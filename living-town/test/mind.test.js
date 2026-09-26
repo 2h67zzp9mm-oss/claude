@@ -111,3 +111,16 @@ test("compatibility differs between pairs", () => {
   const b = mind.compatibility({ id: "zara" }, { id: "nova" });
   assert.ok(b > a, "Zara and Nova are more alike than Hazel and Finn");
 });
+
+test("walkway routes stay on the paths and every family has its own door", () => {
+  const world = require("../shared/world");
+  const path = world.route(world.places.park.x, world.places.park.y, world.places.market.x, world.places.market.y);
+  assert.ok(path.length > 3, "long trips follow several walkway segments");
+  for (const point of path.slice(0, -1)) {
+    assert.ok(Object.values(world.walkNodes).some(([x, y]) => x === point.x && y === point.y), "intermediate points are walkway nodes");
+  }
+  assert.notDeepStrictEqual(world.spotFor("finn", "homes"), world.spotFor("dad", "homes"));
+  assert.deepStrictEqual(world.spotFor("olive", "homes"), world.spotFor("hazel", "homes"));
+  const onRoof = world.snapToWalkable(560, 440); // the middle of the houses' roofs
+  assert.ok(Math.hypot(onRoof.x - 560, onRoof.y - 440) > 5, "roof taps are pulled onto a path");
+});

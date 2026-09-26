@@ -2,7 +2,7 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.5.0
+## Honest status — 0.5.1
 
 Working now:
 
@@ -11,6 +11,9 @@ Working now:
 - Utility-based decisions with a visible reason ("Why: hungry", "Why: Olive is there", "Why: school time")
 - Conversations shaped by personality and shared interests, including occasional mild disagreements
 - Persistent careers, goals, moods, ages and birthdays, background histories, and learned facts
+- Pixel-art residents that match the painted map, walking only on its paths and stairs
+- Named buildings: each family has its own house, sleeping residents go inside, and tapping a sign walks you there
+- Mobile camera: opens showing much more of the town, pinch out to see all of it, and follows your character while you play
 - Portrait-first mobile client: drag, pinch, tap-to-move, chat bubbles, resident sheet, PWA install
 - Player accounts: owner setup with a one-time console code, hashed PINs, lockouts, owner PIN resets and player removal, per-player looks
 - Atomic saves, per-minute backups, hourly snapshots, recovery through all three, and single-writer locking

@@ -74,7 +74,10 @@ test("shared world: migration, validation, control, persistence and recovery", a
   sean.ws.send("not-json");
   sean.ws.send(JSON.stringify({ type: "control", residentId: "milo", x: 10, y: 10 }));
   sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: 99999, y: -99999 }));
-  await until(() => b.residents.get("dad").targetX === 940 && b.residents.get("dad").targetY === 20, "coordinates clamped");
+  await until(() => b.residents.get("dad").targetX !== 700, "wild coordinates still move Sean");
+  const world = require("../shared/world");
+  const snapped = world.snapToWalkable(940, 20);
+  assert.ok(Math.abs(b.residents.get("dad").targetX - snapped.x) < 0.01 && Math.abs(b.residents.get("dad").targetY - snapped.y) < 0.01, "taps snap onto the walkways");
   assert.notStrictEqual(b.residents.get("milo").targetX, 10, "non-player residents cannot be steered");
 
   sean.ws.close();

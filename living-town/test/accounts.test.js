@@ -46,10 +46,10 @@ test("accounts: setup, ownership, lockout, revocation, persistence", async () =>
   const sean = await connectClient(port, { cookie: seanCookie });
   await until(() => watcher.residents.size && olive.residents.size && sean.residents.size, "initial states");
 
-  sean.ws.send(JSON.stringify({ type: "control", residentId: "olive", x: 810, y: 300 }));
+  sean.ws.send(JSON.stringify({ type: "control", residentId: "olive", x: 700, y: 400 }));
   await until(() => rejected(sean) === 1, "Sean cannot steer Olive");
-  olive.ws.send(JSON.stringify({ type: "control", residentId: "olive", x: 810, y: 300 }));
-  await until(() => watcher.residents.get("olive")?.targetX === 810, "Olive steers Olive");
+  olive.ws.send(JSON.stringify({ type: "control", residentId: "olive", x: 700, y: 400 }));
+  await until(() => watcher.residents.get("olive")?.targetX === 700, "Olive steers Olive");
 
   // Looks chosen by players reach every client.
   assert.strictEqual(watcher.looks.olive.hair, "long");

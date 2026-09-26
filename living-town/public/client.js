@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const { places, MAP, PLAYABLE_IDS } = window.LivingTownWorld;
+  const { places, MAP, PLAYABLE_IDS, buildings, homeOf, walkNodes, snapToWalkable } = window.LivingTownWorld;
   const $ = selector => document.querySelector(selector);
   const canvas = $("#townCanvas");
   const ctx = canvas.getContext("2d");
@@ -169,170 +169,278 @@
     setTimeout(() => pendingInspections.delete(r.id), 3000);
   }
 
-  // --- Drawing ---
-  let dpr = 1;
-  function sizeCanvas() {
-    dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = MAP.width * dpr;
-    canvas.height = MAP.height * dpr;
+  // --- Pixel-art sprites ---
+  // Residents are drawn as small pixel sprites (one sprite pixel = PX map
+  // units) with a dark outline, so they sit naturally in the painted town.
+  const SPRITE_W = 16, SPRITE_H = 24, PX = 1.35, FEET_ROW = 22, OUTLINE = "#2a1d18";
+  const spriteCache = new Map();
+
+  function shade(hex, amount) {
+    const n = parseInt(String(hex).slice(1), 16) || 0;
+    const f = c => Math.max(0, Math.min(255, Math.round(c + amount * 255)));
+    return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
   }
 
+  function buildSprite(look, frame) {
+    const c = document.createElement("canvas");
+    c.width = SPRITE_W;
+    c.height = SPRITE_H;
+    const g = c.getContext("2d");
+    const px = (x, y, color, w = 1, h = 1) => { g.fillStyle = color; g.fillRect(x, y, w, h); };
+    const { skin, hair: H, shirt, pants, shoes, style, accessory: acc } = look;
+
+    const legSets = [
+      [{ x: 6, bottom: 20 }, { x: 8, bottom: 20 }],
+      [{ x: 5, bottom: 20 }, { x: 9, bottom: 19 }],
+      [{ x: 5, bottom: 19 }, { x: 9, bottom: 20 }]
+    ];
+    legSets[frame].forEach((leg, i) => {
+      px(leg.x, 17, i ? shade(pants, -0.08) : pants, 2, leg.bottom - 16);
+      px(leg.x, leg.bottom + 1, shoes, 2, 1);
+    });
+    px(5, 11, shirt, 6, 6);
+    px(10, 11, shade(shirt, -0.12), 1, 6);
+    px(6, 12, shade(shirt, 0.12), 1, 3);
+    const swing = frame === 1 ? [1, 0] : frame === 2 ? [0, 1] : [0, 0];
+    [[4, swing[0]], [11, swing[1]]].forEach(([x, d]) => {
+      px(x, 11 + d, shade(shirt, -0.05), 1, 2);
+      px(x, 13 + d, skin, 1, 2);
+    });
+    px(7, 10, shade(skin, -0.08), 2, 1);
+    px(5, 4, skin, 6, 6);
+    px(4, 6, skin, 1, 2);
+    px(11, 6, skin, 1, 2);
+
+    if (style === "bald") px(6, 3, skin, 4, 1);
+    else px(5, 3, H, 6, 2);
+    if (["short", "pigtails", "buns", "long"].includes(style)) { px(5, 5, H); px(10, 5, H); }
+    if (style === "long") { px(4, 4, H, 1, 8); px(11, 4, H, 1, 8); }
+    if (style === "pigtails") { px(3, 6, H, 1, 3); px(12, 6, H, 1, 3); }
+    if (style === "buns") { px(5, 1, H, 2, 2); px(9, 1, H, 2, 2); }
+    if (style === "curls") { px(4, 2, H, 8, 3); px(4, 5, H, 1, 2); px(11, 5, H, 1, 2); [5, 7, 9].forEach(x => px(x, 1, H, 2, 1)); }
+    if (style === "swoop") { px(5, 5, H, 3, 1); px(4, 3, H, 1, 2); px(9, 2, H, 2, 1); }
+
+    px(6, 6, OUTLINE);
+    px(9, 6, OUTLINE);
+    px(7, 8, "#b0645a", 2, 1);
+    if (acc === "beard") { px(5, 7, H, 1, 4); px(10, 7, H, 1, 4); px(6, 9, H, 4, 2); px(6, 8, H); px(9, 8, H); }
+    if (acc === "glasses") { px(5, 5, "#3a3a4a", 3, 1); px(8, 5, "#3a3a4a", 3, 1); ["#cfe3f0"].forEach(c2 => { px(5, 6, c2); px(7, 6, c2); px(8, 6, c2); px(10, 6, c2); }); }
+    if (acc === "bow") { px(10, 2, "#f7d56b", 3, 2); px(11, 2, "#d9a93a", 1, 2); }
+    if (acc === "headband") px(5, 4, "#e76f8a", 6, 1);
+    if (acc === "star") { px(11, 2, "#ffd166"); px(10, 3, "#ffd166", 3, 1); px(11, 4, "#ffd166"); }
+
+    const data = g.getImageData(0, 0, SPRITE_W, SPRITE_H).data;
+    const filled = (x, y) => x >= 0 && y >= 0 && x < SPRITE_W && y < SPRITE_H && data[(y * SPRITE_W + x) * 4 + 3] > 0;
+    g.fillStyle = OUTLINE;
+    for (let y = 0; y < SPRITE_H; y++) {
+      for (let x = 0; x < SPRITE_W; x++) {
+        if (!filled(x, y) && (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1))) g.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
+  function spriteFor(r, frame) {
+    const look = lookFor(r);
+    const key = `${r.id}|${frame}|${look.style}|${look.accessory}|${look.shirt}`;
+    if (!spriteCache.has(key)) spriteCache.set(key, buildSprite(look, frame));
+    return spriteCache.get(key);
+  }
+
+  // --- Camera ---
+  // The canvas is always the full map (960x640 CSS px) moved and scaled with
+  // a transform. Zoom ranges from "whole town fits" to close-up.
+  const view = $(".world-card");
+  const camera = { x: 0, y: 0, z: 1, userMovedAt: 0 };
+  let backing = 0;
+  let backingTimer = null;
+  let signBoxes = [];
+  let tapMarker = null;
+
+  function limits() {
+    const w = view.clientWidth, h = view.clientHeight;
+    const fit = Math.min(w / MAP.width, h / MAP.height);
+    const cover = Math.max(w / MAP.width, h / MAP.height);
+    return { w, h, fit, cover, min: fit, max: cover * 2.5 };
+  }
+
+  // Default: the map fills the height between the top bar and the bottom
+  // sheet (no empty bands); pinch out to see the whole town.
+  function defaultZoom() { const l = limits(); return Math.max(l.fit, Math.min(l.cover, (l.h - 200) / MAP.height)); }
+
+  function sizeBacking() {
+    const next = Math.min(2, Math.max(1, Math.ceil((window.devicePixelRatio || 1) * camera.z * 4) / 4));
+    if (next === backing) return;
+    backing = next;
+    canvas.width = MAP.width * backing;
+    canvas.height = MAP.height * backing;
+  }
+
+  function applyCamera() {
+    const l = limits();
+    const before = camera.z;
+    camera.z = Math.max(l.min, Math.min(l.max, camera.z));
+    const mw = MAP.width * camera.z, mh = MAP.height * camera.z;
+    // Leave room to scroll the edges out from under the top bar and bottom sheet.
+    const top = 70, bottom = 150;
+    camera.x = mw <= l.w ? (l.w - mw) / 2 : Math.max(l.w - mw, Math.min(0, camera.x));
+    camera.y = mh + top + bottom <= l.h ? (l.h - mh) / 2 : Math.max(l.h - mh - bottom, Math.min(top, camera.y));
+    canvas.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.z})`;
+    if (before !== camera.z || !backing) { clearTimeout(backingTimer); backingTimer = setTimeout(sizeBacking, 150); }
+  }
+
+  function zoomAt(z, cx, cy) {
+    const l = limits();
+    z = Math.max(l.min, Math.min(l.max, z));
+    const k = z / camera.z;
+    camera.x = cx - (cx - camera.x) * k;
+    camera.y = cy - (cy - camera.y) * k;
+    camera.z = z;
+    applyCamera();
+  }
+
+  function centerOn(x, y, z = camera.z) {
+    const l = limits();
+    camera.z = Math.max(l.min, Math.min(l.max, z));
+    camera.x = l.w / 2 - x * camera.z;
+    camera.y = l.h * 0.4 - y * camera.z;
+    applyCamera();
+  }
+
+  // Keep the player's resident comfortably on screen unless the user just panned.
+  function followPlayer(dt) {
+    if (mode !== "play" || !me || performance.now() - camera.userMovedAt < 4000) return;
+    const r = residents.get(me.residentId);
+    if (!r) return;
+    const l = limits();
+    const sx = camera.x + r.drawX * camera.z, sy = camera.y + r.drawY * camera.z;
+    if (sx > l.w * 0.2 && sx < l.w * 0.8 && sy > l.h * 0.2 && sy < l.h * 0.6) return;
+    const k = Math.min(1, dt * 2.5);
+    camera.x += (l.w / 2 - r.drawX * camera.z - camera.x) * k;
+    camera.y += (l.h * 0.4 - r.drawY * camera.z - camera.y) * k;
+    applyCamera();
+  }
+
+  // --- Drawing ---
   let lastFrame = performance.now();
   function frame(time) {
     const dt = Math.min(0.1, (time - lastFrame) / 1000);
     lastFrame = time;
-    // Ease drawn positions toward the latest server position so movement is
-    // smooth between one-second server updates.
     for (const r of residents.values()) {
       const k = Math.min(1, dt * 4);
       r.drawX += (r.x - r.drawX) * k;
       r.drawY += (r.y - r.drawY) * k;
       if (Math.hypot(r.x - r.drawX, r.y - r.drawY) > 120) { r.drawX = r.x; r.drawY = r.y; }
     }
-    drawTown();
+    followPlayer(dt);
+    if (backing) drawTown();
     updateClock();
     requestAnimationFrame(frame);
   }
 
+  // Sizes given in screen pixels, converted to map units at the current zoom.
+  function screenPx(px) { return px / camera.z; }
+
+  function hiddenInside(r) { return r.asleep && Boolean(homeOf(r.id)); }
+
   function drawTown() {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(backing, 0, 0, backing, 0, 0);
+    ctx.imageSmoothingEnabled = true;
     ctx.clearRect(0, 0, MAP.width, MAP.height);
-    if (townMap.complete && townMap.naturalWidth) {
-      ctx.drawImage(townMap, 0, 0, MAP.width, MAP.height);
-    } else {
-      ctx.fillStyle = "#7baa68";
-      ctx.fillRect(0, 0, MAP.width, MAP.height);
-      for (const place of Object.values(places)) {
-        ctx.fillStyle = place.color;
-        ctx.beginPath(); ctx.arc(place.x, place.y, 46, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#1a2940"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center";
-        ctx.fillText(place.name.toUpperCase(), place.x, place.y - 54);
+    if (townMap.complete && townMap.naturalWidth) ctx.drawImage(townMap, 0, 0, MAP.width, MAP.height);
+    else { ctx.fillStyle = "#7baa68"; ctx.fillRect(0, 0, MAP.width, MAP.height); }
+
+    if (tapMarker) {
+      const age = (performance.now() - tapMarker.at) / 700;
+      if (age >= 1) tapMarker = null;
+      else {
+        ctx.strokeStyle = `rgba(255,224,102,${1 - age})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.ellipse(tapMarker.x, tapMarker.y, 4 + age * 10, (4 + age * 10) * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
       }
     }
-    const list = [...residents.values()].sort((a, b) => a.drawY - b.drawY);
-    list.forEach(drawResident);
+
+    const visible = [...residents.values()].filter(r => !hiddenInside(r)).sort((a, b) => a.drawY - b.drawY);
+    visible.forEach(drawResident);
+    drawSigns();
     const now = nowMs();
-    list.forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text); });
+    visible.forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text); });
   }
 
   function drawResident(r) {
-    const look = lookFor(r);
     const x = r.drawX, y = r.drawY;
     const walking = Math.hypot(r.targetX - r.x, r.targetY - r.y) > 3;
-    const phase = performance.now() / 130 + r.id.charCodeAt(0);
-    const bob = walking ? Math.abs(Math.sin(phase)) * 2 : r.asleep ? 0 : Math.sin(phase * 0.12) * 0.5;
-    const stride = walking ? Math.sin(phase) * 4 : 0;
+    const step = Math.floor(performance.now() / 170 + r.id.charCodeAt(0)) % 4;
+    const frameIndex = walking ? [1, 0, 2, 0][step] : 0;
 
-    ctx.save();
-    ctx.translate(x, y - bob);
-    if (r.asleep) ctx.globalAlpha = 0.75;
+    ctx.fillStyle = "rgba(20,12,8,.3)";
+    ctx.beginPath(); ctx.ellipse(x, y, 7, 2.6, 0, 0, Math.PI * 2); ctx.fill();
     if (r.id === selectedId) {
-      ctx.strokeStyle = "#fff4b8"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.ellipse(0, -9, 24, 34, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.ellipse(x, y, 10, 4, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    ctx.fillStyle = "rgba(0,0,0,.24)";
-    ctx.beginPath(); ctx.ellipse(0, 17 + bob, 16, 6, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = look.pants; ctx.lineWidth = 6; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(-4, 5); ctx.lineTo(-5 - stride * 0.45, 14); ctx.moveTo(4, 5); ctx.lineTo(5 + stride * 0.45, 14); ctx.stroke();
-    ctx.strokeStyle = look.shoes; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(-7 - stride * 0.45, 15); ctx.lineTo(-2 - stride * 0.45, 15); ctx.moveTo(3 + stride * 0.45, 15); ctx.lineTo(8 + stride * 0.45, 15); ctx.stroke();
-    ctx.strokeStyle = look.skin; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(-13 + stride * 0.35, 4); ctx.moveTo(10, -5); ctx.lineTo(13 - stride * 0.35, 4); ctx.stroke();
-    ctx.fillStyle = look.shirt;
-    ctx.beginPath(); ctx.roundRect(-11, -10, 22, 19, 7); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.25)";
-    ctx.beginPath(); ctx.roundRect(-7, -7, 5, 12, 3); ctx.fill();
-    ctx.fillStyle = look.skin;
-    ctx.beginPath(); ctx.arc(-11, -21, 3, 0, Math.PI * 2); ctx.arc(11, -21, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(0, -22, 12, 0, Math.PI * 2); ctx.fill();
-    drawHair(look);
-    if (r.asleep) {
-      ctx.strokeStyle = "#2a2020"; ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.moveTo(-6, -22); ctx.lineTo(-2, -22); ctx.moveTo(2, -22); ctx.lineTo(6, -22); ctx.stroke();
-    } else {
-      ctx.fillStyle = "#2a2020";
-      ctx.beginPath(); ctx.arc(-4, -22, 1.4, 0, Math.PI * 2); ctx.arc(4, -22, 1.4, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.strokeStyle = "#8b4f48"; ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.arc(0, -18, 3.4, 0.15, Math.PI - 0.15); ctx.stroke();
-    drawAccessory(look);
-    ctx.restore();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(spriteFor(r, frameIndex), x - (SPRITE_W * PX) / 2, y - FEET_ROW * PX, SPRITE_W * PX, SPRITE_H * PX);
+    ctx.imageSmoothingEnabled = true;
 
-    ctx.fillStyle = "rgba(18,28,43,.82)";
-    ctx.beginPath(); ctx.roundRect(x - 25, y + 21, 50, 16, 8); ctx.fill();
-    ctx.fillStyle = "#ffffff"; ctx.font = "700 11px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(r.asleep ? `${r.name} · z` : r.name, x, y + 29);
+    if (r.id === selectedId) {
+      const ay = y - FEET_ROW * PX - 3 + Math.sin(performance.now() / 250) * 1.5;
+      ctx.fillStyle = "#ffe066";
+      ctx.beginPath(); ctx.moveTo(x - 3.5, ay - 5); ctx.lineTo(x + 3.5, ay - 5); ctx.lineTo(x, ay); ctx.closePath(); ctx.fill();
+    }
+
+    // Names for the selected resident, or for everyone once zoomed in.
+    if (r.id !== selectedId && camera.z < 1.1) return;
+    const fs = screenPx(10);
+    ctx.font = `700 ${fs}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const w = ctx.measureText(r.name).width + fs;
+    ctx.fillStyle = "rgba(18,28,43,.78)";
+    ctx.beginPath(); ctx.roundRect(x - w / 2, y + 2, w, fs * 1.4, fs * 0.7); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.fillText(r.name, x, y + 2 + fs * 0.72);
+  }
+
+  function drawSigns() {
+    signBoxes = [];
+    const fs = screenPx(9.5);
+    ctx.font = `800 ${fs}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const b of buildings) {
+      const sleeping = [...residents.values()].filter(r => hiddenInside(r) && homeOf(r.id)?.id === b.id).length;
+      const label = sleeping ? `${b.name} · z${"z".repeat(Math.min(2, sleeping - 1))}` : b.name;
+      const w = ctx.measureText(label).width + fs * 1.3, h = fs * 1.7;
+      const x0 = b.x - w / 2, y0 = b.y - h / 2;
+      ctx.fillStyle = "rgba(59,38,22,.9)";
+      ctx.strokeStyle = "#e8c27a";
+      ctx.lineWidth = fs * 0.14;
+      ctx.beginPath(); ctx.roundRect(x0, y0, w, h, fs * 0.35); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#ffe9b8";
+      ctx.fillText(label, b.x, b.y + fs * 0.06);
+      signBoxes.push({ b, x0, y0, x1: x0 + w, y1: y0 + h });
+    }
   }
 
   function drawChatBubble(r, text) {
+    const fs = screenPx(11.5);
     const label = String(text).length > 54 ? `${String(text).slice(0, 51)}…` : String(text);
     ctx.save();
-    ctx.font = "700 12px system-ui";
-    const width = Math.min(220, Math.max(78, ctx.measureText(label).width + 24));
-    const x = Math.max(8, Math.min(MAP.width - width - 8, r.drawX - width / 2));
-    const y = Math.max(8, r.drawY - 88);
+    ctx.font = `700 ${fs}px system-ui`;
+    const width = Math.min(screenPx(230), ctx.measureText(label).width + fs * 1.8);
+    const height = fs * 2.4;
+    const headY = r.drawY - FEET_ROW * PX;
+    const x = Math.max(4, Math.min(MAP.width - width - 4, r.drawX - width / 2));
+    const y = Math.max(4, headY - height - fs * 0.9);
     ctx.fillStyle = "rgba(255,255,248,.96)";
-    ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 12;
-    ctx.beginPath(); ctx.roundRect(x, y, width, 34, 14); ctx.fill();
+    ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.roundRect(x, y, width, height, fs * 0.9); ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.moveTo(r.drawX - 6, y + 32); ctx.lineTo(r.drawX + 5, y + 32); ctx.lineTo(r.drawX, y + 43); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(r.drawX - fs * 0.4, y + height - 1); ctx.lineTo(r.drawX + fs * 0.4, y + height - 1); ctx.lineTo(r.drawX, y + height + fs * 0.6); ctx.closePath(); ctx.fill();
     ctx.fillStyle = "#1a2940"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(label, x + width / 2, y + 17, width - 18);
+    ctx.fillText(label, x + width / 2, y + height / 2, width - fs);
     ctx.restore();
-  }
-
-  function drawHair(look) {
-    ctx.fillStyle = look.hair;
-    if (look.style === "bald") {
-      ctx.beginPath(); ctx.arc(-10, -23, 2.5, Math.PI * .5, Math.PI * 1.5); ctx.arc(10, -23, 2.5, -Math.PI * .5, Math.PI * .5); ctx.fill();
-    } else if (look.style === "long") {
-      ctx.beginPath(); ctx.arc(0, -22, 13.5, Math.PI, Math.PI * 2); ctx.lineTo(12, -10); ctx.quadraticCurveTo(0, -5, -12, -10); ctx.closePath(); ctx.fill();
-    } else {
-      ctx.beginPath(); ctx.arc(0, -25, 11.5, Math.PI, Math.PI * 2); ctx.lineTo(10, -23); ctx.quadraticCurveTo(2, -28, -10, -22); ctx.closePath(); ctx.fill();
-    }
-    if (look.style === "pigtails") {
-      ctx.beginPath(); ctx.arc(-13, -22, 5, 0, Math.PI * 2); ctx.arc(13, -22, 5, 0, Math.PI * 2); ctx.fill();
-    }
-    if (look.style === "buns") {
-      ctx.beginPath(); ctx.arc(-8, -32, 5, 0, Math.PI * 2); ctx.arc(8, -32, 5, 0, Math.PI * 2); ctx.fill();
-    }
-    if (look.style === "curls") {
-      [[-8,-29],[-3,-32],[3,-32],[8,-29],[-11,-25],[11,-25]].forEach(([x,y]) => { ctx.beginPath(); ctx.arc(x, y, 4.3, 0, Math.PI * 2); ctx.fill(); });
-    }
-    if (look.style === "swoop") {
-      ctx.beginPath(); ctx.moveTo(-10,-28); ctx.quadraticCurveTo(2,-38,11,-27); ctx.quadraticCurveTo(2,-30,-3,-22); ctx.closePath(); ctx.fill();
-    }
-  }
-
-  function drawAccessory(look) {
-    if (look.accessory === "glasses") {
-      ctx.strokeStyle = "#314052"; ctx.lineWidth = 1.2;
-      ctx.strokeRect(-8, -25, 7, 6); ctx.strokeRect(1, -25, 7, 6);
-      ctx.beginPath(); ctx.moveTo(-1, -22); ctx.lineTo(1, -22); ctx.stroke();
-    } else if (look.accessory === "beard") {
-      ctx.fillStyle = look.hair;
-      ctx.beginPath(); ctx.moveTo(-9,-18); ctx.quadraticCurveTo(-7,-7,0,-6); ctx.quadraticCurveTo(7,-7,9,-18); ctx.quadraticCurveTo(5,-13,0,-12); ctx.quadraticCurveTo(-5,-13,-9,-18); ctx.fill();
-      ctx.fillStyle = look.skin;
-      ctx.beginPath(); ctx.ellipse(0,-17,3.7,2.4,0,0,Math.PI*2); ctx.fill();
-    } else if (look.accessory === "bow") {
-      ctx.fillStyle = "#f7d56b";
-      ctx.beginPath(); ctx.moveTo(7,-32); ctx.lineTo(14,-36); ctx.lineTo(13,-28); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(7,-32); ctx.lineTo(2,-37); ctx.lineTo(2,-28); ctx.closePath(); ctx.fill();
-    } else if (look.accessory === "headband") {
-      ctx.strokeStyle = "#e76f8a"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(0, -25, 11, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
-    } else if (look.accessory === "star") {
-      ctx.fillStyle = "#ffd166";
-      ctx.beginPath(); ctx.arc(10, -29, 2.5, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  function portraitSvg(r) {
-    const look = lookFor(r);
-    const glasses = look.accessory === "glasses" ? '<g fill="none" stroke="#314052" stroke-width="2"><rect x="20" y="31" width="12" height="9" rx="3"/><rect x="36" y="31" width="12" height="9" rx="3"/><path d="M32 35h4"/></g>' : "";
-    const hair = look.style === "bald" ? '<path d="M18 29q1-20 16-20t16 20" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2"/>' : `<path d="M18 27c1-14 8-21 17-21 10 0 16 8 16 21-8-5-23-5-33 0Z" fill="${look.hair}"/>`;
-    const beard = look.accessory === "beard" ? `<path d="M20 34q2 18 14 20 12-2 14-20-6 9-14 9t-14-9Z" fill="${look.hair}"/><ellipse cx="34" cy="39" rx="5" ry="3" fill="${look.skin}"/>` : "";
-    return `<svg viewBox="0 0 68 68" aria-hidden="true"><ellipse cx="34" cy="64" rx="18" ry="4" fill="rgba(0,0,0,.2)"/><path d="M19 68V53c0-10 7-16 15-16s15 6 15 16v15" fill="${look.shirt}"/><circle cx="34" cy="28" r="17" fill="${look.skin}"/>${hair}${beard}<circle cx="28" cy="31" r="2" fill="#2a2020"/><circle cx="40" cy="31" r="2" fill="#2a2020"/><path d="M29 39q5 5 10 0" fill="none" stroke="#8b4f48" stroke-width="2" stroke-linecap="round"/>${glasses}</svg>`;
   }
 
   // --- Resident sheet ---
@@ -349,7 +457,7 @@
 
   // Cheap per-tick updates only; no list rebuilding.
   function renderSelectedDynamic(r) {
-    const placeLabel = places[r.place]?.name || "Out and about";
+    const placeLabel = r.place === "homes" ? homeOf(r.id)?.name || "Home" : places[r.place]?.name || "Out and about";
     ui.activity.textContent = `${capitalize(r.activity || "")} · ${placeLabel}`;
     ui.intent.textContent = r.intent ? `Why: ${r.intent}` : "";
     ui.placeChip.textContent = `${r.name} · ${placeLabel}`;
@@ -366,7 +474,11 @@
 
   function renderSelectedDetail(r, detail) {
     ui.name.textContent = r.name;
-    ui.portrait.innerHTML = portraitSvg(r);
+    const portrait = new Image();
+    portrait.className = "pixel-portrait";
+    portrait.alt = "";
+    portrait.src = spriteFor(r, 0).toDataURL();
+    ui.portrait.replaceChildren(portrait);
     ui.portrait.style.background = `linear-gradient(145deg, ${r.color}55, #263d5c)`;
     ui.needs.innerHTML = Object.keys(r.needs || {}).map(key => `<div class="need-row" data-need="${key}"><span>${capitalize(key)}</span><div class="need-track"><div class="need-fill"></div></div><b>0</b></div>`).join("");
     const sorted = Object.entries(r.relationships || {}).sort((a, b) => b[1] - a[1]);
@@ -407,9 +519,14 @@
   }
 
   // --- Input ---
-  function canvasPoint(event) {
-    const rect = canvas.getBoundingClientRect();
-    return { x: (event.clientX - rect.left) * MAP.width / rect.width, y: (event.clientY - rect.top) * MAP.height / rect.height };
+  function viewPoint(event) {
+    const rect = view.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function mapPoint(event) {
+    const p = viewPoint(event);
+    return { x: (p.x - camera.x) / camera.z, y: (p.y - camera.y) / camera.z };
   }
 
   function select(id, open = true) {
@@ -419,20 +536,32 @@
     if (open) ui.sheet.classList.add("open");
   }
 
+  function showBuilding(b) {
+    const inside = [...residents.values()].filter(r => b.residents ? r.place === "homes" && b.residents.includes(r.id) : r.place === b.place);
+    showToast(inside.length ? `${b.name}: ${inside.map(r => r.name + (r.asleep ? " (asleep)" : "")).join(", ")}` : `${b.name}: nobody here right now`);
+    if (inside[0]) select(inside[0].id, false);
+  }
+
   function handleTap(event) {
     if (!residents.size) return;
-    const p = canvasPoint(event);
+    const p = mapPoint(event);
     const playing = mode === "play" && me;
-    // While playing, only a tap right on someone selects them; anywhere else moves you.
-    const radius = playing ? 18 : 34;
-    const hit = [...residents.values()].reverse().find(r => r.id !== (playing ? me.residentId : null) && Math.hypot(r.drawX - p.x, r.drawY - 8 - p.y) < radius);
+    const hit = [...residents.values()]
+      .filter(r => !hiddenInside(r) && r.id !== (playing ? me.residentId : null))
+      .sort((a, b) => b.drawY - a.drawY)
+      .find(r => Math.abs(r.drawX - p.x) < screenPx(playing ? 12 : 18) + 6 && p.y > r.drawY - FEET_ROW * PX - 4 && p.y < r.drawY + screenPx(14));
     if (hit) return select(hit.id);
-    if (playing) {
-      send({ type: "control", residentId: me.residentId, x: p.x, y: p.y });
-      selectedId = me.residentId;
-      renderedDetailKey = "";
-      renderSelected();
-    }
+    const pad = screenPx(6);
+    const sign = signBoxes.find(s => p.x >= s.x0 - pad && p.x <= s.x1 + pad && p.y >= s.y0 - pad && p.y <= s.y1 + pad);
+    if (!playing) { if (sign) showBuilding(sign.b); return; }
+    // Tap a sign to walk to that building's door; tap anywhere else to walk
+    // to the nearest point on the paths.
+    const door = sign ? walkNodes[sign.b.node] : null;
+    const target = door ? { x: door[0], y: door[1] } : snapToWalkable(p.x, p.y);
+    send({ type: "control", residentId: me.residentId, x: target.x, y: target.y });
+    if (sign) showToast(`Walking to ${sign.b.name}`);
+    tapMarker = { x: target.x, y: target.y, at: performance.now() };
+    select(me.residentId, false);
   }
 
   function setMode(next) {
@@ -440,50 +569,62 @@
     if (next === "play" && !PLAYABLE_IDS.includes(me.residentId)) return showToast("Your player isn't linked to a resident.");
     mode = next;
     document.querySelectorAll(".dock-button[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
-    if (mode === "play") select(me.residentId, false);
+    if (mode === "play") {
+      select(me.residentId, false);
+      const r = residents.get(me.residentId);
+      camera.userMovedAt = 0;
+      if (r) centerOn(r.drawX, r.drawY, Math.max(camera.z, defaultZoom()));
+    }
     else send({ type: "release" });
   }
 
   document.querySelectorAll(".dock-button[data-mode]").forEach(button => button.addEventListener("click", () => setMode(button.dataset.mode)));
 
-  const camera = { x: 0, y: 0, scale: 1 };
   const pointers = new Map();
-  let gestureStartDistance = 0, gestureStartScale = 1, gestureMoved = false;
-  function applyCamera() {
-    camera.scale = Math.max(1, Math.min(2.4, camera.scale));
-    const limitX = 240 * camera.scale, limitY = 150 * camera.scale;
-    camera.x = Math.max(-limitX, Math.min(limitX, camera.x));
-    camera.y = Math.max(-limitY, Math.min(limitY, camera.y));
-    canvas.style.transform = `translate(calc(-50% + ${camera.x}px), ${camera.y}px) scale(${camera.scale})`;
-  }
-  canvas.addEventListener("pointerdown", event => {
-    canvas.setPointerCapture(event.pointerId);
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY });
+  let pinch = null;
+  let gestureMoved = false;
+  view.addEventListener("pointerdown", event => {
+    if (event.target.closest("button")) return;
+    view.setPointerCapture(event.pointerId);
+    const p = viewPoint(event);
+    pointers.set(event.pointerId, { x: p.x, y: p.y, startX: p.x, startY: p.y });
     gestureMoved = pointers.size > 1;
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
-      gestureStartDistance = Math.hypot(a.x - b.x, a.y - b.y);
-      gestureStartScale = camera.scale;
+      pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), z: camera.z };
     }
   });
-  canvas.addEventListener("pointermove", event => {
+  view.addEventListener("pointermove", event => {
     const pointer = pointers.get(event.pointerId);
     if (!pointer) return;
-    const dx = event.clientX - pointer.x, dy = event.clientY - pointer.y;
-    pointer.x = event.clientX; pointer.y = event.clientY;
-    if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > 7) gestureMoved = true;
-    if (pointers.size === 1 && gestureMoved) { camera.x += dx; camera.y += dy; applyCamera(); }
-    if (pointers.size === 2) {
-      const [a, b] = [...pointers.values()];
-      camera.scale = gestureStartScale * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, gestureStartDistance);
+    const p = viewPoint(event);
+    const dx = p.x - pointer.x, dy = p.y - pointer.y;
+    pointer.x = p.x; pointer.y = p.y;
+    if (Math.hypot(p.x - pointer.startX, p.y - pointer.startY) > 7) gestureMoved = true;
+    if (pointers.size === 1 && gestureMoved) {
+      camera.x += dx; camera.y += dy;
+      camera.userMovedAt = performance.now();
       applyCamera();
     }
+    if (pointers.size === 2 && pinch) {
+      const [a, b] = [...pointers.values()];
+      zoomAt(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.dist), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      camera.userMovedAt = performance.now();
+    }
   });
-  canvas.addEventListener("pointerup", event => {
+  const endPointer = event => {
     const had = pointers.delete(event.pointerId);
-    if (had && !gestureMoved && pointers.size === 0) handleTap(event);
-  });
-  canvas.addEventListener("pointercancel", event => pointers.delete(event.pointerId));
+    if (pointers.size < 2) pinch = null;
+    return had;
+  };
+  view.addEventListener("pointerup", event => { if (endPointer(event) && !gestureMoved && pointers.size === 0) handleTap(event); });
+  view.addEventListener("pointercancel", endPointer);
+  view.addEventListener("wheel", event => {
+    event.preventDefault();
+    const p = viewPoint(event);
+    zoomAt(camera.z * Math.exp(-event.deltaY * 0.0015), p.x, p.y);
+    camera.userMovedAt = performance.now();
+  }, { passive: false });
 
   $("#findStory").addEventListener("click", () => {
     // Most interesting: whoever is talking right now, else the best mood swing.
@@ -499,9 +640,10 @@
   $("#peopleButton").addEventListener("click", () => ui.sheet.classList.add("open"));
   $("#storiesButton").addEventListener("click", () => { ui.sheet.classList.add("open"); $('[data-panel="eventsPanel"]').click(); });
   $("#recenterButton").addEventListener("click", () => {
-    camera.x = 0; camera.y = 0; camera.scale = 1; applyCamera();
     const r = selected();
-    if (r) showToast(`Map reset · watching ${r.name}`);
+    camera.userMovedAt = 0;
+    if (r) { centerOn(r.drawX, r.drawY, Math.max(camera.z, defaultZoom())); showToast(`Watching ${r.name}`); }
+    else centerOn(places.square.x, places.square.y, defaultZoom());
   });
   document.querySelectorAll(".detail-tab").forEach(button => button.addEventListener("click", () => {
     document.querySelectorAll(".detail-tab").forEach(item => item.classList.toggle("active", item === button));
@@ -666,8 +808,9 @@
   function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[ch])); }
 
   $("#profileButton").addEventListener("click", showProfileMenu);
-  window.addEventListener("resize", sizeCanvas);
-  sizeCanvas();
+  window.addEventListener("resize", applyCamera);
+  camera.z = defaultZoom();
+  centerOn(places.square.x, places.square.y - 20);
   initializePlayers().catch(error => showToast(error.message));
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   connect();

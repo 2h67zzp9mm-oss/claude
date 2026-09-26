@@ -26,7 +26,7 @@ const mind = require("./lib/mind");
 const { createStore } = require("./lib/persistence");
 const { createAuth } = require("./lib/auth");
 
-const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, nearestPlace } = world;
+const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
 const PORT = Number(process.env.PORT) || 4310;
 const HOST = process.env.HOST || "127.0.0.1";
@@ -56,7 +56,7 @@ function makeResident(seed, others = []) {
   for (const other of others) relationships[other.id] = randomBond();
   return {
     id: seed.id, name: seed.name, color: seed.color, x: seed.x, y: seed.y, targetX: seed.x, targetY: seed.y,
-    place: "homes", activity: "settling in", needs: { ...DEFAULT_NEEDS }, memories: [], relationships, lastTalk: 0
+    place: "homes", activity: "settling in", needs: { ...DEFAULT_NEEDS }, memories: [], relationships, lastTalk: 0, path: []
   };
 }
 
@@ -83,7 +83,8 @@ function normalizeResident(resident) {
   resident.y = clamp(finiteOr(resident.y, places.homes.y), MAP.margin, MAP.height - MAP.margin);
   resident.targetX = finiteOr(resident.targetX, resident.x);
   resident.targetY = finiteOr(resident.targetY, resident.y);
-  if (!places[resident.place]) resident.place = nearestPlace(resident.x, resident.y).key;
+  if (!places[resident.place]) resident.place = placeAt(resident, resident.x, resident.y) || "homes";
+  resident.path = Array.isArray(resident.path) ? resident.path.filter(p => Number.isFinite(p?.x) && Number.isFinite(p?.y)) : [];
   if (typeof resident.activity !== "string") resident.activity = "settling in";
   if (typeof resident.color !== "string") resident.color = "#8899aa";
   resident.lastTalk = finiteOr(resident.lastTalk, 0);
@@ -140,14 +141,35 @@ function addEvent(text, at = Date.now()) {
   state.events = state.events.slice(0, MAX_EVENTS);
 }
 
-function placeName(resident) { return places[resident.place]?.name || "the street"; }
+function placeName(resident) {
+  if (resident.place === "homes") return world.homeOf(resident.id)?.name || "home";
+  return places[resident.place]?.name || "the street";
+}
+
+// The place whose spot (for this resident) is within reach of (x, y), if any.
+function placeAt(resident, x, y) {
+  let best = null;
+  for (const key of Object.keys(places)) {
+    const spot = spotFor(resident.id, key);
+    const dist = Math.hypot(spot.x - x, spot.y - y);
+    if (dist <= PLACE_RADIUS && (!best || dist < best.dist)) best = { key, dist };
+  }
+  return best?.key || null;
+}
+
+function walkTo(resident, x, y) {
+  resident.targetX = x;
+  resident.targetY = y;
+  resident.path = route(resident.x, resident.y, x, y);
+  resident.arrived = false;
+}
 
 function setDestination(resident, placeKey) {
-  const place = places[placeKey];
+  const spot = spotFor(resident.id, placeKey);
+  // Spread people out a little so they don't stack; stay close at front doors.
+  const [spreadX, spreadY] = placeKey === "homes" ? [6, 4] : [28, 16];
   resident.place = placeKey;
-  resident.targetX = place.x + (Math.random() - 0.5) * 78;
-  resident.targetY = place.y + (Math.random() - 0.5) * 64;
-  resident.arrived = false;
+  walkTo(resident, spot.x + (Math.random() - 0.5) * spreadX, spot.y + (Math.random() - 0.5) * spreadY);
 }
 
 function isControlled(id) {
@@ -178,17 +200,20 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
     // A resident who is "at" a place but physically elsewhere (fresh seed
     // positions, a released player) walks there instead of teleporting or
     // sleeping in the street.
-    const place = places[r.place];
-    if (place && Math.hypot(place.x - r.targetX, place.y - r.targetY) > PLACE_RADIUS) setDestination(r, r.place);
+    const spot = r.place ? spotFor(r.id, r.place) : null;
+    if (spot && Math.hypot(spot.x - r.targetX, spot.y - r.targetY) > PLACE_RADIUS) setDestination(r, r.place);
   }
 
-  const dx = r.targetX - r.x;
-  const dy = r.targetY - r.y;
-  const dist = Math.hypot(dx, dy);
-  if (dist > 2) {
-    const step = Math.min(dist, 44 * mind.mindFor(r.id).speed * elapsedSeconds);
-    r.x += (dx / dist) * step;
-    r.y += (dy / dist) * step;
+  if (!Array.isArray(r.path)) r.path = [];
+  // Follow the walkway waypoints, carrying leftover movement to the next one.
+  let budget = 40 * mind.mindFor(r.id).speed * elapsedSeconds;
+  while (budget > 0 && r.path.length) {
+    const next = r.path[0];
+    const gap = Math.hypot(next.x - r.x, next.y - r.y);
+    if (gap <= budget) { r.x = next.x; r.y = next.y; budget -= gap; r.path.shift(); }
+    else { r.x += (next.x - r.x) / gap * budget; r.y += (next.y - r.y) / gap * budget; budget = 0; }
+  }
+  if (r.path.length) {
     r.asleep = false;
     r.activity = controlled ? "heading where the player pointed" : `walking to ${placeName(r)}`;
     return;
@@ -204,7 +229,8 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
   if (r.asleep) r.activity = "asleep";
 
   const place = places[r.place];
-  if (place && Math.hypot(place.x - r.x, place.y - r.y) <= PLACE_RADIUS) {
+  const spot = r.place ? spotFor(r.id, r.place) : null;
+  if (place && Math.hypot(spot.x - r.x, spot.y - r.y) <= PLACE_RADIUS) {
     for (const [need, rate] of Object.entries(place.needs)) {
       const boost = r.asleep && need === "energy" ? 1.4 : 1;
       r.needs[need] = clamp(r.needs[need] + rate * boost * dtHours, 0, 100);
@@ -264,12 +290,13 @@ function catchUpOnBoot(now) {
     groups.get(placeKey).push(r);
   }
   for (const [placeKey, group] of groups) {
-    const p = places[placeKey];
     group.forEach((r, index) => {
-      r.x = p.x + ((index % 3) - 1) * 26;
-      r.y = p.y + (Math.floor(index / 3) - 0.5) * 28;
+      const spot = spotFor(r.id, placeKey);
+      r.x = spot.x + ((index % 3) - 1) * 14;
+      r.y = spot.y + Math.floor(index / 3) * 10;
       r.targetX = r.x;
       r.targetY = r.y;
+      r.path = [];
       r.arrived = false;
     });
   }
@@ -372,7 +399,7 @@ app.use("/shared", express.static(SHARED_DIR));
 app.use(express.static(PUBLIC_DIR));
 app.use(express.json({ limit: "4kb" }));
 
-const route = handler => async (req, res) => {
+const handle = handler => async (req, res) => {
   try {
     await handler(req, res);
   } catch (err) {
@@ -386,44 +413,44 @@ const route = handler => async (req, res) => {
 };
 const clientIp = req => req.socket.remoteAddress || "unknown";
 
-app.get("/api/auth/status", route((req, res) => res.json(auth.status(auth.tokenFromRequest(req)))));
+app.get("/api/auth/status", handle((req, res) => res.json(auth.status(auth.tokenFromRequest(req)))));
 
-app.post("/api/auth/setup", route(async (req, res) => {
+app.post("/api/auth/setup", handle(async (req, res) => {
   const { profile, token } = await auth.setup(req.body || {}, clientIp(req));
   res.setHeader("Set-Cookie", auth.cookieFor(token));
   res.json({ me: profile });
 }));
 
-app.post("/api/auth/login", route(async (req, res) => {
+app.post("/api/auth/login", handle(async (req, res) => {
   const { profile, token } = await auth.login(req.body || {}, clientIp(req));
   res.setHeader("Set-Cookie", auth.cookieFor(token));
   res.json({ me: profile });
 }));
 
-app.post("/api/auth/logout", route((req, res) => {
+app.post("/api/auth/logout", handle((req, res) => {
   auth.logout(auth.tokenFromRequest(req));
   res.setHeader("Set-Cookie", auth.clearCookie);
   res.json({ ok: true });
 }));
 
-app.post("/api/auth/profiles", route(async (req, res) => {
+app.post("/api/auth/profiles", handle(async (req, res) => {
   const profile = await auth.createProfile(auth.tokenFromRequest(req), req.body);
   broadcastLooks();
   res.status(201).json({ profile });
 }));
 
-app.put("/api/auth/profiles/:id/pin", route(async (req, res) => {
+app.put("/api/auth/profiles/:id/pin", handle(async (req, res) => {
   await auth.resetPin(auth.tokenFromRequest(req), req.params.id, req.body?.pin);
   res.json({ ok: true });
 }));
 
-app.put("/api/auth/profiles/:id/look", route((req, res) => {
+app.put("/api/auth/profiles/:id/look", handle((req, res) => {
   const profile = auth.updateLook(auth.tokenFromRequest(req), req.params.id, req.body?.look);
   broadcastLooks();
   res.json({ profile });
 }));
 
-app.delete("/api/auth/profiles/:id", route((req, res) => {
+app.delete("/api/auth/profiles/:id", handle((req, res) => {
   auth.deleteProfile(auth.tokenFromRequest(req), req.params.id);
   broadcastLooks();
   res.json({ ok: true });
@@ -502,11 +529,10 @@ function handleControl(ws, msg) {
   const r = state.residents.find(item => item.id === msg.residentId);
   if (!r) return reject("That resident isn't in town.");
   controllers.set(ws, msg.residentId);
-  r.targetX = clamp(msg.x, MAP.margin, MAP.width - MAP.margin);
-  r.targetY = clamp(msg.y, MAP.margin, MAP.height - MAP.margin);
-  const near = nearestPlace(r.targetX, r.targetY);
-  r.place = near.dist <= PLACE_RADIUS ? near.key : null;
-  r.arrived = false;
+  // Players can only walk on the painted walkways.
+  const target = snapToWalkable(clamp(msg.x, MAP.margin, MAP.width - MAP.margin), clamp(msg.y, MAP.margin, MAP.height - MAP.margin));
+  walkTo(r, target.x, target.y);
+  r.place = placeAt(r, target.x, target.y);
   r.asleep = false;
 }
 

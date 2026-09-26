@@ -174,3 +174,17 @@ New in 0.5:
 - **Tooling:** ESLint, `node:test` suites, and a launchd template.
 
 Save schema 3 migrates 0.2 through 0.4 saves in place.
+
+# Version 0.5.1: the town matches the map
+
+- Place spots now sit on the painted locations: the park's pond and gazebo, the cafe terrace, the market plaza, in front of the fountain, the workshop yard, and the house doors.
+- Residents walk along a network of paths and stairs traced from the map. Player taps snap onto the nearest path.
+- Named buildings with signs:
+  - Sean's House for Sean, Olive and Hazel
+  - Milo & Zara's for Milo, Zara and Nova
+  - Finn's Cottage
+  - the cafe, market, workshop, park and square
+
+  Sleeping residents go inside their house. Tapping a sign shows who's there, or walks your character there while playing.
+- Residents are redrawn as pixel-art sprites with outlines, sized to fit the buildings.
+- New camera: opens with the map filling the screen height, zooms out to the whole town, and follows the player's character.
