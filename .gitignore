@@ -1,3 +1,4 @@
 node_modules/
 living-town/data/
 *.tmp-*
+*.zip
