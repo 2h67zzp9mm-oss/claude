@@ -1,1 +1,10 @@
-{"name":"Living Town","short_name":"Living Town","start_url":"/","display":"standalone","background_color":"#0b1424","theme_color":"#15243b","orientation":"portrait","icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name": "Living Town",
+  "short_name": "Living Town",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1424",
+  "theme_color": "#15243b",
+  "orientation": "portrait",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

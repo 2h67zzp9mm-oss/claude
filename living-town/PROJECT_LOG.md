@@ -115,12 +115,11 @@ Before extraction on Mouse, verify the transferred archive against the release S
 ## Next decisions after playtesting
 
 1. Does watching the residents feel fun without intervening?
-2. Should character creation or richer conversations come first?
-3. After Mouse deployment, should character creation or richer memories come first?
+2. Do the new personalities read clearly on a phone, or do intents and voices need more room?
+3. What comes after 0.5: interiors, town editing, or the LLM dialogue review?
 
 ## Parking lot — not promised yet
 
-- Character creator and outfits
 - Shared Mac/iPhone town
 - Generative dialogue
 - Interior rooms
@@ -134,3 +133,44 @@ Before extraction on Mouse, verify the transferred archive against the release S
 - Added first-run owner setup, hashed PIN authentication, resident-linked player accounts, session ownership enforcement, and a lightweight character appearance creator.
 - Preserved the version 2 town-state schema, autonomous life engine, histories, families, learning, backups, snapshots, and crash recovery.
 - Added account and ownership integration tests alongside the complete 0.3.2 regression suite.
+
+# Version 0.5.0 — independent review fixes and resident minds
+
+An independent review of 0.4.0 found and reproduced these problems. All are fixed, with regression tests:
+
+- **Accounts:**
+  - After login, tap-to-move did nothing until the page was reloaded.
+  - "Switch player" left the open socket with the previous player's control.
+  - PINs could be guessed in minutes, and each guess stalled the simulation.
+  - Before setup, anyone could steer anyone and claim the owner role.
+  - A damaged accounts file reopened first-time setup.
+- **Life engine:**
+  - Runtime promotions were wiped on restart.
+  - Residents forgot their own history.
+  - Goal text nested forever.
+  - Every mood ended at "delighted".
+  - Nova had a duplicate promotion and worked as a nine-year-old.
+  - Finn was "promoted" into retirement.
+  - Ages never advanced.
+  - Offline events were all stamped in the last few minutes.
+- **Persistence:**
+  - A crash handler could save half-updated state over the good save.
+  - Rapid backups covered only about three minutes.
+  - Snapshots were never used for recovery.
+- **Client:**
+  - The appearance creator had no effect.
+  - The clock ran at the wrong speed on 120Hz screens.
+  - Movement was choppy, and the panels were rebuilt every second.
+  - The map image was 4 MB.
+  - The service worker cached error pages.
+
+New in 0.5:
+
+- **Resident minds** (`lib/mind.js`): personality traits, personal sleep and weekly routines, utility-based place choice with visible reasons, interest-based activities, conversations in each resident's own voice, and mild child-safe disagreements. See `LIFE_ENGINE.md`.
+- **Modules:** the code is split into `lib/` modules and `shared/world.js`.
+- **Network:** clients get per-tick changes instead of the full state every second.
+- **Server hardening:** the WebSocket Origin is checked and security headers are set.
+- **Accounts:** owner PIN reset and player removal; sessions persist across restarts.
+- **Tooling:** ESLint, `node:test` suites, and a launchd template.
+
+Save schema 3 migrates 0.2 through 0.4 saves in place.

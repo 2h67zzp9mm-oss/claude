@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: replace the three ALL-CAPS placeholders before installing. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.livingtown.server</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/ABSOLUTE/PATH/TO/node</string>
+    <string>server.js</string>
+  </array>
+  <key>WorkingDirectory</key><string>/ABSOLUTE/PATH/TO/living-town</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOST</key><string>MOUSE_TAILSCALE_IP</string>
+    <key>PORT</key><string>4310</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>/tmp/living-town.log</string>
+  <key>StandardErrorPath</key><string>/tmp/living-town.log</string>
+</dict>
+</plist>

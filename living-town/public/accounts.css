@@ -1,1 +1,153 @@
-.player-gate{position:absolute;z-index:100;inset:0;display:grid;place-items:center;padding:20px;background:rgba(5,12,22,.78);backdrop-filter:blur(14px)}.gate-card{width:100%;max-width:360px;padding:23px;border:1px solid rgba(255,255,255,.15);border-radius:25px;background:linear-gradient(145deg,#213b58,#0e1b2d);box-shadow:0 25px 90px #000b;text-align:center}.gate-card h2,.gate-card h3{margin:7px 0 12px}.gate-copy{margin:0 0 15px;color:#b9cad8;font-size:.8rem;line-height:1.45}.gate-card label{display:grid;gap:6px;margin:11px 0;text-align:left;color:#b9cad8;font-size:.72rem}.gate-card input,.gate-card select{width:100%;min-height:45px;border:1px solid #ffffff24;border-radius:12px;background:#081524;color:white;padding:9px 12px;font:inherit}.player-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:18px}.player-card{display:grid;place-items:center;gap:4px;min-height:125px;border:1px solid #ffffff20;border-radius:18px;background:#ffffff08}.player-card span,.login-avatar{display:grid;place-items:center;width:52px;height:52px;margin:auto;border-radius:17px;background:#ffd166;color:#172033;font-size:1.5rem;font-weight:900}.player-card small{color:#9fb3c5;text-transform:capitalize}.login-avatar{margin:14px auto 8px}.gate-error{min-height:18px;margin:10px 0 0;color:#ff8d8d;font-size:.72rem}.back-button,.soft-button,.text-button{border:0;background:transparent;color:#ffd166;padding:9px}.back-button{display:block;padding-left:0}.soft-button{width:100%;margin-top:9px;border:1px solid #ffffff22;border-radius:12px;color:white}.creator-form{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.creator-form label:nth-child(-n+3),.creator-form .wide-button{grid-column:1/-1}
+.player-gate {
+  position: absolute;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 12, 22, 0.78);
+  backdrop-filter: blur(14px);
+}
+.gate-card {
+  width: 100%;
+  max-width: 360px;
+  padding: 23px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 25px;
+  background: linear-gradient(145deg, #213b58, #0e1b2d);
+  box-shadow: 0 25px 90px #000b;
+  text-align: center;
+}
+.gate-card h2,
+.gate-card h3 {
+  margin: 7px 0 12px;
+}
+.gate-copy {
+  margin: 0 0 15px;
+  color: #b9cad8;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.gate-card label {
+  display: grid;
+  gap: 6px;
+  margin: 11px 0;
+  text-align: left;
+  color: #b9cad8;
+  font-size: 0.72rem;
+}
+.gate-card input,
+.gate-card select {
+  width: 100%;
+  min-height: 45px;
+  border: 1px solid #ffffff24;
+  border-radius: 12px;
+  background: #081524;
+  color: white;
+  padding: 9px 12px;
+  font: inherit;
+}
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+.player-card {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  min-height: 125px;
+  border: 1px solid #ffffff20;
+  border-radius: 18px;
+  background: #ffffff08;
+}
+.player-card span,
+.login-avatar {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: auto;
+  border-radius: 17px;
+  background: #ffd166;
+  color: #172033;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+.player-card small {
+  color: #9fb3c5;
+  text-transform: capitalize;
+}
+.login-avatar {
+  margin: 14px auto 8px;
+}
+.gate-error {
+  min-height: 18px;
+  margin: 10px 0 0;
+  color: #ff8d8d;
+  font-size: 0.72rem;
+}
+.back-button,
+.soft-button,
+.text-button {
+  border: 0;
+  background: transparent;
+  color: #ffd166;
+  padding: 9px;
+}
+.back-button {
+  display: block;
+  padding-left: 0;
+}
+.soft-button {
+  width: 100%;
+  margin-top: 9px;
+  border: 1px solid #ffffff22;
+  border-radius: 12px;
+  color: white;
+}
+.creator-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10px;
+}
+.creator-form label:nth-child(-n + 3),
+.creator-form .wide-button {
+  grid-column: 1/-1;
+}
+
+.intent {
+  margin: 3px 0 0;
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.panel-note {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.player-admin {
+  list-style: none;
+  margin: 14px 0;
+  padding: 0;
+  text-align: left;
+  font-size: 0.78rem;
+}
+.player-admin li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.player-admin span {
+  display: flex;
+  gap: 4px;
+}
+.text-button.danger {
+  color: var(--danger);
+}

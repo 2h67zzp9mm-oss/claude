@@ -1,16 +1,16 @@
 "use strict";
 /**
- * Living Town — shared server-hosted world.
+ * Living Town — one shared, always-running world.
  *
- * Runs one continuous simulation on the server (intended to run on Mouse),
- * ticking in real time whether or not anyone is connected. Any device on
- * the tailnet (Olive's phone, Sean's laptop, a TV) connects to the SAME
- * running world over WebSocket instead of each getting its own
- * localStorage copy.
+ * The server owns the canonical simulation and ticks once per real second
+ * whether or not anyone is connected. Browsers connect over WebSocket and
+ * all see the same residents. See README.md for deployment.
  *
- * This ports the exact simulation logic from the browser prototype
- * (residents, schedules, needs, movement, social encounters, memories,
- * catch-up) to run server-side, with JSON-file persistence.
+ *   lib/mind.js         personality-driven decisions and conversations
+ *   lib/life.js         histories, careers, goals, moods, experiences
+ *   lib/persistence.js  lock, atomic saves, backups, recovery
+ *   lib/auth.js         player accounts, PINs, sessions
+ *   shared/world.js     places and residents shared with the browser
  */
 
 const express = require("express");
@@ -19,371 +19,140 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const {
-  hydrateLifeState,
-  runAutonomousExperience,
-  runOfflineLife,
-  shareKnowledge
-} = require("./life");
 
-const PORT = process.env.PORT || 4310;
+const world = require("./shared/world");
+const life = require("./lib/life");
+const mind = require("./lib/mind");
+const { createStore } = require("./lib/persistence");
+const { createAuth } = require("./lib/auth");
+
+const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, nearestPlace } = world;
+
+const PORT = Number(process.env.PORT) || 4310;
 const HOST = process.env.HOST || "127.0.0.1";
-const DATA_DIR = process.env.LIVING_TOWN_DATA_DIR
-  ? path.resolve(process.env.LIVING_TOWN_DATA_DIR)
-  : path.join(__dirname, "data");
-const SAVE_FILE = path.join(DATA_DIR, "town-state.json");
-const BACKUP_DIR = path.join(DATA_DIR, "backups");
-const SNAPSHOT_DIR = path.join(DATA_DIR, "snapshots");
-const LOCK_FILE = path.join(DATA_DIR, "server.lock");
-const ACCOUNT_FILE = path.join(DATA_DIR, "player-accounts.json");
-const VERSION = 2;
-const TICK_MS = 1000; // one server tick per real second
+const DATA_DIR = process.env.LIVING_TOWN_DATA_DIR ? path.resolve(process.env.LIVING_TOWN_DATA_DIR) : path.join(__dirname, "data");
+const SCHEMA_VERSION = 3;
+const TICK_MS = 1000;
 const AUTOSAVE_MS = 10_000;
-const MAX_BACKUPS = 20;
-const SNAPSHOT_MS = Math.max(1000, Number(process.env.LIVING_TOWN_SNAPSHOT_MS) || 60 * 60_000);
-const MAX_SNAPSHOTS = 168;
-const LOCK_STALE_MS = 20_000;
-const LOCK_HEARTBEAT_MS = 5_000;
 const MAX_MESSAGE_BYTES = 1024;
-const lockToken = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const MAX_EVENTS = 200;
+const INSPECT_MIN_INTERVAL_MS = 200;
 
-function readAccounts() {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(ACCOUNT_FILE, "utf8"));
-    if (Array.isArray(parsed.profiles)) return parsed;
-  } catch {}
-  return { version: 1, profiles: [] };
-}
-function saveAccounts() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const temp = `${ACCOUNT_FILE}.tmp-${process.pid}`;
-  fs.writeFileSync(temp, JSON.stringify(accounts, null, 2));
-  fs.renameSync(temp, ACCOUNT_FILE);
-}
-function pinDigest(pin, salt) { return crypto.scryptSync(String(pin), salt, 32).toString("hex"); }
-function safeProfile(profile) {
-  const { pinHash, pinSalt, ...safe } = profile;
-  return safe;
-}
-function cookies(req) {
-  return Object.fromEntries(String(req.headers.cookie || "").split(";").map(part => part.trim().split("=")).filter(pair => pair.length === 2));
-}
-function signedInProfile(req) {
-  const session = sessions.get(cookies(req).living_town_session);
-  return session ? accounts.profiles.find(profile => profile.id === session.profileId) : null;
-}
-function newSession(profile) {
-  const token = crypto.randomBytes(24).toString("hex");
-  sessions.set(token, { profileId: profile.id, createdAt: Date.now() });
-  return token;
-}
-let accounts = readAccounts();
-const sessions = new Map();
-
-// --- Single-writer guard ---
-// Only one process should ever write SAVE_FILE. A stale lock (crash, kill -9)
-// is detected by age, not just presence, so a genuine restart isn't blocked
-// forever by a leftover file.
-function acquireLock() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  while (true) {
-    try {
-      const fd = fs.openSync(LOCK_FILE, "wx");
-      fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, token: lockToken, startedAt: Date.now() }));
-      fs.closeSync(fd);
-      break;
-    } catch (err) {
-      if (err.code !== "EEXIST") throw err;
-      const age = Date.now() - fs.statSync(LOCK_FILE).mtimeMs;
-      if (age < LOCK_STALE_MS) {
-        console.error(`Refusing to start: another Living Town server looks like it's already running (lock is ${Math.round(age / 1000)}s old).`);
-        process.exit(1);
-      }
-      console.warn("Found a stale lock file (server likely crashed) — recovering it.");
-      try { fs.unlinkSync(LOCK_FILE); } catch (unlinkError) {
-        if (unlinkError.code !== "ENOENT") throw unlinkError;
-      }
-    }
-  }
-  lockHeartbeat = setInterval(() => {
-    try {
-      const lock = JSON.parse(fs.readFileSync(LOCK_FILE, "utf8"));
-      if (lock.token !== lockToken) {
-        console.error("Lost the server lock to another process; exiting without saving.");
-        process.exit(1);
-      }
-      fs.utimesSync(LOCK_FILE, new Date(), new Date());
-    } catch {
-      console.error("The server lock disappeared; exiting without saving.");
-      process.exit(1);
-    }
-  }, LOCK_HEARTBEAT_MS);
-}
-function releaseLock() {
-  clearInterval(lockHeartbeat);
-  try {
-    const lock = JSON.parse(fs.readFileSync(LOCK_FILE, "utf8"));
-    if (lock.token === lockToken) fs.unlinkSync(LOCK_FILE);
-  } catch {}
-}
-let lockHeartbeat = null;
-
-const places = {
-  square: { name: "Town Square", x: 480, y: 320 },
-  cafe: { name: "Moonbeam Cafe", x: 735, y: 160 },
-  park: { name: "Juniper Park", x: 215, y: 190 },
-  market: { name: "Corner Market", x: 730, y: 475 },
-  workshop: { name: "Workshop", x: 225, y: 480 },
-  homes: { name: "Maple Apartments", x: 470, y: 520 }
-};
-
-const residentSeeds = [
-  ["olive", "Olive", "O", "#a98cff", "curious", 430, 500],
-  ["hazel", "Hazel", "H", "#f28482", "adventurous", 455, 520],
-  ["dad", "Sean", "S", "#4fc3a1", "helpful", 505, 505],
-  ["milo", "Milo", "M", "#ff9966", "social", 720, 190],
-  ["zara", "Zara", "Z", "#ff6f91", "creative", 205, 210],
-  ["finn", "Finn", "F", "#64b5f6", "quiet", 245, 455],
-  ["nova", "Nova", "N", "#ffd166", "playful", 500, 300]
-];
-
-const schedules = {
-  olive: [[0, "homes"], [7, "square"], [9, "park"], [12, "cafe"], [14, "workshop"], [18, "square"], [21, "homes"]],
-  hazel: [[0, "homes"], [7, "park"], [10, "square"], [12, "cafe"], [14, "park"], [18, "square"], [20, "homes"]],
-  dad: [[0, "homes"], [6, "cafe"], [8, "workshop"], [12, "market"], [15, "workshop"], [18, "square"], [22, "homes"]],
-  milo: [[0, "homes"], [8, "cafe"], [11, "square"], [14, "market"], [17, "park"], [22, "homes"]],
-  zara: [[0, "homes"], [7, "park"], [10, "workshop"], [13, "cafe"], [16, "square"], [21, "homes"]],
-  finn: [[0, "homes"], [7, "workshop"], [12, "park"], [15, "market"], [19, "square"], [21, "homes"]],
-  nova: [[0, "homes"], [8, "square"], [10, "park"], [13, "cafe"], [16, "square"], [20, "homes"]]
-};
+const store = createStore({
+  dataDir: DATA_DIR,
+  backupIntervalMs: Math.max(1000, Number(process.env.LIVING_TOWN_BACKUP_MS) || 60_000),
+  maxBackups: 30,
+  snapshotIntervalMs: Math.max(1000, Number(process.env.LIVING_TOWN_SNAPSHOT_MS) || 3_600_000),
+  maxSnapshots: 168
+});
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function randomBond() { return 15 + Math.floor(Math.random() * 16); }
 
-function freshState() {
+// --- State creation and migration ---
+
+function makeResident(seed, others = []) {
   const relationships = {};
-  residentSeeds.forEach(([id]) => {
-    relationships[id] = {};
-    residentSeeds.forEach(([other]) => { if (id !== other) relationships[id][other] = 15 + Math.floor(Math.random() * 16); });
-  });
+  for (const other of others) relationships[other.id] = randomBond();
   return {
-    version: VERSION,
-    lastRealTime: Date.now(),
-    simTime: Date.now(),
-    eventId: 1,
-    events: [{ id: 0, at: Date.now(), text: "The town opened its doors for the first time." }],
-    residents: residentSeeds.map(([id, name, initial, color, trait, x, y]) => ({
-      id, name, initial, color, trait, x, y, targetX: x, targetY: y,
-      place: "homes", activity: "settling in", needs: { energy: 82, hunger: 78, social: 72, fun: 75 },
-      memories: [], relationships: relationships[id], lastTalk: 0
-    }))
+    id: seed.id, name: seed.name, color: seed.color, x: seed.x, y: seed.y, targetX: seed.x, targetY: seed.y,
+    place: "homes", activity: "settling in", needs: { ...DEFAULT_NEEDS }, memories: [], relationships, lastTalk: 0
   };
 }
 
-function makeResident(seed, existingResidents = []) {
-  const [id, name, initial, color, trait, x, y] = seed;
-  const relationships = {};
-  for (const other of existingResidents) relationships[other.id] = 15 + Math.floor(Math.random() * 16);
-  return {
-    id, name, initial, color, trait, x, y, targetX: x, targetY: y,
-    place: "homes", activity: "settling in", needs: { energy: 82, hunger: 78, social: 72, fun: 75 },
-    memories: [], relationships, lastTalk: 0
-  };
+function freshState(now) {
+  const residents = [];
+  for (const seed of residentSeeds) {
+    const resident = makeResident(seed, residents);
+    for (const other of residents) other.relationships[resident.id] = randomBond();
+    residents.push(resident);
+  }
+  return { version: SCHEMA_VERSION, lastRealTime: now, eventId: 1, events: [{ id: 0, at: now, text: "The town opened its doors for the first time." }], residents };
 }
+
+function finiteOr(value, fallback) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 
 function normalizeResident(resident) {
-  const defaultNeeds = { energy: 82, hunger: 78, social: 72, fun: 75 };
   resident.needs = resident.needs && typeof resident.needs === "object" ? resident.needs : {};
-  for (const [key, fallback] of Object.entries(defaultNeeds)) {
-    if (!Number.isFinite(Number(resident.needs[key]))) resident.needs[key] = fallback;
-  }
+  for (const [key, fallback] of Object.entries(DEFAULT_NEEDS)) resident.needs[key] = clamp(finiteOr(resident.needs[key], fallback), 0, 100);
   resident.relationships = resident.relationships && typeof resident.relationships === "object" ? resident.relationships : {};
   resident.memories = Array.isArray(resident.memories) ? resident.memories : [];
   resident.knowledge = Array.isArray(resident.knowledge) ? resident.knowledge : [];
   resident.experiences = Array.isArray(resident.experiences) ? resident.experiences : [];
-  resident.x = Number.isFinite(Number(resident.x)) ? Number(resident.x) : places.homes.x;
-  resident.y = Number.isFinite(Number(resident.y)) ? Number(resident.y) : places.homes.y;
-  resident.targetX = Number.isFinite(Number(resident.targetX)) ? Number(resident.targetX) : resident.x;
-  resident.targetY = Number.isFinite(Number(resident.targetY)) ? Number(resident.targetY) : resident.y;
-  if (!places[resident.place]) resident.place = "homes";
+  resident.x = clamp(finiteOr(resident.x, places.homes.x), MAP.margin, MAP.width - MAP.margin);
+  resident.y = clamp(finiteOr(resident.y, places.homes.y), MAP.margin, MAP.height - MAP.margin);
+  resident.targetX = finiteOr(resident.targetX, resident.x);
+  resident.targetY = finiteOr(resident.targetY, resident.y);
+  if (!places[resident.place]) resident.place = nearestPlace(resident.x, resident.y).key;
   if (typeof resident.activity !== "string") resident.activity = "settling in";
-  if (!Number.isFinite(Number(resident.lastTalk))) resident.lastTalk = 0;
+  if (typeof resident.color !== "string") resident.color = "#8899aa";
+  resident.lastTalk = finiteOr(resident.lastTalk, 0);
+  if (!Number.isInteger(resident.lifeRevision)) resident.lifeRevision = 1;
+  delete resident.initial;
+  delete resident.trait;
   return resident;
 }
 
-// Forward-compatible content migration. Older 0.2.x saves did not contain
-// Hazel and used older display labels for Sean. Add/rename family residents without
-// discarding positions, needs, memories, relationships, or event history.
-function ensureCoreFamily(parsed) {
+function migrate(parsed, now) {
   if (!Array.isArray(parsed.events)) parsed.events = [];
   if (!Number.isInteger(parsed.eventId)) parsed.eventId = parsed.events.reduce((max, event) => Math.max(max, Number(event.id) || 0), 0) + 1;
-  const seedsById = new Map(residentSeeds.map(seed => [seed[0], seed]));
+  const seedsById = new Map(residentSeeds.map(seed => [seed.id, seed]));
   for (const resident of parsed.residents) {
     normalizeResident(resident);
     const seed = seedsById.get(resident.id);
-    if (!seed) continue;
-    resident.name = seed[1];
-    resident.initial = seed[2];
-    if (!resident.relationships || typeof resident.relationships !== "object") resident.relationships = {};
+    if (seed) resident.name = seed.name;
   }
   for (const seed of residentSeeds) {
-    if (parsed.residents.some(resident => resident.id === seed[0])) continue;
+    if (parsed.residents.some(resident => resident.id === seed.id)) continue;
     const newcomer = makeResident(seed, parsed.residents);
-    for (const resident of parsed.residents) {
-      if (resident.id !== newcomer.id && resident.relationships[newcomer.id] === undefined) {
-        resident.relationships[newcomer.id] = 15 + Math.floor(Math.random() * 16);
-      }
-    }
+    for (const resident of parsed.residents) if (resident.relationships[newcomer.id] === undefined) resident.relationships[newcomer.id] = randomBond();
     parsed.residents.push(newcomer);
-    parsed.events.unshift({ id: parsed.eventId++, at: Date.now(), text: `${newcomer.name} moved into town.` });
+    parsed.events.unshift({ id: parsed.eventId++, at: now, text: `${newcomer.name} moved into town.` });
   }
+  delete parsed.controllers;
+  delete parsed.simTime;
+  life.hydrateLifeState(parsed, now);
+  for (const resident of parsed.residents) mind.ensureMind(resident);
+  if (!parsed.familyBondsSeeded) { mind.seedFamilyBonds(parsed); parsed.familyBondsSeeded = true; }
+  parsed.version = SCHEMA_VERSION;
   return parsed;
 }
 
-function listBackupsNewestFirst() {
-  if (!fs.existsSync(BACKUP_DIR)) return [];
-  return fs.readdirSync(BACKUP_DIR)
-    .filter(f => f.startsWith("town-state.") && f.endsWith(".json"))
-    .sort()
-    .reverse()
-    .map(f => path.join(BACKUP_DIR, f));
+// --- Simulation ---
+
+store.acquireLock(() => process.exit(1));
+
+let auth;
+try {
+  auth = createAuth({ dataDir: DATA_DIR });
+} catch (err) {
+  console.error(err.message);
+  store.releaseLock();
+  process.exit(1);
 }
 
-// Tries the primary save file, then falls back to progressively older
-// backups if the primary is missing/corrupt/wrong-version, rather than
-// silently starting over with a fresh town on the first hiccup.
-function loadState() {
-  const candidates = [SAVE_FILE, ...listBackupsNewestFirst()];
-  for (const file of candidates) {
-    try {
-      if (!fs.existsSync(file)) continue;
-      const raw = fs.readFileSync(file, "utf8");
-      const parsed = JSON.parse(raw);
-      if (![1, VERSION].includes(parsed.version)) {
-        console.warn(`${file}: unsupported schema version ${parsed.version}, skipping.`);
-        continue;
-      }
-      if (!Array.isArray(parsed.residents) || parsed.residents.length === 0) {
-        console.warn(`${file}: missing/empty residents array, skipping.`);
-        continue;
-      }
-      if (file !== SAVE_FILE) console.warn(`Recovered from backup: ${file} (primary save was missing or unreadable).`);
-      parsed.version = VERSION;
-      return ensureCoreFamily(parsed);
-    } catch (err) {
-      console.warn(`${file}: failed to load (${err.message}), trying next candidate.`);
-    }
-  }
-  console.warn("No usable save or backup found — starting a fresh town.");
-  return freshState();
-}
+const bootTime = Date.now();
+let state = migrate(store.load([1, 2, SCHEMA_VERSION]) || (console.warn("No usable save or backup found — starting a fresh town."), freshState(bootTime)), bootTime);
+const controllers = new Map(); // ws -> residentId
 
-// Atomic write: write to a temp file in the same directory, then rename
-// over the target. rename() is atomic on the same filesystem, so a reader
-// (or a crash mid-write) never sees a half-written town-state.json.
-function atomicWrite(targetPath, contents) {
-  const tmpPath = `${targetPath}.tmp-${process.pid}`;
-  const fd = fs.openSync(tmpPath, "w");
-  fs.writeFileSync(fd, contents);
-  fs.fsyncSync(fd);
-  fs.closeSync(fd);
-  fs.renameSync(tmpPath, targetPath);
-  try {
-    const dirFd = fs.openSync(path.dirname(targetPath), "r");
-    fs.fsyncSync(dirFd);
-    fs.closeSync(dirFd);
-  } catch {}
-}
-
-function rotateBackups() {
-  const files = listBackupsNewestFirst();
-  for (const file of files.slice(MAX_BACKUPS)) {
-    try { fs.unlinkSync(file); } catch {}
-  }
-}
-
-function rotateSnapshots() {
-  if (!fs.existsSync(SNAPSHOT_DIR)) return;
-  const files = fs.readdirSync(SNAPSHOT_DIR)
-    .filter(file => file.startsWith("town-state.") && file.endsWith(".json"))
-    .sort()
-    .reverse();
-  for (const file of files.slice(MAX_SNAPSHOTS)) {
-    try { fs.unlinkSync(path.join(SNAPSHOT_DIR, file)); } catch {}
-  }
-}
-
-let lastSnapshotAt = 0;
-
-function saveState() {
-  const now = Date.now();
-  state.lastRealTime = now;
-  state.simTime = simNow.getTime();
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  const json = JSON.stringify(state, null, 2);
-
-  atomicWrite(SAVE_FILE, json);
-
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  atomicWrite(path.join(BACKUP_DIR, `town-state.${stamp}.json`), json);
-  rotateBackups();
-
-  if (now - lastSnapshotAt >= SNAPSHOT_MS) {
-    fs.mkdirSync(SNAPSHOT_DIR, { recursive: true });
-    atomicWrite(path.join(SNAPSHOT_DIR, `town-state.${stamp}.json`), json);
-    rotateSnapshots();
-    lastSnapshotAt = now;
-  }
-}
-
-acquireLock();
-let state = loadState();
-delete state.controllers;
-hydrateLifeState(state, Date.now());
-let simNow = new Date(state.simTime || Date.now());
-const controllers = new Map();
-
-function addEvent(text, at = simNow.getTime()) {
+function addEvent(text, at = Date.now()) {
   state.events.unshift({ id: state.eventId++, at, text });
-  state.events = state.events.slice(0, 200);
+  state.events = state.events.slice(0, MAX_EVENTS);
 }
 
-function scheduledPlace(id, date) {
-  const hour = date.getHours() + date.getMinutes() / 60;
-  let place = "homes";
-  const schedule = schedules[id] || [[0, "homes"]];
-  for (const [start, key] of schedule) if (hour >= start) place = key;
-  return place;
-}
+function placeName(resident) { return places[resident.place]?.name || "the street"; }
 
-function setDestination(r, placeKey) {
-  const p = places[placeKey];
-  r.place = placeKey;
-  r.targetX = p.x + (Math.random() - 0.5) * 78;
-  r.targetY = p.y + (Math.random() - 0.5) * 64;
-}
-
-function applyPlaceBenefit(r, dtHours) {
-  const gain = dtHours * 9;
-  const preserveActivity = Number(r.activityUntil || 0) > simNow.getTime();
-  if (r.place === "homes") { r.needs.energy = clamp(r.needs.energy + gain * 1.8, 0, 100); if (!preserveActivity) r.activity = "resting at home"; }
-  if (r.place === "cafe") { r.needs.hunger = clamp(r.needs.hunger + gain * 2.2, 0, 100); if (!preserveActivity) r.activity = "having something to eat"; }
-  if (r.place === "park") { r.needs.fun = clamp(r.needs.fun + gain * 1.5, 0, 100); if (!preserveActivity) r.activity = "enjoying the park"; }
-  if (r.place === "square") { r.needs.social = clamp(r.needs.social + gain, 0, 100); if (!preserveActivity) r.activity = "seeing who is around"; }
-  if (r.place === "market") { r.needs.hunger = clamp(r.needs.hunger + gain * 0.7, 0, 100); if (!preserveActivity) r.activity = "shopping at the market"; }
-  if (r.place === "workshop") { r.needs.fun = clamp(r.needs.fun + gain * 0.8, 0, 100); if (!preserveActivity) r.activity = "working on a small project"; }
+function setDestination(resident, placeKey) {
+  const place = places[placeKey];
+  resident.place = placeKey;
+  resident.targetX = place.x + (Math.random() - 0.5) * 78;
+  resident.targetY = place.y + (Math.random() - 0.5) * 64;
+  resident.arrived = false;
 }
 
 function isControlled(id) {
-  return [...controllers.values()].includes(id);
-}
-
-function desiredDestination(r) {
-  if (r.needs.hunger < 28) return "cafe";
-  if (r.needs.energy < 25) return "homes";
-  if (r.needs.fun < 25) return "park";
-  if (r.needs.social < 25) return "square";
-  return scheduledPlace(r.id, simNow);
+  for (const residentId of controllers.values()) if (residentId === id) return true;
+  return false;
 }
 
 function releaseController(ws) {
@@ -391,281 +160,388 @@ function releaseController(ws) {
   controllers.delete(ws);
   if (!residentId || isControlled(residentId)) return;
   const resident = state.residents.find(r => r.id === residentId);
-  if (resident) setDestination(resident, desiredDestination(resident));
+  if (resident) { resident.mind.commitUntil = 0; resident.intent = "back to their own plans"; }
 }
 
-function updateResident(r, dtHours, elapsedRealSeconds) {
-  r.needs.hunger = clamp(r.needs.hunger - dtHours * 3.5, 0, 100);
-  r.needs.energy = clamp(r.needs.energy - dtHours * 2.1, 0, 100);
-  r.needs.social = clamp(r.needs.social - dtHours * 1.7, 0, 100);
-  r.needs.fun = clamp(r.needs.fun - dtHours * 1.3, 0, 100);
+function updateResident(r, dtHours, elapsedSeconds, date) {
+  const rates = mind.decayRates(r);
+  for (const [need, rate] of Object.entries(rates)) r.needs[need] = clamp(r.needs[need] - rate * dtHours, 0, 100);
+  life.tickMood(r, dtHours, mind.traitsFor(r.id).neuroticism);
 
   const controlled = isControlled(r.id);
-  let destination = r.place;
-  if (!controlled) {
-    destination = desiredDestination(r);
-    if (destination !== r.place) setDestination(r, destination);
+  if (controlled) {
+    r.asleep = false;
+    r.intent = "following a player's lead";
+  } else {
+    const destination = mind.decide(state, r, date);
+    if (destination) setDestination(r, destination);
+    // A resident who is "at" a place but physically elsewhere (fresh seed
+    // positions, a released player) walks there instead of teleporting or
+    // sleeping in the street.
+    const place = places[r.place];
+    if (place && Math.hypot(place.x - r.targetX, place.y - r.targetY) > PLACE_RADIUS) setDestination(r, r.place);
   }
 
   const dx = r.targetX - r.x;
   const dy = r.targetY - r.y;
   const dist = Math.hypot(dx, dy);
   if (dist > 2) {
-    const speed = Math.min(dist, 44 * elapsedRealSeconds);
-    r.x += (dx / dist) * speed;
-    r.y += (dy / dist) * speed;
-    r.activity = `walking to ${places[r.place]?.name || "somewhere"}`;
-  } else {
-    applyPlaceBenefit(r, dtHours);
+    const step = Math.min(dist, 44 * mind.mindFor(r.id).speed * elapsedSeconds);
+    r.x += (dx / dist) * step;
+    r.y += (dy / dist) * step;
+    r.asleep = false;
+    r.activity = controlled ? "heading where the player pointed" : `walking to ${placeName(r)}`;
+    return;
   }
-}
 
-function lowestNeedLabel(r) {
-  return Object.entries(r.needs).sort((a, b) => a[1] - b[1])[0][0];
-}
+  if (!r.arrived) {
+    r.arrived = true;
+    if (Number(r.activityUntil || 0) <= date.getTime()) mind.onArrive(r, r.place, date);
+    if (controlled && !r.place) r.activity = "exploring the street";
+  }
 
-function recordConversation(a, b, quiet) {
-  const learnedByA = shareKnowledge(a, b, simNow.getTime());
-  const learnedByB = shareKnowledge(b, a, simNow.getTime());
-  const fallback = `${b.name} was feeling ${lowestNeedLabel(b)} today.`;
-  const fact = learnedByA?.text || fallback;
-  a.memories.unshift({ at: simNow.getTime(), about: b.id, text: learnedByA ? `${b.name} told me: ${fact}` : fact, type: "conversation" });
-  a.memories = a.memories.slice(0, 120);
-  b.memories.unshift({ at: simNow.getTime(), about: a.id, text: learnedByB ? `${a.name} told me: ${learnedByB.text}` : `${a.name} stopped to talk with me.`, type: "conversation" });
-  b.memories = b.memories.slice(0, 120);
-  a.relationships[b.id] = clamp((a.relationships[b.id] || 0) + 2, -100, 100);
-  b.relationships[a.id] = clamp((b.relationships[a.id] || 0) + 2, -100, 100);
-  a.needs.social = clamp(a.needs.social + 12, 0, 100);
-  b.needs.social = clamp(b.needs.social + 12, 0, 100);
-  a.lastTalk = b.lastTalk = simNow.getTime();
-  if (!quiet) addEvent(learnedByA
-    ? `${a.name} talked with ${b.name} at ${places[a.place].name} and learned: ${fact}`
-    : `${a.name} caught up with ${b.name} at ${places[a.place].name}.`);
-}
+  r.asleep = !controlled && r.place === "homes" && mind.isAsleepTime(r.id, date);
+  if (r.asleep) r.activity = "asleep";
 
-let lastSocialCheck = 0;
-function checkSocialEvents() {
-  const now = simNow.getTime();
-  for (let i = 0; i < state.residents.length; i++) {
-    for (let j = i + 1; j < state.residents.length; j++) {
-      const a = state.residents[i], b = state.residents[j];
-      if (Math.hypot(a.x - b.x, a.y - b.y) < 55 && now - a.lastTalk > 25 * 60_000 && Math.random() < 0.12) {
-        recordConversation(a, b, false);
-      }
+  const place = places[r.place];
+  if (place && Math.hypot(place.x - r.x, place.y - r.y) <= PLACE_RADIUS) {
+    for (const [need, rate] of Object.entries(place.needs)) {
+      const boost = r.asleep && need === "energy" ? 1.4 : 1;
+      r.needs[need] = clamp(r.needs[need] + rate * boost * dtHours, 0, 100);
     }
   }
 }
 
-// Catch-up: run once at startup, covering however long the server process
-// itself was down (Mouse rebooted, power blip, etc). While the process is
-// running, the tick loop below IS the real simulation — there's no separate
-// "pretend time passed" step needed, because time actually is passing.
-function catchUpOnBoot() {
-  const elapsedMs = Math.max(0, Date.now() - Number(state.lastRealTime || Date.now()));
-  const elapsedHours = Math.min(24 * 30, elapsedMs / 3_600_000); // cap at 30 days to avoid runaway math after long downtime
-  if (elapsedHours < 0.05) return;
-  simNow = new Date(); // catch-up events belong to the current restart, not the old saved clock
+let lastTick = Date.now();
+let lastSocialCheck = 0;
+let lastAutonomyCheck = 0;
+let lastBirthdayCheck = 0;
 
-  state.residents.forEach((r, index) => {
+function tick() {
+  const now = Date.now();
+  const elapsedSeconds = Math.min(5, Math.max(0, (now - lastTick) / 1000));
+  lastTick = now;
+  const date = new Date(now);
+  const dtHours = elapsedSeconds / 3600;
+  for (const resident of state.residents) updateResident(resident, dtHours, elapsedSeconds, date);
+
+  if (now - lastSocialCheck >= 15_000) {
+    lastSocialCheck = now;
+    for (const talk of mind.socialTick(state, now, placeName)) addEvent(talk.event, now);
+  }
+  if (now - lastAutonomyCheck >= 10_000) {
+    lastAutonomyCheck = now;
+    for (const resident of state.residents) {
+      if (resident.asleep || now < Number(resident.autonomy?.nextEventAt || 0)) continue;
+      const text = life.runAutonomousExperience(state, resident, now, false, mind.traitsFor(resident.id));
+      if (text) addEvent(text, now);
+    }
+  }
+  if (now - lastBirthdayCheck >= 60_000) {
+    lastBirthdayCheck = now;
+    for (const text of life.checkBirthdays(state, now)) addEvent(text, now);
+  }
+}
+
+// Catch-up after the server was down. While running, the tick loop is the
+// real simulation because real time is actually passing.
+function catchUpOnBoot(now) {
+  const elapsedMs = Math.max(0, now - Number(state.lastRealTime || now));
+  const elapsedHours = Math.min(24 * 30, elapsedMs / 3_600_000);
+  if (elapsedHours < 0.05) return;
+  const date = new Date(now);
+
+  const groups = new Map();
+  for (const r of state.residents) {
     r.needs.energy = clamp(r.needs.energy - elapsedHours * 0.8 + 8, 30, 100);
     r.needs.hunger = clamp(r.needs.hunger - elapsedHours * 1.1 + 10, 25, 100);
     r.needs.social = clamp(r.needs.social - elapsedHours * 0.55 + 6, 25, 100);
     r.needs.fun = clamp(r.needs.fun - elapsedHours * 0.45 + 5, 25, 100);
-    const placeKey = scheduledPlace(r.id, new Date());
-    const p = places[placeKey];
-    r.x = p.x + ((index % 3) - 1) * 22;
-    r.y = p.y + (Math.floor(index / 3) - 0.5) * 24;
-    r.targetX = r.x;
-    r.targetY = r.y;
+    r.mind.commitUntil = 0;
+    const placeKey = mind.decide(state, r, date) || r.place || "homes";
     r.place = placeKey;
-  });
+    if (!groups.has(placeKey)) groups.set(placeKey, []);
+    groups.get(placeKey).push(r);
+  }
+  for (const [placeKey, group] of groups) {
+    const p = places[placeKey];
+    group.forEach((r, index) => {
+      r.x = p.x + ((index % 3) - 1) * 26;
+      r.y = p.y + (Math.floor(index / 3) - 0.5) * 28;
+      r.targetX = r.x;
+      r.targetY = r.y;
+      r.arrived = false;
+    });
+  }
 
   const wholeHours = Math.floor(elapsedHours);
-  if (wholeHours >= 1) addEvent(`The server was offline. ${wholeHours} hour${wholeHours === 1 ? "" : "s"} passed while it was down.`);
-  if (elapsedHours >= 10) {
-    const a = state.residents[Math.floor(Math.random() * state.residents.length)];
-    const b = state.residents.filter(r => r.id !== a.id)[Math.floor(Math.random() * (state.residents.length - 1))];
-    recordConversation(a, b, true);
-  }
-  const offlineEventCount = Math.min(12, Math.floor(elapsedHours / 8));
-  runOfflineLife(state, elapsedHours, Date.now());
-  if (offlineEventCount > 0) addEvent(`While the server was down, each resident lived through ${offlineEventCount} personal experience${offlineEventCount === 1 ? "" : "s"}.`);
+  if (wholeHours >= 1) addEvent(`The server was offline. ${wholeHours} hour${wholeHours === 1 ? "" : "s"} passed while it was down.`, now);
+  const count = life.runOfflineLife(state, elapsedHours, now, mind.traitsFor);
+  if (count > 0) addEvent(`While the server was down, each resident lived through ${count} personal experience${count === 1 ? "" : "s"}.`, now);
 }
 
-let lastTick = Date.now();
-let lastAutonomyCheck = 0;
-function tick() {
-  const now = Date.now();
-  const elapsedRealSeconds = Math.min(5, (now - lastTick) / 1000); // cap in case of a hiccup
-  lastTick = now;
-  simNow = new Date(simNow.getTime() + elapsedRealSeconds * 1000);
-  const dtHours = elapsedRealSeconds / 3600;
-  state.residents.forEach(r => updateResident(r, dtHours, elapsedRealSeconds));
-  if (simNow.getTime() - lastSocialCheck > 15_000) { checkSocialEvents(); lastSocialCheck = simNow.getTime(); }
-  if (simNow.getTime() - lastAutonomyCheck > 10_000) {
-    for (const resident of state.residents) {
-      if (simNow.getTime() < Number(resident.autonomy?.nextEventAt || 0)) continue;
-      const text = runAutonomousExperience(state, resident, simNow.getTime(), false);
-      if (text) addEvent(text);
-    }
-    lastAutonomyCheck = simNow.getTime();
+catchUpOnBoot(bootTime);
+
+function saveState() {
+  state.lastRealTime = Date.now();
+  try {
+    store.save(state);
+  } catch (err) {
+    console.error("Save failed:", err.message);
+    if (!store.ownsLock()) process.exit(1);
   }
 }
 
-catchUpOnBoot();
+// --- Serialization for clients ---
 
-// --- HTTP + WebSocket wiring ---
+function publicMood(mood) { return mood ? { label: mood.label, valence: Math.round(mood.valence), stress: Math.round(mood.stress), reason: mood.reason } : null; }
 
-const app = express();
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.json());
-
-app.get("/api/auth/status", (req, res) => {
-  const me = signedInProfile(req);
-  res.json({ initialized: accounts.profiles.length > 0, profiles: accounts.profiles.map(safeProfile), me: me ? safeProfile(me) : null });
-});
-
-app.post("/api/auth/setup", (req, res) => {
-  if (accounts.profiles.length) return res.status(409).json({ error: "Town accounts are already configured." });
-  const pin = String(req.body?.pin || "");
-  if (!/^\d{4,6}$/.test(pin)) return res.status(400).json({ error: "Use a 4–6 digit PIN." });
-  const salt = crypto.randomBytes(16).toString("hex");
-  const owner = { id: "sean", name: "Sean", residentId: "dad", role: "owner", pinSalt: salt, pinHash: pinDigest(pin, salt), look: { hair: "bald", shirt: "#4fc3a1", accessory: "beard" } };
-  accounts.profiles.push(owner); saveAccounts();
-  const token = newSession(owner);
-  res.setHeader("Set-Cookie", `living_town_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000`);
-  res.json({ me: safeProfile(owner) });
-});
-
-app.post("/api/auth/login", (req, res) => {
-  const profile = accounts.profiles.find(item => item.id === req.body?.profileId);
-  const pin = String(req.body?.pin || "");
-  if (!profile || pinDigest(pin, profile.pinSalt) !== profile.pinHash) return res.status(401).json({ error: "Wrong PIN." });
-  const token = newSession(profile);
-  res.setHeader("Set-Cookie", `living_town_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000`);
-  res.json({ me: safeProfile(profile) });
-});
-
-app.post("/api/auth/logout", (req, res) => {
-  sessions.delete(cookies(req).living_town_session);
-  res.setHeader("Set-Cookie", "living_town_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0");
-  res.json({ ok: true });
-});
-
-app.post("/api/auth/profiles", (req, res) => {
-  const owner = signedInProfile(req);
-  if (!owner || owner.role !== "owner") return res.status(403).json({ error: "Owner access required." });
-  const name = String(req.body?.name || "").trim().slice(0, 24);
-  const residentId = String(req.body?.residentId || "");
-  const pin = String(req.body?.pin || "");
-  if (!name || !CONTROLLABLE_IDS.has(residentId) || !/^\d{4,6}$/.test(pin)) return res.status(400).json({ error: "Name, resident, and a 4–6 digit PIN are required." });
-  if (accounts.profiles.some(profile => profile.residentId === residentId)) return res.status(409).json({ error: "That resident already has a player." });
-  const salt = crypto.randomBytes(16).toString("hex");
-  const id = `${residentId}-${crypto.randomBytes(3).toString("hex")}`;
-  const allowedHair = new Set(["short", "long", "pigtails", "buns", "curls", "swoop", "bald"]);
-  const allowedAccessory = new Set(["none", "bow", "headband", "star", "glasses", "beard"]);
-  const look = { hair: allowedHair.has(req.body?.look?.hair) ? req.body.look.hair : "short", accessory: allowedAccessory.has(req.body?.look?.accessory) ? req.body.look.accessory : "none", shirt: /^#[0-9a-f]{6}$/i.test(req.body?.look?.shirt || "") ? req.body.look.shirt : "#64b5f6" };
-  const profile = { id, name, residentId, role: "player", pinSalt: salt, pinHash: pinDigest(pin, salt), look };
-  accounts.profiles.push(profile); saveAccounts();
-  res.status(201).json({ profile: safeProfile(profile) });
-});
-
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws", maxPayload: MAX_MESSAGE_BYTES });
-
-function lightweightState() {
+function residentSummary(r) {
   return {
-    ...state,
-    residents: state.residents.map(resident => ({
-      ...resident,
-      lifeHistory: undefined,
-      knowledge: undefined,
-      experiences: (resident.experiences || []).slice(0, 5),
-      memories: (resident.memories || []).slice(0, 5)
-    }))
+    id: r.id, name: r.name, color: r.color, x: r.x, y: r.y, targetX: r.targetX, targetY: r.targetY,
+    place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs: r.needs,
+    relationships: r.relationships, profile: r.profile, career: r.career, goals: r.goals, mood: publicMood(r.mood),
+    lifeRevision: r.lifeRevision, speech: r.speech || null, playable: PLAYABLE_IDS.includes(r.id),
+    experiences: (r.experiences || []).slice(0, 5), memories: (r.memories || []).slice(0, 5),
+    experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length
   };
 }
 
-function statePayload() {
-  return JSON.stringify({ type: "state", state: lightweightState(), simNow: simNow.getTime() });
+function residentDynamic(r) {
+  const needs = {};
+  for (const [key, value] of Object.entries(r.needs)) needs[key] = Math.round(value * 10) / 10;
+  return {
+    id: r.id, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
+    place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: publicMood(r.mood),
+    speech: r.speech && r.speech.until > Date.now() ? r.speech : null, lifeRevision: r.lifeRevision
+  };
 }
 
-function broadcastState() {
-  const payload = statePayload();
-  wss.clients.forEach(client => { if (client.readyState === 1) client.send(payload); });
+function residentDetail(r) {
+  return { ...residentSummary(r), lifeHistory: r.lifeHistory || [], knowledge: r.knowledge || [], experiences: r.experiences || [], memories: (r.memories || []).slice(0, 30) };
 }
 
-const CONTROLLABLE_IDS = new Set(state.residents.map(r => r.id));
+function fullStatePayload() {
+  return JSON.stringify({ type: "state", now: Date.now(), looks: auth.looks(), state: { events: state.events.slice(0, 50), residents: state.residents.map(residentSummary) } });
+}
 
-// Every field from a client is untrusted input (this is exposed to anyone
-// on the tailnet, and eventually to a 9-year-old tapping fast). Validate
-// shape, type, and range before touching shared state — a malformed or
-// hostile message should be dropped, never allowed to corrupt the town.
+const sentRevisions = new Map();
+let lastSentEventId = state.eventId;
+
+function tickPayload() {
+  const changed = [];
+  for (const r of state.residents) {
+    if (sentRevisions.get(r.id) !== r.lifeRevision) { changed.push(residentSummary(r)); sentRevisions.set(r.id, r.lifeRevision); }
+  }
+  const events = state.events.filter(event => event.id >= lastSentEventId).reverse();
+  lastSentEventId = state.eventId;
+  return JSON.stringify({ type: "tick", now: Date.now(), residents: state.residents.map(residentDynamic), changed, events });
+}
+
+// --- HTTP ---
+
+const app = express();
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  const host = String(req.headers.host || "").replace(/[^\w.:[\]-]/g, "");
+  res.setHeader("Content-Security-Policy", `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://${host} wss://${host}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  next();
+});
+
+// The service worker cache name is derived from the served files, so every
+// change to the client automatically invalidates old caches.
+const PUBLIC_DIR = path.join(__dirname, "public");
+const SHARED_DIR = path.join(__dirname, "shared");
+const assetVersion = (() => {
+  const hash = crypto.createHash("sha256");
+  for (const dir of [PUBLIC_DIR, SHARED_DIR]) {
+    const walk = folder => fs.readdirSync(folder, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).forEach(entry => {
+      const full = path.join(folder, entry.name);
+      if (entry.isDirectory()) walk(full); else hash.update(entry.name).update(fs.readFileSync(full));
+    });
+    walk(dir);
+  }
+  return hash.digest("hex").slice(0, 12);
+})();
+const swSource = fs.readFileSync(path.join(PUBLIC_DIR, "sw.js"), "utf8").replace("__ASSET_VERSION__", assetVersion);
+app.get("/sw.js", (req, res) => { res.type("application/javascript").setHeader("Cache-Control", "no-cache"); res.send(swSource); });
+app.use("/shared", express.static(SHARED_DIR));
+app.use(express.static(PUBLIC_DIR));
+app.use(express.json({ limit: "4kb" }));
+
+const route = handler => async (req, res) => {
+  try {
+    await handler(req, res);
+  } catch (err) {
+    if (err.status) {
+      if (err.retryAfter) res.setHeader("Retry-After", String(err.retryAfter));
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong on the server." });
+  }
+};
+const clientIp = req => req.socket.remoteAddress || "unknown";
+
+app.get("/api/auth/status", route((req, res) => res.json(auth.status(auth.tokenFromRequest(req)))));
+
+app.post("/api/auth/setup", route(async (req, res) => {
+  const { profile, token } = await auth.setup(req.body || {}, clientIp(req));
+  res.setHeader("Set-Cookie", auth.cookieFor(token));
+  res.json({ me: profile });
+}));
+
+app.post("/api/auth/login", route(async (req, res) => {
+  const { profile, token } = await auth.login(req.body || {}, clientIp(req));
+  res.setHeader("Set-Cookie", auth.cookieFor(token));
+  res.json({ me: profile });
+}));
+
+app.post("/api/auth/logout", route((req, res) => {
+  auth.logout(auth.tokenFromRequest(req));
+  res.setHeader("Set-Cookie", auth.clearCookie);
+  res.json({ ok: true });
+}));
+
+app.post("/api/auth/profiles", route(async (req, res) => {
+  const profile = await auth.createProfile(auth.tokenFromRequest(req), req.body);
+  broadcastLooks();
+  res.status(201).json({ profile });
+}));
+
+app.put("/api/auth/profiles/:id/pin", route(async (req, res) => {
+  await auth.resetPin(auth.tokenFromRequest(req), req.params.id, req.body?.pin);
+  res.json({ ok: true });
+}));
+
+app.put("/api/auth/profiles/:id/look", route((req, res) => {
+  const profile = auth.updateLook(auth.tokenFromRequest(req), req.params.id, req.body?.look);
+  broadcastLooks();
+  res.json({ profile });
+}));
+
+app.delete("/api/auth/profiles/:id", route((req, res) => {
+  auth.deleteProfile(auth.tokenFromRequest(req), req.params.id);
+  broadcastLooks();
+  res.json({ ok: true });
+}));
+
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed" || err.type === "entity.too.large") return res.status(400).json({ error: "Bad request." });
+  next(err);
+});
+
+// --- WebSocket ---
+
+const server = http.createServer(app);
+const wss = new WebSocketServer({
+  server,
+  path: "/ws",
+  maxPayload: MAX_MESSAGE_BYTES,
+  // Browsers always send Origin; reject pages from other sites.
+  verifyClient: ({ origin, req }) => {
+    if (!origin) return true;
+    try { return new URL(origin).host === req.headers.host; } catch { return false; }
+  }
+});
+
+function send(ws, payload) { if (ws.readyState === 1) ws.send(typeof payload === "string" ? payload : JSON.stringify(payload)); }
+
+function broadcast(payload) { wss.clients.forEach(client => send(client, payload)); }
+
+function broadcastLooks() { broadcast({ type: "looks", looks: auth.looks() }); }
+
+auth.onRevoke(hash => {
+  wss.clients.forEach(ws => {
+    if (ws.token && auth.hashToken(ws.token) === hash) {
+      releaseController(ws);
+      ws.close(4001, "signed out");
+    }
+  });
+});
+
 function validateClientMessage(raw) {
-  if (typeof raw !== "string" && !Buffer.isBuffer(raw)) return null;
+  if (!Buffer.isBuffer(raw) && typeof raw !== "string") return null;
   if (raw.length > MAX_MESSAGE_BYTES) return null;
   let msg;
   try { msg = JSON.parse(raw.toString()); } catch { return null; }
   if (!msg || typeof msg !== "object") return null;
-
   if (msg.type === "control") {
-    if (typeof msg.residentId !== "string" || !CONTROLLABLE_IDS.has(msg.residentId)) return null;
-    if (!["olive", "hazel", "dad"].includes(msg.residentId)) return null; // only family player characters are steerable
-    if (typeof msg.x !== "number" || typeof msg.y !== "number") return null;
+    if (typeof msg.residentId !== "string" || !PLAYABLE_IDS.includes(msg.residentId)) return null;
     if (!Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return null;
     return { type: "control", residentId: msg.residentId, x: msg.x, y: msg.y };
   }
-  if (msg.type === "release") {
-    return { type: "release" };
-  }
+  if (msg.type === "release") return { type: "release" };
   if (msg.type === "inspect") {
-    if (typeof msg.residentId !== "string" || !CONTROLLABLE_IDS.has(msg.residentId)) return null;
+    if (typeof msg.residentId !== "string" || msg.residentId.length > 64) return null;
     return { type: "inspect", residentId: msg.residentId };
   }
   return null;
 }
 
+const detailCache = new Map();
+function detailPayload(resident) {
+  const cached = detailCache.get(resident.id);
+  if (cached && cached.revision === resident.lifeRevision) return cached.json;
+  const json = JSON.stringify({ type: "resident-detail", resident: residentDetail(resident) });
+  detailCache.set(resident.id, { revision: resident.lifeRevision, json });
+  return json;
+}
+
+function handleControl(ws, msg) {
+  // Re-check the session on every command so logout, PIN resets, and
+  // removed players take effect immediately on already-open sockets.
+  const reject = reason => send(ws, { type: "control-rejected", residentId: msg.residentId, reason });
+  if (!auth.isInitialized()) return reject("Set up town accounts before playing.");
+  const profile = auth.profileForToken(ws.token);
+  if (!profile) return reject("Sign in to move a resident.");
+  if (profile.residentId !== msg.residentId) return reject("You can only move your own resident.");
+  const r = state.residents.find(item => item.id === msg.residentId);
+  if (!r) return reject("That resident isn't in town.");
+  controllers.set(ws, msg.residentId);
+  r.targetX = clamp(msg.x, MAP.margin, MAP.width - MAP.margin);
+  r.targetY = clamp(msg.y, MAP.margin, MAP.height - MAP.margin);
+  const near = nearestPlace(r.targetX, r.targetY);
+  r.place = near.dist <= PLACE_RADIUS ? near.key : null;
+  r.arrived = false;
+  r.asleep = false;
+}
+
 wss.on("connection", (ws, req) => {
-  ws.playerProfile = signedInProfile(req);
+  ws.token = auth.tokenFromRequest(req);
   ws.isAlive = true;
+  ws.lastInspect = 0;
   ws.on("pong", () => { ws.isAlive = true; });
-  ws.send(statePayload());
+  const me = auth.profileForToken(ws.token);
+  send(ws, { type: "hello", me: me ? auth.safeProfile(me) : null, initialized: auth.isInitialized() });
+  send(ws, fullStatePayload());
 
-  ws.on("message", (raw) => {
+  ws.on("message", raw => {
     const msg = validateClientMessage(raw);
-    if (!msg) return; // silently drop anything malformed/out of range
-
-    if (msg.type === "control") {
-      if (accounts.profiles.length && ws.playerProfile?.residentId !== msg.residentId) return;
-      // one browser "claims" a resident to steer; naive last-writer-wins,
-      // which is exactly the "fine at this scale" concurrency call from
-      // the architecture review — not a real conflict-resolution system.
-      controllers.set(ws, msg.residentId);
-      const r = state.residents.find(x => x.id === msg.residentId);
-      if (r) {
-        // Coordinates are clamped to the map, not rejected — a wild tap
-        // near an edge should still move the character, just constrained
-        // to valid ground, rather than silently doing nothing.
-        r.targetX = clamp(msg.x, 20, 960);
-        r.targetY = clamp(msg.y, 20, 640);
-        r.activity = "going where you pointed";
-      }
-    }
-    if (msg.type === "release") {
-      releaseController(ws);
-    }
-    if (msg.type === "inspect") {
-      const resident = state.residents.find(item => item.id === msg.residentId);
-      if (resident) ws.send(JSON.stringify({ type: "resident-detail", resident }));
+    if (!msg) return;
+    if (msg.type === "control") handleControl(ws, msg);
+    else if (msg.type === "release") releaseController(ws);
+    else if (msg.type === "inspect") {
+      // Rate-limited: a burst of requests collapses into the latest one.
+      ws.pendingInspect = msg.residentId;
+      if (ws.inspectTimer) return;
+      const serve = () => {
+        ws.inspectTimer = null;
+        ws.lastInspect = Date.now();
+        const resident = state.residents.find(item => item.id === ws.pendingInspect);
+        if (resident) send(ws, detailPayload(resident));
+      };
+      const wait = INSPECT_MIN_INTERVAL_MS - (Date.now() - ws.lastInspect);
+      if (wait <= 0) serve(); else ws.inspectTimer = setTimeout(serve, wait);
     }
   });
 
-  // Bug found in independent review: without this, a client that
-  // disconnects uncleanly (locked phone, dropped WiFi, killed tab that
-  // never fires beforeunload) left its resident permanently "controlled"
-  // and stuck ignoring its schedule forever. Releasing on close() fixes
-  // the common case; the ping sweep below terminates dead half-open sockets.
-  ws.on("close", () => releaseController(ws));
+  // Unclean disconnects (locked phone, dropped Wi-Fi) still fire close once
+  // the ping sweep below terminates the dead socket.
+  ws.on("close", () => { clearTimeout(ws.inspectTimer); releaseController(ws); });
 });
 
 const socketHealthInterval = setInterval(() => {
@@ -676,23 +552,32 @@ const socketHealthInterval = setInterval(() => {
   });
 }, 30_000);
 
-setInterval(() => { tick(); broadcastState(); }, TICK_MS);
-setInterval(saveState, AUTOSAVE_MS);
+const tickInterval = setInterval(() => { tick(); broadcast(tickPayload()); }, TICK_MS);
+const saveInterval = setInterval(saveState, AUTOSAVE_MS);
+const sessionInterval = setInterval(() => auth.pruneSessions(), 3_600_000);
 
+let shuttingDown = false;
 function shutdown(exitCode = 0) {
-  clearInterval(socketHealthInterval);
-  try { saveState(); } catch (err) { console.error("Save on shutdown failed:", err.message); }
-  releaseLock();
+  if (shuttingDown) return;
+  shuttingDown = true;
+  [socketHealthInterval, tickInterval, saveInterval, sessionInterval].forEach(clearInterval);
+  if (exitCode === 0) saveState();
+  store.releaseLock();
   process.exit(exitCode);
 }
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught exception, saving and exiting:", err);
+process.on("uncaughtException", err => {
+  // State may be half-updated mid-tick. Keep it for diagnosis, but never
+  // let it replace the last good autosave.
+  console.error("Uncaught exception; exiting without saving:", err);
+  const dump = store.writeCrashDump(state);
+  if (dump) console.error(`Crash state written to ${dump}`);
   shutdown(1);
 });
 
 server.listen(PORT, HOST, () => {
   console.log(`Living Town server running — http://${HOST}:${PORT}`);
-console.log(`Schema version ${VERSION} · autonomous life engine active · autosave every ${AUTOSAVE_MS / 1000}s · keeping ${MAX_BACKUPS} rapid backups and ${MAX_SNAPSHOTS} hourly snapshots`);
+  console.log(`Schema ${SCHEMA_VERSION} · assets ${assetVersion} · autosave every ${AUTOSAVE_MS / 1000}s`);
 });
+
