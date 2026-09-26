@@ -1,0 +1,14 @@
+{
+  "name": "living-town-server",
+  "version": "0.4.0",
+  "description": "Server-hosted port of the Living Town prototype — one shared, always-running world on Mouse, reachable from any device on the tailnet.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/integration.js && node test/accounts.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}
