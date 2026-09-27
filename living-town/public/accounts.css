@@ -151,3 +151,11 @@
 .text-button.danger {
   color: var(--danger);
 }
+
+.look-preview { display: block; width: 80px; height: 120px; margin: 4px auto 8px; image-rendering: pixelated; background: #081524; border-radius: 12px; }
+.swatch-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0; }
+.swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #ffffff33; padding: 0; }
+.swatch.active { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+.gate-copy.small { font-size: 0.7rem; margin-top: 8px; }
+.event-feed li.mre-event { color: #e9dcff; background: linear-gradient(90deg, #4b2d7a55, transparent); border-radius: 10px; }
+.resident-heading .circle-button.hidden { display: none; }

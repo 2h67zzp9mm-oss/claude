@@ -188,3 +188,31 @@ Save schema 3 migrates 0.2 through 0.4 saves in place.
   Sleeping residents go inside their house. Tapping a sign shows who's there, or walks your character there while playing.
 - Residents are redrawn as pixel-art sprites with outlines, sized to fit the buildings.
 - New camera: opens with the map filling the screen height, zooms out to the whole town, and follows the player's character.
+
+# Version 0.6.0: Mr. E and custom characters
+
+## LLM review gate (checkpoint 2), completed before enabling Mr. E's AI
+
+- **Hardware:** a small local model (`llama3.2:3b`, about 2 GB) runs through Ollama on Mouse. Calls are asynchronous and never block the simulation tick, and there is at most one call at a time, about every 25–50 minutes, between 7:00 and 21:00.
+- **Cost:** none. There is no cloud API and no key.
+- **Privacy:** town state, including the family's first names, is only sent to Ollama on the same machine (127.0.0.1). Nothing is sent to the internet.
+- **Child safety:**
+  - The model can only choose from nine whitelisted, gentle event types, and the server applies each event's effects itself.
+  - Resident IDs and places are checked against the town.
+  - Free text (title, item, announcement) is capped in length, stripped of markup, and checked against a list of blocked words (violence, fear, romance, insults, substances, money, links). Anything that fails is replaced with a hand-written template.
+  - If the model is unavailable, Mr. E uses built-in surprises.
+  - Tests cover unsafe and invalid AI output and the offline fallback.
+- **Remaining risk:** a harmless-looking but odd sentence can still get through the word filter. Owner-triggered surprises make it easy to spot-check, and `LIVING_TOWN_MRE_AI=off` turns the AI off.
+
+## Features
+
+- **Mr. E** appears as a cloaked visitor with a "?" face and announces surprises. His events are highlighted in gold in the feed.
+  - Weather (rain, sunshine) and happenings pull residents toward or away from places, with a visible reason.
+  - Lost items are found later by whoever is nearby.
+  - The owner can ask for a surprise from the profile menu.
+- **Characters:**
+  - Looks live on the resident: skin, hair style and color, shirt, pants, shoes and accessory, edited with a live preview.
+  - Players restyle their own character; the owner can restyle anyone.
+  - The owner can add residents with a name, age and home, including the new Rose Cottage. New residents get a personality, schedule and voice generated from their age.
+  - Any custom resident can be linked to a player.
+  - The owner can rename, rehome or age custom residents, or let them move away.

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const { places, MAP, PLAYABLE_IDS, buildings, homeOf, walkNodes, snapToWalkable } = window.LivingTownWorld;
+  const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, setHomeAssignments, SKIN_TONES, HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
   const $ = selector => document.querySelector(selector);
   const canvas = $("#townCanvas");
   const ctx = canvas.getContext("2d");
@@ -43,13 +43,15 @@
     finn: { skin: "#f1c6a8", hair: "#b55b36", shirt: "#64b5f6", pants: "#38506d", shoes: "#df694f", style: "swoop", accessory: "glasses" },
     nova: { skin: "#6f4125", hair: "#17100d", shirt: "#ffd166", pants: "#4d5584", shoes: "#f08a5d", style: "buns", accessory: "headband" }
   };
-  let playerLooks = {};
-
+  const NEW_LOOK = { skin: "#e0ac86", hair: "#5a3825", style: "short", shirt: "#64b5f6", pants: "#3f4d79", shoes: "#f1eee4", accessory: "none" };
+  // Anything customized in the app is stored on the resident and wins.
   function lookFor(r) {
-    const base = baseLooks[r.id] || { skin: "#d8a47f", hair: "#38251d", shirt: r.color, pants: "#3f4d5e", shoes: "#eee", style: "short" };
-    const chosen = playerLooks[r.id];
-    return chosen ? { ...base, style: chosen.hair, accessory: chosen.accessory, shirt: chosen.shirt } : base;
+    const base = baseLooks[r.id] || { ...NEW_LOOK, shirt: r.color || NEW_LOOK.shirt };
+    return { accessory: "none", ...base, ...(r.look || {}) };
   }
+
+  let town = { mre: null, weather: "clear" };
+  let mreBrain = "";
 
   // --- State ---
   const residents = new Map(); // id -> merged resident (summary + dynamic + detail)
@@ -119,7 +121,9 @@
       if (!msg.me && me) { me = null; updatePlayerUi(); }
     } else if (msg.type === "state") {
       setClock(msg.now);
-      playerLooks = msg.looks || {};
+      setHomeAssignments(msg.homes || {});
+      town = msg.town || town;
+      mreBrain = msg.mreBrain || mreBrain;
       residents.clear();
       msg.state.residents.forEach(mergeResident);
       events = msg.state.events;
@@ -129,6 +133,7 @@
       renderSelected();
     } else if (msg.type === "tick") {
       setClock(msg.now);
+      if (msg.town) town = msg.town;
       msg.changed.forEach(mergeResident);
       msg.residents.forEach(mergeResident);
       if (msg.events.length) {
@@ -142,10 +147,6 @@
       details.set(r.id, { revision: r.lifeRevision, lifeHistory: r.lifeHistory, knowledge: r.knowledge, experiences: r.experiences, memories: r.memories });
       pendingInspections.delete(r.id);
       if (r.id === selectedId) { renderedDetailKey = ""; renderSelected(); }
-    } else if (msg.type === "looks") {
-      playerLooks = msg.looks || {};
-      renderedDetailKey = "";
-      renderSelected();
     } else if (msg.type === "control-rejected") {
       showToast(msg.reason);
     }
@@ -242,7 +243,7 @@
 
   function spriteFor(r, frame) {
     const look = lookFor(r);
-    const key = `${r.id}|${frame}|${look.style}|${look.accessory}|${look.shirt}`;
+    const key = `${frame}|${JSON.stringify(look)}`;
     if (!spriteCache.has(key)) spriteCache.set(key, buildSprite(look, frame));
     return spriteCache.get(key);
   }
@@ -365,6 +366,8 @@
     drawSigns();
     const now = nowMs();
     visible.forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text); });
+    drawWeather();
+    drawMrE(now);
   }
 
   function drawResident(r) {
@@ -402,6 +405,76 @@
     ctx.fillText(r.name, x, y + 2 + fs * 0.72);
   }
 
+  // --- Mr. E and weather ---
+  const MRE_LOOK = { skin: "#2b2140", hair: "#4b2d7a", shirt: "#4b2d7a", pants: "#35205c", shoes: "#1c1330", style: "long", accessory: "none" };
+  let mreSpriteCanvas = null;
+  function mreSprite() {
+    if (mreSpriteCanvas) return mreSpriteCanvas;
+    const c = buildSprite(MRE_LOOK, 0);
+    const g = c.getContext("2d");
+    g.fillStyle = "#4b2d7a";
+    g.fillRect(5, 2, 6, 1); g.fillRect(6, 1, 4, 1); // hood
+    g.fillRect(4, 16, 8, 5); // long cloak
+    g.fillStyle = "#ffd166"; // glowing question-mark face
+    [[7, 5], [8, 5], [9, 6], [8, 7], [8, 9]].forEach(([x, y]) => g.fillRect(x, y, 1, 1));
+    g.fillStyle = "#2b2140";
+    g.fillRect(6, 6, 1, 1);
+    mreSpriteCanvas = c;
+    return c;
+  }
+
+  function mreVisible(now) { return Boolean(town.mre) && now < town.mre.until; }
+
+  function drawMrE(now) {
+    if (!mreVisible(now)) return;
+    const { x, y } = town.mre;
+    const t = performance.now() / 1000;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, (town.mre.until - now) / 3000);
+    ctx.fillStyle = "rgba(180,140,255,.25)";
+    ctx.beginPath(); ctx.ellipse(x, y, 13, 5, 0, 0, Math.PI * 2); ctx.fill();
+    for (let i = 0; i < 5; i++) {
+      const a = t * 1.5 + i * 1.26;
+      ctx.fillStyle = i % 2 ? "#ffd166" : "#d6c3ff";
+      ctx.fillRect(x + Math.cos(a) * 14, y - 18 + Math.sin(a * 1.3) * 12, 1.6, 1.6);
+    }
+    const bob = Math.sin(t * 2) * 1.5;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(mreSprite(), x - (SPRITE_W * PX) / 2, y - FEET_ROW * PX + bob, SPRITE_W * PX, SPRITE_H * PX);
+    ctx.imageSmoothingEnabled = true;
+    const fs = screenPx(10);
+    ctx.font = `800 ${fs}px system-ui`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const label = "✦ Mr. E";
+    const w = ctx.measureText(label).width + fs;
+    ctx.fillStyle = "rgba(60,30,110,.85)";
+    ctx.beginPath(); ctx.roundRect(x - w / 2, y + 2, w, fs * 1.4, fs * 0.7); ctx.fill();
+    ctx.fillStyle = "#ffe9b8";
+    ctx.fillText(label, x, y + 2 + fs * 0.72);
+    ctx.restore();
+    drawChatBubble({ drawX: x, drawY: y + bob }, town.mre.text, true);
+  }
+
+  function drawWeather() {
+    if (town.weather === "rain") {
+      ctx.fillStyle = "rgba(30,50,85,.18)";
+      ctx.fillRect(0, 0, MAP.width, MAP.height);
+      ctx.strokeStyle = "rgba(200,220,255,.5)";
+      ctx.lineWidth = 1;
+      const t = performance.now() / 1000;
+      ctx.beginPath();
+      for (let i = 0; i < 160; i++) {
+        const x = ((i * 73) % MAP.width + t * 40) % MAP.width;
+        const y = ((i * 151) % MAP.height + t * 380) % MAP.height;
+        ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 8);
+      }
+      ctx.stroke();
+    } else if (town.weather === "sunny") {
+      ctx.fillStyle = "rgba(255,214,120,.07)";
+      ctx.fillRect(0, 0, MAP.width, MAP.height);
+    }
+  }
+
   function drawSigns() {
     signBoxes = [];
     const fs = screenPx(9.5);
@@ -423,23 +496,34 @@
     }
   }
 
-  function drawChatBubble(r, text) {
+  function drawChatBubble(r, text, magic = false) {
     const fs = screenPx(11.5);
-    const label = String(text).length > 54 ? `${String(text).slice(0, 51)}…` : String(text);
     ctx.save();
     ctx.font = `700 ${fs}px system-ui`;
-    const width = Math.min(screenPx(230), ctx.measureText(label).width + fs * 1.8);
-    const height = fs * 2.4;
+    // Wrap into up to three lines that fit a phone-friendly width.
+    const maxWidth = screenPx(210);
+    const lines = [];
+    let line = "";
+    for (const word of String(text).split(/\s+/)) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width > maxWidth && line) { lines.push(line); line = word; } else line = next;
+    }
+    if (line) lines.push(line);
+    if (lines.length > 3) { lines.length = 3; lines[2] = `${lines[2].replace(/\s*\S*$/, "")}…`; }
+    const width = Math.max(...lines.map(l => ctx.measureText(l).width)) + fs * 1.8;
+    const lineH = fs * 1.25;
+    const height = lines.length * lineH + fs * 1.1;
     const headY = r.drawY - FEET_ROW * PX;
     const x = Math.max(4, Math.min(MAP.width - width - 4, r.drawX - width / 2));
     const y = Math.max(4, headY - height - fs * 0.9);
-    ctx.fillStyle = "rgba(255,255,248,.96)";
-    ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 8;
+    ctx.fillStyle = magic ? "rgba(245,236,255,.97)" : "rgba(255,255,248,.96)";
+    ctx.shadowColor = magic ? "rgba(120,80,220,.55)" : "rgba(0,0,0,.25)";
+    ctx.shadowBlur = magic ? 14 : 8;
     ctx.beginPath(); ctx.roundRect(x, y, width, height, fs * 0.9); ctx.fill();
     ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.moveTo(r.drawX - fs * 0.4, y + height - 1); ctx.lineTo(r.drawX + fs * 0.4, y + height - 1); ctx.lineTo(r.drawX, y + height + fs * 0.6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "#1a2940"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(label, x + width / 2, y + height / 2, width - fs);
+    ctx.fillStyle = magic ? "#3b1f73" : "#1a2940"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    lines.forEach((l, i) => ctx.fillText(l, x + width / 2, y + fs * 0.55 + lineH * (i + 0.5)));
     ctx.restore();
   }
 
@@ -449,7 +533,7 @@
     if (!r) return;
     requestInspection(r);
     const detail = details.get(r.id);
-    const lookKey = JSON.stringify(playerLooks[r.id] || null);
+    const lookKey = JSON.stringify(r.look || null);
     const key = `${r.id}:${r.lifeRevision}:${detail?.revision}:${lookKey}`;
     if (key !== renderedDetailKey) { renderedDetailKey = key; renderSelectedDetail(r, detail); }
     renderSelectedDynamic(r);
@@ -474,6 +558,7 @@
 
   function renderSelectedDetail(r, detail) {
     ui.name.textContent = r.name;
+    $("#editResident").classList.toggle("hidden", !(me && (me.role === "owner" || me.residentId === r.id)));
     const portrait = new Image();
     portrait.className = "pixel-portrait";
     portrait.alt = "";
@@ -509,7 +594,7 @@
   }
 
   function renderFeed() {
-    ui.eventFeed.innerHTML = events.slice(0, 8).map(event => `<li><time>${formatEventTime(event.at)}</time>${escapeHtml(event.text)}</li>`).join("");
+    ui.eventFeed.innerHTML = events.slice(0, 8).map(event => `<li${event.by === "mre" ? ' class="mre-event"' : ""}><time>${formatEventTime(event.at)}</time>${escapeHtml(event.text)}</li>`).join("");
   }
 
   function updateClock() {
@@ -551,6 +636,9 @@
       .sort((a, b) => b.drawY - a.drawY)
       .find(r => Math.abs(r.drawX - p.x) < screenPx(playing ? 12 : 18) + 6 && p.y > r.drawY - FEET_ROW * PX - 4 && p.y < r.drawY + screenPx(14));
     if (hit) return select(hit.id);
+    if (mreVisible(nowMs()) && Math.abs(town.mre.x - p.x) < screenPx(16) + 6 && p.y > town.mre.y - FEET_ROW * PX - 4 && p.y < town.mre.y + screenPx(14)) {
+      return showToast(`✦ Mr. E: "${town.mre.text}"`);
+    }
     const pad = screenPx(6);
     const sign = signBoxes.find(s => p.x >= s.x0 - pad && p.x <= s.x1 + pad && p.y >= s.y0 - pad && p.y <= s.y1 + pad);
     if (!playing) { if (sign) showBuilding(sign.b); return; }
@@ -566,7 +654,7 @@
 
   function setMode(next) {
     if (next === "play" && !me) { showToast("Sign in to play."); return showProfileMenu(); }
-    if (next === "play" && !PLAYABLE_IDS.includes(me.residentId)) return showToast("Your player isn't linked to a resident.");
+    if (next === "play" && residents.get(me.residentId)?.playable === false) return showToast("Your player isn't linked to a resident.");
     mode = next;
     document.querySelectorAll(".dock-button[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
     if (mode === "play") {
@@ -635,6 +723,7 @@
     if (pickResident) select(pickResident.id);
   });
   $("#dismissReturn").addEventListener("click", () => ui.returnCard.classList.add("hidden"));
+  $("#editResident").addEventListener("click", () => { const r = selected(); if (r) showCharacterEditor(r); });
   $("#expandSheet").addEventListener("click", () => ui.sheet.classList.toggle("open"));
   $(".sheet-handle").addEventListener("click", () => ui.sheet.classList.toggle("open"));
   $("#peopleButton").addEventListener("click", () => ui.sheet.classList.add("open"));
@@ -728,14 +817,6 @@
     onSubmit(gate, "#loginForm", async data => applyPlayer((await api("/api/auth/login", { method: "POST", body: JSON.stringify({ profileId, pin: data.get("pin") }) })).me));
   }
 
-  function lookFields(look = {}) {
-    const option = (value, current) => `<option${value === current ? " selected" : ""}>${value}</option>`;
-    const { HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
-    return `<label>Hair<select name="hair">${HAIR_STYLES.map(v => option(v, look.hair)).join("")}</select></label><label>Accessory<select name="accessory">${ACCESSORIES.map(v => option(v, look.accessory)).join("")}</select></label><label>Shirt color<input name="shirt" type="color" value="${escapeHtml(look.shirt || "#64b5f6")}"></label>`;
-  }
-
-  function lookFrom(data) { return { hair: data.get("hair"), accessory: data.get("accessory"), shirt: data.get("shirt") }; }
-
   async function showProfileMenu() {
     let status;
     try { status = await api("/api/auth/status"); } catch (error) { return showToast(error.message); }
@@ -745,9 +826,23 @@
     const claimed = new Set(status.profiles.map(profile => profile.residentId));
     const canCreate = owner && status.playable.some(id => !claimed.has(id));
     const others = owner ? status.profiles.filter(p => p.id !== me.id).map(p => `<li><b>${escapeHtml(p.name)}</b> · ${escapeHtml(residentName(p.residentId))}<span><button class="text-button" data-reset="${escapeHtml(p.id)}">Reset PIN</button><button class="text-button danger" data-remove="${escapeHtml(p.id)}">Remove</button></span></li>`).join("") : "";
-    const gate = gateShell(`<div class="login-avatar">${escapeHtml(me.name.charAt(0))}</div><h3>${escapeHtml(me.name)}</h3><p class="gate-copy">Plays as ${escapeHtml(residentName(me.residentId))}</p><button id="editLook" class="soft-button">Change my look</button>${canCreate ? '<button id="createPlayer" class="wide-button">Create another player</button>' : ""}${others ? `<ul class="player-admin">${others}</ul>` : ""}<button id="backToTown" class="soft-button">Back to town</button><button id="logoutPlayer" class="text-button">Switch player</button>`);
+    const ownerTools = owner ? `<button id="addResident" class="wide-button">Add a new resident</button><button id="askMrE" class="soft-button">✦ Ask Mr. E for a surprise</button><p class="gate-copy small">Mr. E's brain: ${escapeHtml(mreBrain || "starting up")}</p>` : "";
+    const gate = gateShell(`<div class="login-avatar">${escapeHtml(me.name.charAt(0))}</div><h3>${escapeHtml(me.name)}</h3><p class="gate-copy">Plays as ${escapeHtml(residentName(me.residentId))}</p><button id="editLook" class="soft-button">Customize my character</button>${ownerTools}${canCreate ? '<button id="createPlayer" class="soft-button">Create another player</button>' : ""}${others ? `<ul class="player-admin">${others}</ul>` : ""}<button id="backToTown" class="soft-button">Back to town</button><button id="logoutPlayer" class="text-button">Switch player</button>`);
     gate.querySelector("#backToTown").addEventListener("click", () => gate.remove());
-    gate.querySelector("#editLook").addEventListener("click", () => showLookEditor(me));
+    gate.querySelector("#editLook").addEventListener("click", () => {
+      const mine = residents.get(me.residentId);
+      if (mine) showCharacterEditor(mine); else showToast("Your character hasn't loaded yet.");
+    });
+    gate.querySelector("#addResident")?.addEventListener("click", () => showCharacterEditor(null));
+    gate.querySelector("#askMrE")?.addEventListener("click", async () => {
+      try {
+        showToast("✦ Mr. E is thinking…");
+        const result = await api("/api/mre/surprise", { method: "POST" });
+        gate.remove();
+        showToast(`✦ Mr. E: "${result.announcement}"`);
+      } catch (error) { gate.querySelector("#gateError").textContent = error.message; }
+    });
+
     gate.querySelector("#logoutPlayer").addEventListener("click", async () => {
       await api("/api/auth/logout", { method: "POST" }).catch(() => {});
       me = null;
@@ -774,23 +869,79 @@
     });
   }
 
-  function showLookEditor(profile) {
-    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Profile</button><h3>My look</h3><form id="lookForm" class="creator-form">${lookFields(profile.look)}<button class="wide-button">Save look</button></form>`);
+  // --- Character editor: looks for anyone you may edit; name, age and home
+  // for residents created in the app (owner only). ---
+  function showCharacterEditor(resident) {
+    const isNew = !resident;
+    const owner = me?.role === "owner";
+    const editDetails = owner && (isNew || resident.custom);
+    const look = isNew ? { ...NEW_LOOK } : lookFor(resident);
+    const option = (value, current, label = value) => `<option value="${escapeHtml(value)}"${value === current ? " selected" : ""}>${escapeHtml(label)}</option>`;
+    const currentHome = isNew ? "roseCottage" : homeOf(resident.id)?.id;
+    const details = editDetails ? `<label>Name<input name="name" maxlength="20" required value="${escapeHtml(isNew ? "" : resident.name)}"></label>
+      <label>Age<input name="age" type="number" min="3" max="95" required value="${escapeHtml(isNew ? 10 : resident.profile?.age ?? 30)}"></label>
+      <label>Home<select name="homeId">${homeBuildings.map(b => option(b.id, currentHome, b.name)).join("")}</select></label>` : "";
+    const swatches = SKIN_TONES.map(tone => `<button type="button" class="swatch${tone === look.skin ? " active" : ""}" data-skin="${tone}" style="background:${tone}" aria-label="Skin tone"></button>`).join("");
+    const title = isNew ? "New resident" : `Customize ${resident.name}`;
+    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Back</button><h3>${escapeHtml(title)}</h3>
+      <canvas id="lookPreview" class="look-preview" width="16" height="24"></canvas>
+      <form id="characterForm" class="creator-form">${details}
+        <input type="hidden" name="skin" value="${escapeHtml(look.skin)}">
+        <div class="swatch-row">${swatches}</div>
+        <label>Hair<select name="style">${HAIR_STYLES.map(v => option(v, look.style)).join("")}</select></label>
+        <label>Hair color<input name="hair" type="color" value="${escapeHtml(look.hair)}"></label>
+        <label>Accessory<select name="accessory">${ACCESSORIES.map(v => option(v, look.accessory)).join("")}</select></label>
+        <label>Shirt<input name="shirt" type="color" value="${escapeHtml(look.shirt)}"></label>
+        <label>Pants<input name="pants" type="color" value="${escapeHtml(look.pants)}"></label>
+        <label>Shoes<input name="shoes" type="color" value="${escapeHtml(look.shoes)}"></label>
+        <button class="wide-button">${isNew ? "Welcome them to town" : "Save"}</button>
+      </form>${editDetails && !isNew ? '<button id="moveAway" class="text-button danger">Move away from town</button>' : ""}`);
+    const form = gate.querySelector("#characterForm");
+    const preview = gate.querySelector("#lookPreview").getContext("2d");
+    const lookFromForm = () => {
+      const data = new FormData(form);
+      return Object.fromEntries(["skin", "hair", "style", "accessory", "shirt", "pants", "shoes"].map(key => [key, data.get(key)]));
+    };
+    const redraw = () => { preview.clearRect(0, 0, 16, 24); preview.drawImage(buildSprite(lookFromForm(), 0), 0, 0); };
+    form.addEventListener("input", redraw);
+    form.addEventListener("change", redraw);
+    gate.querySelectorAll("[data-skin]").forEach(button => button.addEventListener("click", () => {
+      form.elements.skin.value = button.dataset.skin;
+      gate.querySelectorAll("[data-skin]").forEach(b => b.classList.toggle("active", b === button));
+      redraw();
+    }));
+    redraw();
     gate.querySelector("#backMenu").addEventListener("click", showProfileMenu);
-    onSubmit(gate, "#lookForm", async data => {
-      me = (await api(`/api/auth/profiles/${encodeURIComponent(profile.id)}/look`, { method: "PUT", body: JSON.stringify({ look: lookFrom(data) }) })).profile;
-      showToast("Look saved");
+    gate.querySelector("#moveAway")?.addEventListener("click", async () => {
+      if (!confirm(`Say goodbye to ${resident.name}? They'll move away from town.`)) return;
+      try { await api(`/api/residents/${encodeURIComponent(resident.id)}`, { method: "DELETE" }); gate.remove(); showToast(`${resident.name} moved away`); }
+      catch (error) { gate.querySelector("#gateError").textContent = error.message; }
+    });
+    onSubmit(gate, "#characterForm", async data => {
+      const newLook = lookFromForm();
+      if (isNew) {
+        const created = await api("/api/residents", { method: "POST", body: JSON.stringify({ name: data.get("name"), age: Number(data.get("age")), homeId: data.get("homeId"), look: newLook }) });
+        gate.remove();
+        showToast(`${created.resident.name} moved in!`);
+        setTimeout(() => select(created.resident.id), 300);
+        return;
+      }
+      if (editDetails) {
+        await api(`/api/residents/${encodeURIComponent(resident.id)}`, { method: "PUT", body: JSON.stringify({ name: data.get("name"), age: Number(data.get("age")), homeId: data.get("homeId") }) });
+      }
+      await api(`/api/residents/${encodeURIComponent(resident.id)}/look`, { method: "PUT", body: JSON.stringify({ look: newLook }) });
       gate.remove();
+      showToast("Saved");
     });
   }
 
   function showCreator(status) {
     const claimed = new Set(status.profiles.map(profile => profile.residentId));
-    const options = status.playable.filter(id => !claimed.has(id)).map(id => `<option value="${id}">${escapeHtml(residentName(id))}</option>`).join("");
-    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Profile</button><h3>Create player</h3><form id="creatorForm" class="creator-form"><label>Player name<input name="name" maxlength="24" required></label><label>Resident<select name="residentId">${options}</select></label><label>PIN (4–6 digits)<input name="pin" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" type="password" autocomplete="new-password" required></label>${lookFields()}<button class="wide-button">Create player</button></form>`);
+    const options = status.playable.filter(id => !claimed.has(id)).map(id => `<option value="${escapeHtml(id)}">${escapeHtml(residentName(id))}</option>`).join("");
+    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Profile</button><h3>Create player</h3><form id="creatorForm" class="creator-form"><label>Player name<input name="name" maxlength="24" required></label><label>Plays as<select name="residentId">${options}</select></label><label>PIN (4–6 digits)<input name="pin" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" type="password" autocomplete="new-password" required></label><button class="wide-button">Create player</button></form>`);
     gate.querySelector("#backMenu").addEventListener("click", showProfileMenu);
     onSubmit(gate, "#creatorForm", async data => {
-      await api("/api/auth/profiles", { method: "POST", body: JSON.stringify({ name: data.get("name"), residentId: data.get("residentId"), pin: data.get("pin"), look: lookFrom(data) }) });
+      await api("/api/auth/profiles", { method: "POST", body: JSON.stringify({ name: data.get("name"), residentId: data.get("residentId"), pin: data.get("pin") }) });
       showToast("Player created");
       showProfileMenu();
     });

@@ -25,6 +25,8 @@ const life = require("./lib/life");
 const mind = require("./lib/mind");
 const { createStore } = require("./lib/persistence");
 const { createAuth } = require("./lib/auth");
+const cast = require("./lib/cast");
+const { createMrE, ollamaGenerator } = require("./lib/mre");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
@@ -112,6 +114,19 @@ function migrate(parsed, now) {
   }
   delete parsed.controllers;
   delete parsed.simTime;
+  for (const resident of parsed.residents) {
+    if (resident.custom && (typeof resident.custom.name !== "string" || typeof resident.custom.born !== "string")) delete resident.custom;
+    if (resident.custom) cast.registerCustom(resident, now);
+    resident.look = cast.sanitizeLook(resident.look);
+  }
+  cast.syncHomes(parsed);
+  // 0.5 kept looks on player accounts; they now live on the resident.
+  for (const [residentId, look] of Object.entries(auth.looks())) {
+    const resident = parsed.residents.find(r => r.id === residentId);
+    if (resident && !Object.keys(resident.look).length && look) {
+      resident.look = cast.sanitizeLook({ style: look.hair, accessory: look.accessory, shirt: look.shirt });
+    }
+  }
   life.hydrateLifeState(parsed, now);
   for (const resident of parsed.residents) mind.ensureMind(resident);
   if (!parsed.familyBondsSeeded) { mind.seedFamilyBonds(parsed); parsed.familyBondsSeeded = true; }
@@ -125,7 +140,7 @@ store.acquireLock(() => process.exit(1));
 
 let auth;
 try {
-  auth = createAuth({ dataDir: DATA_DIR });
+  auth = createAuth({ dataDir: DATA_DIR, playableIds: () => playableIds() });
 } catch (err) {
   console.error(err.message);
   store.releaseLock();
@@ -136,8 +151,14 @@ const bootTime = Date.now();
 let state = migrate(store.load([1, 2, SCHEMA_VERSION]) || (console.warn("No usable save or backup found — starting a fresh town."), freshState(bootTime)), bootTime);
 const controllers = new Map(); // ws -> residentId
 
-function addEvent(text, at = Date.now()) {
-  state.events.unshift({ id: state.eventId++, at, text });
+// Sean, Olive, Hazel and every resident created in the app can be played.
+function playableIds() {
+  return state ? state.residents.filter(r => PLAYABLE_IDS.includes(r.id) || r.custom).map(r => r.id) : [...PLAYABLE_IDS];
+}
+function isPlayable(id) { return playableIds().includes(id); }
+
+function addEvent(text, at = Date.now(), by = null) {
+  state.events.unshift(by ? { id: state.eventId++, at, text, by } : { id: state.eventId++, at, text });
   state.events = state.events.slice(0, MAX_EVENTS);
 }
 
@@ -263,6 +284,7 @@ function tick() {
       if (text) addEvent(text, now);
     }
   }
+  mre.tick(state, now, mreHelpers);
   if (now - lastBirthdayCheck >= 60_000) {
     lastBirthdayCheck = now;
     for (const text of life.checkBirthdays(state, now)) addEvent(text, now);
@@ -307,6 +329,14 @@ function catchUpOnBoot(now) {
   if (count > 0) addEvent(`While the server was down, each resident lived through ${count} personal experience${count === 1 ? "" : "s"}.`, now);
 }
 
+const mreGenerator = process.env.LIVING_TOWN_MRE_AI === "off" ? null : ollamaGenerator({
+  url: process.env.LIVING_TOWN_OLLAMA_URL || "http://127.0.0.1:11434",
+  model: process.env.LIVING_TOWN_MRE_MODEL || "llama3.2:3b"
+});
+const mre = createMrE({ generate: mreGenerator });
+const mreHelpers = { addEvent, placeName, spotFor: (id, key) => spotFor(id, key) };
+mre.ensureState(state);
+
 catchUpOnBoot(bootTime);
 
 function saveState() {
@@ -328,7 +358,7 @@ function residentSummary(r) {
     id: r.id, name: r.name, color: r.color, x: r.x, y: r.y, targetX: r.targetX, targetY: r.targetY,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs: r.needs,
     relationships: r.relationships, profile: r.profile, career: r.career, goals: r.goals, mood: publicMood(r.mood),
-    lifeRevision: r.lifeRevision, speech: r.speech || null, playable: PLAYABLE_IDS.includes(r.id),
+    lifeRevision: r.lifeRevision, speech: r.speech || null, playable: isPlayable(r.id), look: r.look || {}, custom: Boolean(r.custom),
     experiences: (r.experiences || []).slice(0, 5), memories: (r.memories || []).slice(0, 5),
     experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length
   };
@@ -348,8 +378,22 @@ function residentDetail(r) {
   return { ...residentSummary(r), lifeHistory: r.lifeHistory || [], knowledge: r.knowledge || [], experiences: r.experiences || [], memories: (r.memories || []).slice(0, 30) };
 }
 
+function townPayload() {
+  const weather = (state.effects || []).find(e => e.kind === "weather" && e.until > Date.now());
+  return { mre: state.mre?.visit || null, weather: weather?.weather || "clear" };
+}
+
 function fullStatePayload() {
-  return JSON.stringify({ type: "state", now: Date.now(), looks: auth.looks(), state: { events: state.events.slice(0, 50), residents: state.residents.map(residentSummary) } });
+  return JSON.stringify({
+    type: "state", now: Date.now(), homes: cast.homeMap(state), town: townPayload(), mreBrain: mre.brain,
+    state: { events: state.events.slice(0, 50), residents: state.residents.map(residentSummary) }
+  });
+}
+
+function broadcastRoster() {
+  for (const r of state.residents) sentRevisions.set(r.id, r.lifeRevision);
+  lastSentEventId = state.eventId;
+  broadcast(fullStatePayload());
 }
 
 const sentRevisions = new Map();
@@ -362,7 +406,7 @@ function tickPayload() {
   }
   const events = state.events.filter(event => event.id >= lastSentEventId).reverse();
   lastSentEventId = state.eventId;
-  return JSON.stringify({ type: "tick", now: Date.now(), residents: state.residents.map(residentDynamic), changed, events });
+  return JSON.stringify({ type: "tick", now: Date.now(), town: townPayload(), residents: state.residents.map(residentDynamic), changed, events });
 }
 
 // --- HTTP ---
@@ -435,7 +479,6 @@ app.post("/api/auth/logout", handle((req, res) => {
 
 app.post("/api/auth/profiles", handle(async (req, res) => {
   const profile = await auth.createProfile(auth.tokenFromRequest(req), req.body);
-  broadcastLooks();
   res.status(201).json({ profile });
 }));
 
@@ -444,16 +487,103 @@ app.put("/api/auth/profiles/:id/pin", handle(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.put("/api/auth/profiles/:id/look", handle((req, res) => {
-  const profile = auth.updateLook(auth.tokenFromRequest(req), req.params.id, req.body?.look);
-  broadcastLooks();
-  res.json({ profile });
-}));
-
 app.delete("/api/auth/profiles/:id", handle((req, res) => {
   auth.deleteProfile(auth.tokenFromRequest(req), req.params.id);
-  broadcastLooks();
   res.json({ ok: true });
+}));
+
+// --- Residents: create, customize, move away ---
+
+function requireOwner(req) {
+  const me = auth.profileForToken(auth.tokenFromRequest(req));
+  if (!me || me.role !== "owner") throw Object.assign(new Error("Owner access required."), { status: 403 });
+  return me;
+}
+
+function findResident(id) {
+  const resident = state.residents.find(r => r.id === id);
+  if (!resident) throw Object.assign(new Error("No such resident."), { status: 404 });
+  return resident;
+}
+
+const NEW_RESIDENT_LOOK = { skin: "#e0ac86", hair: "#5a3825", style: "short", shirt: "#64b5f6", pants: "#3f4d79", shoes: "#f1eee4", accessory: "none" };
+
+app.post("/api/residents", handle((req, res) => {
+  requireOwner(req);
+  const details = cast.validateDetails(req.body || {}, state, { requireAll: true });
+  if (state.residents.filter(r => r.custom).length >= cast.MAX_CUSTOM_RESIDENTS) throw Object.assign(new Error("The town is full for now."), { status: 409 });
+  const now = Date.now();
+  const home = world.homeBuildings.find(b => b.id === details.homeId);
+  const [doorX, doorY] = world.walkNodes[home.node];
+  const look = { ...NEW_RESIDENT_LOOK, ...cast.sanitizeLook(req.body?.look) };
+  const resident = makeResident({ id: cast.newResidentId(details.name), name: details.name, color: look.shirt, x: doorX, y: doorY }, state.residents);
+  resident.custom = { name: details.name, born: cast.bornFromAge(details.age, now), homeId: details.homeId };
+  resident.look = look;
+  for (const other of state.residents) other.relationships[resident.id] = randomBond();
+  cast.registerCustom(resident, now);
+  state.residents.push(normalizeResident(resident));
+  cast.syncHomes(state);
+  life.ensureResidentLife(resident, now);
+  mind.ensureMind(resident);
+  addEvent(`${resident.name} moved into ${home.name}. Welcome to Living Town!`, now);
+  broadcastRoster();
+  res.status(201).json({ resident: residentSummary(resident) });
+}));
+
+app.put("/api/residents/:id", handle((req, res) => {
+  requireOwner(req);
+  const resident = findResident(req.params.id);
+  if (!resident.custom) throw Object.assign(new Error("Only residents created in the app can be renamed or moved."), { status: 400 });
+  const details = cast.validateDetails(req.body || {}, state, { selfId: resident.id });
+  const now = Date.now();
+  if (details.name) resident.custom.name = resident.name = details.name;
+  if (details.age !== undefined) { resident.custom.born = cast.bornFromAge(details.age, now); resident.lastKnownAge = details.age; }
+  if (details.homeId) resident.custom.homeId = details.homeId;
+  cast.registerCustom(resident, now);
+  cast.syncHomes(state);
+  life.ensureResidentLife(resident, now);
+  if (resident.place === "homes") setDestination(resident, "homes");
+  resident.lifeRevision += 1;
+  broadcastRoster();
+  res.json({ resident: residentSummary(resident) });
+}));
+
+app.put("/api/residents/:id/look", handle((req, res) => {
+  const me = auth.profileForToken(auth.tokenFromRequest(req));
+  const resident = findResident(req.params.id);
+  if (!me || (me.role !== "owner" && me.residentId !== resident.id)) throw Object.assign(new Error("You can only change your own character's look."), { status: 403 });
+  resident.look = { ...resident.look, ...cast.sanitizeLook(req.body?.look) };
+  if (resident.look.shirt) resident.color = resident.look.shirt;
+  resident.lifeRevision += 1;
+  broadcastRoster();
+  res.json({ resident: residentSummary(resident) });
+}));
+
+app.delete("/api/residents/:id", handle((req, res) => {
+  requireOwner(req);
+  const resident = findResident(req.params.id);
+  if (!resident.custom) throw Object.assign(new Error("Only residents created in the app can move away."), { status: 400 });
+  if (auth.profiles().some(p => p.residentId === resident.id)) throw Object.assign(new Error("Remove the player linked to this resident first."), { status: 409 });
+  state.residents = state.residents.filter(r => r !== resident);
+  for (const other of state.residents) delete other.relationships[resident.id];
+  for (const [ws, id] of controllers) if (id === resident.id) controllers.delete(ws);
+  cast.unregisterCustom(resident.id);
+  cast.syncHomes(state);
+  addEvent(`${resident.name} packed a bag and moved away. Everyone waved goodbye.`);
+  broadcastRoster();
+  res.json({ ok: true });
+}));
+
+// --- Mr. E ---
+
+let lastForcedSurprise = 0;
+app.post("/api/mre/surprise", handle(async (req, res) => {
+  requireOwner(req);
+  if (Date.now() - lastForcedSurprise < 60_000) throw Object.assign(new Error("Mr. E needs a minute to think up the next surprise."), { status: 429 });
+  lastForcedSurprise = Date.now();
+  const announcement = await mre.surprise(state, mreHelpers);
+  if (!announcement) throw Object.assign(new Error("Mr. E couldn't find anyone awake to surprise."), { status: 409 });
+  res.json({ announcement, brain: mre.brain });
 }));
 
 app.use((err, req, res, next) => {
@@ -479,7 +609,7 @@ function send(ws, payload) { if (ws.readyState === 1) ws.send(typeof payload ===
 
 function broadcast(payload) { wss.clients.forEach(client => send(client, payload)); }
 
-function broadcastLooks() { broadcast({ type: "looks", looks: auth.looks() }); }
+
 
 auth.onRevoke(hash => {
   wss.clients.forEach(ws => {
@@ -497,7 +627,7 @@ function validateClientMessage(raw) {
   try { msg = JSON.parse(raw.toString()); } catch { return null; }
   if (!msg || typeof msg !== "object") return null;
   if (msg.type === "control") {
-    if (typeof msg.residentId !== "string" || !PLAYABLE_IDS.includes(msg.residentId)) return null;
+    if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId)) return null;
     if (!Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return null;
     return { type: "control", residentId: msg.residentId, x: msg.x, y: msg.y };
   }

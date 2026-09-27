@@ -56,7 +56,7 @@ function readJsonStrict(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
-function createAuth({ dataDir, log = console, now = () => Date.now() }) {
+function createAuth({ dataDir, log = console, now = () => Date.now(), playableIds = () => PLAYABLE_IDS }) {
   const accountFile = path.join(dataDir, "player-accounts.json");
   const backupFile = `${accountFile}.bak`;
   const sessionFile = path.join(dataDir, "sessions.json");
@@ -207,7 +207,7 @@ function createAuth({ dataDir, log = console, now = () => Date.now() }) {
 
     status(token) {
       const me = profileForToken(token);
-      return { initialized: accounts.profiles.length > 0, profiles: accounts.profiles.map(safeProfile), me: me ? safeProfile(me) : null, playable: PLAYABLE_IDS };
+      return { initialized: accounts.profiles.length > 0, profiles: accounts.profiles.map(safeProfile), me: me ? safeProfile(me) : null, playable: playableIds() };
     },
 
     async setup({ pin, code }, ip) {
@@ -247,7 +247,7 @@ function createAuth({ dataDir, log = console, now = () => Date.now() }) {
       const name = String(body?.name || "").trim().slice(0, 24);
       const residentId = String(body?.residentId || "");
       const pin = String(body?.pin || "");
-      if (!name || !PLAYABLE_IDS.includes(residentId) || !/^\d{4,6}$/.test(pin)) throw new AuthError(400, "Name, a playable resident, and a 4–6 digit PIN are required.");
+      if (!name || !playableIds().includes(residentId) || !/^\d{4,6}$/.test(pin)) throw new AuthError(400, "Name, a playable resident, and a 4–6 digit PIN are required.");
       if (accounts.profiles.some(profile => profile.residentId === residentId)) throw new AuthError(409, "That resident already has a player.");
       const profile = { id: `${residentId}-${crypto.randomBytes(3).toString("hex")}`, name, residentId, role: "player", ...(await makePinFields(pin)), look: sanitizeLook(body?.look) };
       accounts.profiles.push(profile);

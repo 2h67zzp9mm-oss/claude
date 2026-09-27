@@ -112,6 +112,9 @@ const defaultMind = {
 };
 
 function mindFor(id) { return minds[id] || defaultMind; }
+/** Add or replace a resident's mind at runtime (custom residents). */
+function registerMind(id, mind) { minds[id] = mind; }
+function unregisterMind(id) { delete minds[id]; }
 function traitsFor(id) { return mindFor(id).traits; }
 
 const activities = {
@@ -263,6 +266,15 @@ function scorePlaces(state, resident, date) {
       const value = Math.min(2, matches.length) * 0.35 * (0.5 + O * 0.5);
       score += value;
       reasons.push([value, `loves ${topicLabels[matches[0]] || matches[0]}`]);
+    }
+
+    // Mr. E's happenings and weather pull people toward (or away from) places.
+    for (const effect of state.effects || []) {
+      if (effect.until <= now || (effect.residentIds && !effect.residentIds.includes(resident.id))) continue;
+      const value = effect.pulls ? effect.pulls[key] || 0 : effect.place === key ? effect.pull : 0;
+      if (!value) continue;
+      score += value;
+      if (value > 0.5) reasons.push([value + 1, effect.reason]);
     }
 
     const present = peopleAt(state, key, resident.id);
@@ -481,6 +493,8 @@ function socialTick(state, now, placeName) {
 }
 
 module.exports = {
+  registerMind,
+  unregisterMind,
   minds,
   mindFor,
   traitsFor,

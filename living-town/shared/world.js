@@ -56,7 +56,7 @@
     westStairs: [285, 372], workshopPath: [290, 462], workshop: [228, 476], southWest: [293, 575],
     southWalk: [400, 600], homes: [478, 556], homesLow: [487, 600], southWalkE: [600, 600],
     seanHome: [483, 518], miloStairs: [603, 572], miloHome: [608, 520],
-    westRoad: [190, 322], finnGate: [128, 300], finnHome: [129, 268]
+    westRoad: [190, 322], finnGate: [128, 300], finnHome: [129, 268], roseHome: [437, 516]
   };
   const walkEdges = [
     ["square", "plazaW"], ["square", "plazaE"], ["square", "plazaSW"], ["plazaSW", "plazaW"],
@@ -68,7 +68,7 @@
     ["workshopPath", "southWest"], ["southWest", "southWalk"], ["southWalk", "homes"],
     ["homes", "seanHome"], ["homes", "homesLow"], ["southWalk", "homesLow"], ["homesLow", "southWalkE"],
     ["southWalkE", "miloStairs"], ["miloStairs", "miloHome"],
-    ["plazaSW", "westRoad"], ["westRoad", "finnGate"], ["finnGate", "finnHome"]
+    ["plazaSW", "westRoad"], ["westRoad", "finnGate"], ["finnGate", "finnHome"], ["homes", "roseHome"]
   ];
 
   // Named buildings: a sign on the map, the walkway node at the door, and
@@ -79,12 +79,25 @@
     { id: "market", name: "Corner Market", x: 790, y: 262, node: "market", place: "market" },
     { id: "park", name: "Juniper Park", x: 175, y: 30, node: "park", place: "park" },
     { id: "square", name: "Town Square", x: 477, y: 212, node: "square", place: "square" },
-    { id: "seanHouse", name: "Sean's House", x: 470, y: 398, node: "seanHome", place: "homes", residents: ["dad", "olive", "hazel"] },
+    { id: "roseCottage", name: "Rose Cottage", x: 378, y: 424, node: "roseHome", place: "homes", residents: [] },
+    { id: "seanHouse", name: "Sean's House", x: 493, y: 396, node: "seanHome", place: "homes", residents: ["dad", "olive", "hazel"] },
     { id: "miloHouse", name: "Milo & Zara's", x: 648, y: 436, node: "miloHome", place: "homes", residents: ["milo", "zara", "nova"] },
     { id: "finnCottage", name: "Finn's Cottage", x: 130, y: 212, node: "finnHome", place: "homes", residents: ["finn"] }
   ];
 
+  const homeBuildings = buildings.filter(building => Array.isArray(building.residents));
+
+  // Custom residents (and anyone who moves) get an explicit home assignment
+  // that overrides the built-in household lists.
+  const homeAssignments = {};
+  function setHomeAssignments(map) {
+    for (const key of Object.keys(homeAssignments)) delete homeAssignments[key];
+    Object.assign(homeAssignments, map || {});
+  }
+
   function homeOf(residentId) {
+    const assigned = homeAssignments[residentId];
+    if (assigned) return buildings.find(building => building.id === assigned) || null;
     return buildings.find(building => building.residents?.includes(residentId)) || null;
   }
 
@@ -115,6 +128,7 @@
 
   const HAIR_STYLES = ["short", "long", "pigtails", "buns", "curls", "swoop", "bald"];
   const ACCESSORIES = ["none", "bow", "headband", "star", "glasses", "beard"];
+  const SKIN_TONES = ["#f6d5bd", "#f2c7a5", "#e0ac86", "#d8a47f", "#c68642", "#a8683c", "#8d5524", "#6f4125"];
 
   function nearestPlace(x, y) {
     let best = "homes";
@@ -191,5 +205,5 @@
     return { x: best.x + (x - best.x) * k, y: best.y + (y - best.y) * k };
   }
 
-  return { MAP, places, walkNodes, walkEdges, buildings, homeOf, spotFor, route, snapToWalkable, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, HAIR_STYLES, ACCESSORIES, nearestPlace };
+  return { MAP, places, walkNodes, walkEdges, buildings, homeBuildings, setHomeAssignments, SKIN_TONES, homeOf, spotFor, route, snapToWalkable, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, HAIR_STYLES, ACCESSORIES, nearestPlace };
 });

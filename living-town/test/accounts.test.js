@@ -51,10 +51,10 @@ test("accounts: setup, ownership, lockout, revocation, persistence", async () =>
   olive.ws.send(JSON.stringify({ type: "control", residentId: "olive", x: 700, y: 400 }));
   await until(() => watcher.residents.get("olive")?.targetX === 700, "Olive steers Olive");
 
-  // Looks chosen by players reach every client.
-  assert.strictEqual(watcher.looks.olive.hair, "long");
-  assert.strictEqual((await api(port, "PUT", `/api/auth/profiles/${oliveId}/look`, { look: { hair: "curls", accessory: "bow", shirt: "#112233" } }, oliveCookie)).status, 200);
-  await until(() => watcher.looks.olive?.hair === "curls", "look broadcast");
+  // Players restyle their own character; everyone sees it.
+  assert.strictEqual((await api(port, "PUT", "/api/residents/olive/look", { look: { style: "curls", accessory: "bow", shirt: "#112233" } }, oliveCookie)).status, 200);
+  await until(() => watcher.residents.get("olive")?.look?.style === "curls", "look broadcast");
+  assert.strictEqual((await api(port, "PUT", "/api/residents/hazel/look", { look: { style: "bald" } }, oliveCookie)).status, 403, "players can only restyle their own character");
 
   // Logging out closes the open socket immediately.
   await api(port, "POST", "/api/auth/logout", undefined, oliveCookie);

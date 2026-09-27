@@ -274,7 +274,7 @@ function birthYear(profile) { return Number(profile.born.slice(0, 4)); }
 
 function historyYearsFor(id) {
   const profile = profiles[id];
-  if (!profile) return 0;
+  if (!profile || profile.noHistory) return 0;
   return Math.min(HISTORY_YEARS, HISTORY_ANCHOR_YEAR - birthYear(profile));
 }
 
@@ -528,12 +528,13 @@ function runAutonomousExperience(state, resident, now = Date.now(), quiet = fals
   const stage = resident.profile?.lifeStage || "adult";
   const isMinor = stage === "child" || stage === "teen";
   const retired = resident.career?.kind === "retired";
+  const working = ["work", "work-study"].includes(resident.career?.kind);
   const family = familyMember(state, resident);
 
   const options = [
     { kind: "family", weight: family ? 0.18 * (0.6 + A) : 0 },
     { kind: isMinor ? (stage === "child" ? "play" : "school") : "none", weight: isMinor ? 0.45 : 0 },
-    { kind: "career", weight: !isMinor && !retired ? 0.35 * (0.6 + C) : 0 },
+    { kind: "career", weight: working && !isMinor ? 0.35 * (0.6 + C) : 0 },
     { kind: "mentoring", weight: retired ? 0.3 : 0 },
     { kind: "interest", weight: 0.22 * (0.5 + O) },
     { kind: "community", weight: 0.12 * (0.4 + E + A) }
@@ -691,7 +692,14 @@ function checkBirthdays(state, now) {
   return texts;
 }
 
+/** Add or replace a character profile at runtime (custom residents). */
+function registerProfile(id, profile) { profiles[id] = profile; }
+function unregisterProfile(id) { delete profiles[id]; }
+
 module.exports = {
+  pushExperience,
+  registerProfile,
+  unregisterProfile,
   HISTORY_YEARS,
   HISTORY_ANCHOR_YEAR,
   DAY_MS,

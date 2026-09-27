@@ -2,9 +2,12 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.5.1
+## Honest status — 0.6.0
 
 Working now:
+
+- **Mr. E**, a mysterious town storyteller who stirs up gentle surprises: festivals, rain and sunshine, gifts, riddles, meet-ups, free treats, and lost-and-found stories. He runs on a local AI model on Mouse, or on built-in surprises when the AI is off.
+- **Character customization**: skin, hair style and color, clothes, and accessory, with a live pixel preview. The owner can add new residents (name, age, home) and link any of them to a player.
 
 - One server-owned world ticking once per real second, on the real wall clock
 - Seven residents with distinct personalities, sleep times, weekly routines, interests, and speaking voices (see [LIFE_ENGINE.md](LIFE_ENGINE.md))
@@ -72,6 +75,24 @@ launchctl load ~/Library/LaunchAgents/com.livingtown.server.plist
 ```
 
 `KeepAlive` restarts the server after crashes and retries until Tailscale is up at boot. After installing, gather the review evidence listed in `PROJECT_LOG.md`: the release checksum, the installed plist, `lsof -iTCP:4310 -sTCP:LISTEN`, and `npm test` output from Mouse.
+
+## Mr. E's local AI (optional)
+
+Mr. E works without any setup, using built-in surprises. To give him a real AI brain that runs privately on Mouse:
+
+```bash
+brew install ollama
+brew services start ollama
+ollama pull llama3.2:3b
+```
+
+Then restart Living Town. His status shows in the owner's profile menu under "Mr. E's brain". Settings:
+
+- `LIVING_TOWN_MRE_MODEL` — which model to use (default `llama3.2:3b`)
+- `LIVING_TOWN_OLLAMA_URL` — where Ollama is running (default `http://127.0.0.1:11434`)
+- `LIVING_TOWN_MRE_AI=off` — switch the AI off and use only the built-in surprises
+
+Nothing leaves the house: Ollama runs on Mouse and only listens locally.
 
 ## Safety and persistence
 
