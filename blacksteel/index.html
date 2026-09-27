@@ -230,6 +230,27 @@
     #stage [data-hs].glow, .blink { animation: none; }
     #world img.bg { transition: none; }
   }
+  #world3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #flash3d { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 4; }
+  #chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  #chips .label { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  #chips button { font-weight: 400; font-size: 14px; padding: 7px 10px; background: transparent; }
+  #steer { position: absolute; inset: auto 0 12px 0; display: flex; justify-content: space-between; padding-inline: 12px; z-index: 5; pointer-events: none; }
+  #steer button { pointer-events: auto; font: 28px/1 var(--display); width: 72px; height: 56px; background: rgba(16,23,29,.75); border-color: var(--brass); color: var(--parchment); }
+  #paper {
+    position: absolute; inset: 4% 10%; z-index: 6; overflow: auto;
+    background: #e9e1cc; color: #1d1812; border-radius: 3px; padding: 14px 18px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.6); font-family: Georgia, "Times New Roman", serif; cursor: pointer;
+  }
+  #paper .mast { text-align: center; font: 13px/1 var(--display); letter-spacing: .3em; border-bottom: 3px double #1d1812; padding-bottom: 6px; }
+  #paper h3 { margin: 10px 0 6px; font: 900 clamp(18px, 4vw, 34px)/1.05 Georgia, serif; text-align: center; letter-spacing: .01em; text-wrap: balance; }
+  #paper .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; line-height: 1.35; }
+  #paper .pic { aspect-ratio: 4/3; background: radial-gradient(ellipse at 45% 60%, #2a2530 0 18%, transparent 40%), linear-gradient(160deg, #6a6258, #1f1c19); filter: grayscale(1) blur(.6px); position: relative; }
+  #paper .pic::after { content: ""; position: absolute; left: 20%; right: 5%; top: 40%; height: 14%; border-top: 10px solid #0b0a0a; border-radius: 50% 50% 0 0; transform: rotate(-14deg); }
+  #paper .bounty { margin-top: 10px; border: 2px solid #1d1812; text-align: center; padding: 8px; font: 700 15px/1.3 Georgia, serif; }
+  #paper .bounty b { display: block; font-size: clamp(20px, 4.5vw, 32px); letter-spacing: .04em; }
+  @media (max-width: 520px) { #paper { inset: 2%; } #paper .cols { grid-template-columns: 1fr; } }
+  #voiceBtn[aria-pressed="true"], #autoBtn[aria-pressed="true"] { border-color: var(--lamp); color: var(--lamp); }
 </style>
 
 <div id="app">
@@ -237,11 +258,17 @@
     <h1>The Blacksteel Pirates</h1>
     <div class="tools">
       <span class="where" id="where"></span>
+      <button id="voiceBtn" type="button" aria-pressed="true" title="Voices read the story aloud">Voice</button>
+      <button id="autoBtn" type="button" aria-pressed="false" title="Turn the page when each line finishes">Auto</button>
       <button id="hintBtn" type="button" hidden>Hint</button>
       <button id="menuBtn" type="button" hidden>Menu</button>
     </div>
   </header>
-  <div id="stage"><div id="title" hidden></div></div>
+  <div id="stage">
+    <div id="title" hidden></div>
+    <div id="steer" hidden><button type="button" id="steerL" aria-label="Steer left">&#9664;</button><button type="button" id="steerR" aria-label="Steer right">&#9654;</button></div>
+    <div id="paper" hidden></div>
+  </div>
   <section id="box" aria-live="polite">
     <div class="speaker">
       <div id="portrait" hidden></div>
@@ -253,67 +280,86 @@
     <div id="choices"></div>
     <div id="tap" hidden>Tap to continue</div>
   </section>
+  <div id="chips" hidden></div>
   <div id="inv" hidden></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-<script src="scene3d.js"></script>
+<script src="people3d.js"></script>
+<script src="world3d.js"></script>
+<script src="sets3d.js"></script>
 <script src="art.js"></script>
-<script src="chars.js"></script>
+<script src="story.js"></script>
 <script>
 (() => {
   "use strict";
 
-  // ---------- State and saves ----------
-  const S = { player: null, part: "title", stage: 0, flags: {}, inv: [], busy: false, sel: null };
+  // ---------- state and saves ----------
+  const S = { player: null, ch: 0, stage: 0, flags: {}, inv: [], busy: false, sel: null };
+  window.__bsp = S;
   const NAMES = { olive: "Olive", hazel: "Hazel" };
   const me = () => NAMES[S.player];
   const sis = () => (S.player === "olive" ? "Hazel" : "Olive");
-  window.__bsp = S;
-  const saveKey = p => "blacksteel.prologue." + p;
-
-  function save() {
-    if (!S.player) return;
-    try {
-      localStorage.setItem(saveKey(S.player), JSON.stringify({ part: S.part, stage: S.stage, flags: S.flags, inv: S.inv }));
-    } catch (e) { /* storage unavailable: play continues without saving */ }
-  }
-  function load(p) {
-    try { return JSON.parse(localStorage.getItem(saveKey(p)) || "null"); } catch (e) { return null; }
-  }
-  function wipe(p) {
-    try { localStorage.removeItem(saveKey(p)); } catch (e) { /* ignore */ }
-  }
+  const saveKey = p => "blacksteel.prologue.v2." + p;
+  function save() { if (!S.player) return; try { localStorage.setItem(saveKey(S.player), JSON.stringify({ ch: S.ch })); } catch (e) { /* no storage: play on */ } }
+  function load(p) { try { return JSON.parse(localStorage.getItem(saveKey(p)) || "null"); } catch (e) { return null; } }
+  function wipe(p) { try { localStorage.removeItem(saveKey(p)); } catch (e) { /* ignore */ } }
+  const pref = (k, d) => { try { const v = localStorage.getItem("blacksteel.pref." + k); return v === null ? d : v === "1"; } catch (e) { return d; } };
+  const setPref = (k, v) => { try { localStorage.setItem("blacksteel.pref." + k, v ? "1" : "0"); } catch (e) { /* ignore */ } };
 
   // ---------- DOM ----------
   const $ = id => document.getElementById(id);
-  const stage = $("stage"), box = $("box"), who = $("who"), line = $("line"),
-        choices = $("choices"), tap = $("tap"), inv = $("inv"), title = $("title"),
-        hintBtn = $("hintBtn"), menuBtn = $("menuBtn"), where = $("where");
+  const stage = $("stage"), box = $("box"), who = $("who"), line = $("line"), choices = $("choices"), tap = $("tap"),
+        inv = $("inv"), chips = $("chips"), title = $("title"), hintBtn = $("hintBtn"), menuBtn = $("menuBtn"),
+        where = $("where"), portrait = $("portrait"), steerEl = $("steer"), paper = $("paper"),
+        voiceBtn = $("voiceBtn"), autoBtn = $("autoBtn");
 
   ART.mount(stage);
-  // The playable cabin is 3D when WebGL is available; otherwise the 2D cabin is used.
-  const R3 = window.CABIN3D && window.CABIN3D.init(stage) ? window.CABIN3D : null;
   const world2d = stage.querySelector("#world");
-  function setScene(key, data) {
-    closeVerbs();
-    if (R3 && R3.active) { R3.hide(); world2d.style.visibility = ""; }
-    ART.show(key, S, data);
+  const W = window.WORLD && window.WORLD.init(stage) ? window.WORLD : null;
+  // Chapters call G.W freely; without 3D these calls do nothing.
+  const W0 = { ok: false, goTo: async () => {}, gesture: async () => {}, faceTo() {}, ev: async () => {}, shake() {}, flash() {}, fade: async () => {}, actor: () => null, player: null, setGlow() {}, hotspots: () => [], refresh() {} };
+  const GW = () => (W && W.active ? W : W0);
+
+  // ---------- voices ----------
+  const synth = window.speechSynthesis;
+  let voiceOn = pref("voice", true) && !!synth, autoOn = pref("auto", false);
+  voiceBtn.setAttribute("aria-pressed", String(voiceOn));
+  autoBtn.setAttribute("aria-pressed", String(autoOn));
+  if (!synth) voiceBtn.hidden = true;
+  let voices = [];
+  const FEMALE = /female|samantha|victoria|karen|moira|tessa|fiona|zira|susan|serena|allison|ava|kate|hazel|libby|sonia|jenny|aria|emma|amelie|nicky|martha|catherine|google uk english female|google us english/i;
+  const MALE = /(^|\W)male|daniel|alex|fred|arthur|oliver|david|mark|george|rishi|aaron|tom|james|guy|ryan|thomas|lee|google uk english male/i;
+  function pickVoices() {
+    const all = synth ? synth.getVoices().filter(v => /^en/i.test(v.lang)) : [];
+    const f = all.filter(v => FEMALE.test(v.name) && !/male/i.test(v.name.replace(/female/i, "")));
+    const m = all.filter(v => MALE.test(v.name) && !FEMALE.test(v.name));
+    const any = all.length ? all : (synth ? synth.getVoices() : []);
+    const gb = list => list.find(v => /GB|UK/i.test(v.lang + v.name)) || list[0];
+    voices = { f1: gb(f) || any[0], f2: f[1] || f[0] || any[0], m1: gb(m) || m[0] || any[0], m2: m[1] || m[0] || any[0], m3: m[2] || m[0] || any[0] };
   }
-
-  // ---------- Dialogue ----------
-  // Speaker codes: N = Shannon telling the story, R = Shannon over the communicator,
-  // S = Sean, SIS = the sister who is listening, CAP = storybook caption, or a plain name.
-  const LABEL = {
-    N: () => "Shannon",
-    R: () => "Shannon · over the communicator",
-    S: () => "Sean",
-    SIS: () => sis(),
-    CAP: () => ""
+  if (synth) { pickVoices(); synth.onvoiceschanged = pickVoices; }
+  // Who sounds like what: a voice, a pitch and a pace for each speaker.
+  const CAST = {
+    N: ["f1", 1, .95], R: ["f1", 1.05, 1], CAP: ["f1", .95, .9], S: ["m1", .95, 1],
+    Deke: ["m2", 1.05, 1.02], Mercer: ["m3", .75, .9], Nia: ["f2", 1.15, 1.05], Harrow: ["m1", .6, .85],
+    Lily: ["f2", 1.6, 1.05], "Lily's mother": ["f2", 1.1, 1], Olive: ["f2", 1.25, 1], Hazel: ["f1", 1.55, 1.05]
   };
-  let advance = null;
+  function speak(sp, text) {
+    if (!voiceOn || !synth || !text) return Promise.resolve();
+    const key = sp === "SIS" ? sis() : sp;
+    const [v, pitch, rate] = CAST[key] || ["f2", 1, 1];
+    const u = new SpeechSynthesisUtterance(text.replace(/[“”"]/g, "").replace(/’/g, "'"));
+    if (voices[v]) u.voice = voices[v];
+    u.pitch = pitch; u.rate = rate;
+    return new Promise(res => { u.onend = u.onerror = () => res(); synth.cancel(); synth.speak(u); });
+  }
+  const hush = () => { if (synth) synth.cancel(); };
+  voiceBtn.addEventListener("click", () => { voiceOn = !voiceOn; setPref("voice", voiceOn); voiceBtn.setAttribute("aria-pressed", String(voiceOn)); if (!voiceOn) hush(); });
+  autoBtn.addEventListener("click", () => { autoOn = !autoOn; setPref("auto", autoOn); autoBtn.setAttribute("aria-pressed", String(autoOn)); });
 
-  // Family artwork. Each portrait crops the painting to the face.
+  // ---------- dialogue ----------
+  const LABEL = { N: () => "Shannon", R: () => "Shannon · over the communicator", S: () => "Sean", SIS: () => sis(), CAP: () => "", Harrow: () => "Harrow · field voice projector" };
   const PORTRAITS = {
     Hazel: { src: "art/hazel.webp", size: "300% auto", pos: "50% 24%" },
     Olive: { src: "art/olive_face.jpg", size: "cover", pos: "50% 40%" },
@@ -323,222 +369,186 @@
     const p = PORTRAITS[name];
     el.hidden = !p;
     if (!p) return;
-    el.style.backgroundImage = `url("${p.src}")`;
-    el.style.backgroundSize = p.size;
-    el.style.backgroundPosition = p.pos;
-    el.setAttribute("role", "img");
-    el.setAttribute("aria-label", name);
+    el.style.backgroundImage = `url("${p.src}")`; el.style.backgroundSize = p.size; el.style.backgroundPosition = p.pos;
+    el.setAttribute("role", "img"); el.setAttribute("aria-label", name);
   }
-  const portrait = $("portrait");
-
   function show(sp, text) {
     const known = LABEL[sp];
     paintFace(portrait, sp === "SIS" ? sis() : sp === "S" ? "Sean" : sp);
     who.textContent = known ? known() : sp;
-    who.className = known ? sp : "";
+    who.className = known && sp !== "Harrow" ? sp : "";
     line.textContent = text;
-    line.className = known ? sp : "";
+    line.className = known && sp !== "Harrow" ? sp : "";
   }
+  let advance = null;
   function say(sp, text) {
     return new Promise(res => {
       show(sp, text);
       choices.innerHTML = "";
       tap.hidden = false;
       box.classList.add("waiting");
-      advance = () => { advance = null; tap.hidden = true; box.classList.remove("waiting"); res(); };
+      let done = false;
+      advance = () => { if (done) return; done = true; advance = null; hush(); tap.hidden = true; box.classList.remove("waiting"); res(); };
+      const mine = advance;
+      const spoken = speak(sp, text);
+      if (autoOn) {
+        const minRead = 900 + text.length * 38;
+        Promise.all([spoken, new Promise(r => setTimeout(r, voiceOn ? 250 : minRead))]).then(() => { if (advance === mine) setTimeout(() => { if (advance === mine) mine(); }, 350); });
+      }
     });
   }
-  async function lines(list) {
-    for (const [sp, text] of list) await say(sp, text);
-  }
+  async function lines(list) { for (const [sp, t] of list) await say(sp, t); }
   function choose(prompt, opts) {
     return new Promise(res => {
-      show("", prompt);
-      line.className = "N";
-      tap.hidden = true;
-      choices.innerHTML = "";
+      hush();
+      show("", prompt); line.className = "N"; portrait.hidden = true;
+      tap.hidden = true; choices.innerHTML = "";
+      if (prompt) speak("N", prompt);
       opts.forEach((o, i) => {
         const b = document.createElement("button");
         b.type = "button";
         b.innerHTML = '<span class="k">' + (i + 1) + "</span>";
         b.appendChild(document.createTextNode(o));
-        b.addEventListener("click", e => { e.stopPropagation(); choices.innerHTML = ""; res(i); });
+        b.addEventListener("click", e => { e.stopPropagation(); hush(); choices.innerHTML = ""; res(i); });
         choices.appendChild(b);
       });
       choices.firstChild.focus({ preventScroll: true });
     });
   }
   function idleText(text) {
-    advance = null;
-    tap.hidden = true;
-    choices.innerHTML = "";
-    box.classList.remove("waiting");
-    show("", text);
-    line.className = "N";
+    advance = null; tap.hidden = true; choices.innerHTML = ""; box.classList.remove("waiting");
+    show("", text); line.className = "N"; portrait.hidden = true;
   }
-
   box.addEventListener("click", () => { if (advance) advance(); });
   document.addEventListener("keydown", e => {
-    if ((e.key === "Enter" || e.key === " ") && advance && !choices.childElementCount) {
-      e.preventDefault();
-      advance();
-    }
-    if (/^[1-9]$/.test(e.key) && choices.childElementCount) {
-      const b = choices.children[+e.key - 1];
-      if (b) b.click();
-    }
+    if ((e.key === "Enter" || e.key === " ") && advance && !choices.childElementCount) { e.preventDefault(); advance(); }
+    if (/^[1-9]$/.test(e.key) && choices.childElementCount) { const b = choices.children[+e.key - 1]; if (b) b.click(); }
+    if (!steerEl.hidden && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); GW().ev("steer", e.key === "ArrowLeft" ? -1 : 1); }
   });
+  const wait = ms => new Promise(r => setTimeout(r, ms));
 
-  // ---------- Inventory ----------
-  const ITEMS = {
-    chart: "Chart",
-    packet: "Shannon's packet",
-    coat: "Coat",
-    sword: "Nightforge"
-  };
-
-  function renderInv() {
-    inv.hidden = S.part !== "cabin";
-    inv.innerHTML = '<span class="label">Carrying</span>';
-    if (!S.inv.length) {
-      inv.insertAdjacentHTML("beforeend", '<span class="empty">nothing yet</span>');
-      return;
+  // ---------- scenes ----------
+  function scene2d(key, data) {
+    closeVerbs();
+    if (W && W.active) W.hide();
+    world2d.style.visibility = "";
+    ART.show(key, S, data);
+    return Promise.resolve();
+  }
+  let fallback = false;
+  async function scene3d(key, opts) {
+    closeVerbs();
+    if (W) {
+      world2d.style.visibility = "hidden";
+      W.load(key, S, opts || {});
+      fallback = false;
+    } else {
+      // Without 3D graphics the story still plays: a painted backdrop and a list of things to tap.
+      world2d.style.visibility = "";
+      ART.show("frame", S);
+      fallback = true;
     }
+  }
+  async function card(kicker, name, sub) {
+    await scene2d("card", { kicker, name });
+    where.textContent = "";
+    if (sub) await say("CAP", sub);
+  }
+
+  // ---------- inventory ----------
+  let cfg = null, finishPlay = null;
+  function itemName(id) { return (cfg && cfg.items && cfg.items[id]) || ({ chart: "Chart", packet: "Shannon's packet", coat: "Coat", sword: "Nightforge", pistol: "Mercer's pistol", olive: "Olive" })[id] || id; }
+  function renderInv() {
+    inv.hidden = !cfg || !S.inv.length;
+    inv.innerHTML = '<span class="label">Carrying</span>';
     S.inv.forEach(id => {
       const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = ITEMS[id];
+      b.type = "button"; b.textContent = itemName(id);
       if (S.sel === id) b.classList.add("sel");
-      b.addEventListener("click", e => {
-        e.stopPropagation();
-        if (S.busy) return;
-        openVerbs(id, ITEMS[id], ["Look", "Use on…"], b, true);
-      });
+      b.addEventListener("click", e => { e.stopPropagation(); if (S.busy || !cfg) return; openVerbs(id, itemName(id), ["Look", "Use on…"], true); });
       inv.appendChild(b);
     });
   }
-  function give(id) { if (!S.inv.includes(id)) S.inv.push(id); renderInv(); }
+  function renderChips() {
+    if (!cfg || cfg.quick) { chips.hidden = true; return; }
+    const ids = Object.keys(cfg.hs).filter(id => fallback || !W || GW().hotspots().includes(id));
+    chips.hidden = !ids.length;
+    chips.innerHTML = '<span class="label">Things here</span>';
+    ids.forEach(id => {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = cfg.hs[id][0]; b.dataset.hs = id;
+      b.addEventListener("click", e => { e.stopPropagation(); tapHotspot(id, null); });
+      chips.appendChild(b);
+    });
+  }
+  const give = id => { if (!S.inv.includes(id)) S.inv.push(id); renderInv(); };
+  const drop = id => { S.inv = S.inv.filter(x => x !== id); if (S.sel === id) S.sel = null; renderInv(); };
+  const has = id => S.inv.includes(id);
+  function refresh() { GW().refresh(S); renderInv(); renderChips(); }
 
-  // ---------- Verb menu ----------
-  const HS = {
-    door: ["Door", ["Look", "Open"]],
-    coat: ["Coat", ["Look", "Take"]],
-    sword: ["Saber on the wall", ["Look", "Take"]],
-    porthole: ["Porthole", ["Look"]],
-    shelf: ["Shelf", ["Look"]],
-    bucket: ["Bucket", ["Look"]],
-    bunk: ["Bunk", ["Look"]],
-    table: ["Table", ["Look"]],
-    receipts: ["Receipts", ["Look", "Take"]],
-    chart: ["Chart", ["Look", "Take"]],
-    plate: ["Dinner plate", ["Look", "Take"]],
-    tides: ["Tide tables", ["Look", "Take"]],
-    comm: ["Communicator", ["Look", "Answer"]],
-    packet: ["Packet", ["Look", "Take"]]
-  };
+  // ---------- verbs ----------
   let verbsEl = null;
-
   function closeVerbs() { if (verbsEl) { verbsEl.remove(); verbsEl = null; } }
-
-  function openVerbs(id, name, verbs, anchor, isItem, pt) {
+  function openVerbs(id, name, verbs, isItem, pt) {
     closeVerbs();
     verbsEl = document.createElement("div");
     verbsEl.id = "verbs";
     verbsEl.innerHTML = `<div class="vname">${name}</div>`;
     verbs.forEach(v => {
       const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = v;
+      b.type = "button"; b.textContent = v;
       b.addEventListener("click", e => {
-        e.stopPropagation();
-        closeVerbs();
-        if (isItem) itemVerb(id, v);
-        else run(async () => {
-          if (v === "Look") faceSean(id);
-          else { await goTo(id); await gesture(); }
-          return act(id, v);
+        e.stopPropagation(); closeVerbs();
+        if (isItem) return itemVerb(id, v);
+        run(async () => {
+          if (v === "Look") { GW().faceTo(id); return cfg.look ? cfg.look(id) : null; }
+          await GW().goTo(id);
+          if (v !== "Talk") await GW().gesture();
+          return cfg.act(id, v);
         });
       });
       verbsEl.appendChild(b);
     });
     stage.appendChild(verbsEl);
     const r = stage.getBoundingClientRect();
-    let x, y;
-    if (pt) { x = pt.x - r.left; y = pt.y - r.top; }
-    else { x = r.width / 2; y = r.height / 2; }
+    const x = pt ? pt.x - r.left : r.width / 2, y = pt ? pt.y - r.top : r.height / 2;
     const w = verbsEl.offsetWidth, h = verbsEl.offsetHeight;
     verbsEl.style.left = Math.max(6, Math.min(r.width - w - 6, x - w / 2)) + "px";
     verbsEl.style.top = Math.max(6, Math.min(r.height - h - 6, y - h - 10)) + "px";
     verbsEl.querySelector("button").focus({ preventScroll: true });
   }
+  function itemVerb(id, v) {
+    if (v === "Look") { run(() => cfg.lookItem ? cfg.lookItem(id) : say("N", itemName(id) + ".")); return; }
+    S.sel = id; renderInv();
+    idleText("Use " + itemName(id) + " on what? Tap something.");
+  }
+  function tapHotspot(id, pt) {
+    if (!cfg || S.busy || !cfg.hs[id]) return;
+    if (S.sel) {
+      const item = S.sel; S.sel = null; renderInv();
+      run(async () => { await GW().goTo(id); await GW().gesture(); return cfg.useOn ? cfg.useOn(item, id) : say("N", NOPE1); });
+      return;
+    }
+    if (cfg.quick) { run(() => cfg.act(id, "Act")); return; }
+    openVerbs(id, cfg.hs[id][0], cfg.hs[id][1], false, pt);
+  }
+  const NOPE1 = "That isn't how it happened. Try something that did.";
 
+  // Tremor: after Bellgrave his right hand shakes. Taps land a little off.
+  let tremor = false;
   stage.addEventListener("click", e => {
     if (advance) { advance(); return; }
-    if (S.part !== "cabin" || S.busy) return;
-    let t = null, floorPt = null;
-    if (R3) {
-      const hit = R3.pick(e);
-      if (hit.hs) t = { getAttribute: () => hit.hs };
-      floorPt = hit.floor || null;
-    } else t = e.target.closest("[data-hs]");
-    if (!t) {
-      const hadMenu = !!verbsEl;
-      closeVerbs();
-      if (S.sel) { S.sel = null; renderInv(); idleText(objectiveText()); return; }
-      if (!hadMenu) {
-        if (R3) { if (floorPt) R3.walkTo(floorPt); }
-        else { const p = scenePt(e); ACTORS.sean.walkTo(p.x, p.y); }
-      }
-      return;
-    }
-    const id = t.getAttribute("data-hs");
-    if (S.sel) {
-      const item = S.sel;
-      S.sel = null;
-      renderInv();
-      run(async () => { await goTo(id); await gesture(); return useOn(item, id); });
-      return;
-    }
-    openVerbs(id, HS[id][0], HS[id][1], null, false, { x: e.clientX, y: e.clientY });
+    if (!steerEl.hidden) { const r = stage.getBoundingClientRect(); GW().ev("steer", e.clientX < r.left + r.width / 2 ? -1 : 1); return; }
+    if (!cfg || S.busy || !W || !W.active) { closeVerbs(); return; }
+    let ev = e;
+    if (tremor) ev = { clientX: e.clientX + (Math.random() - .5) * 26, clientY: e.clientY + (Math.random() - .5) * 26 };
+    const hit = W.pick(ev);
+    if (hit.hs) { tapHotspot(hit.hs, { x: e.clientX, y: e.clientY }); return; }
+    const hadMenu = !!verbsEl;
+    closeVerbs();
+    if (S.sel) { S.sel = null; renderInv(); idleText(cfg.objective()); return; }
+    if (!hadMenu && hit.floor && !cfg.quick) W.walkTo(hit.floor);
   });
-
-  // Where Sean stands to reach each thing in the cabin, and which way he faces.
-  const STAND = {
-    door: [150, 432, -1], coat: [292, 430, -1], sword: [380, 424, 1], porthole: [586, 426, 1],
-    shelf: [640, 428, 1], bunk: [650, 440, 1], bucket: [566, 440, 1], table: [400, 444, 1],
-    receipts: [268, 442, 1], chart: [360, 444, 1], plate: [360, 444, 1], tides: [432, 444, 1],
-    comm: [500, 444, 1], packet: [556, 444, 1]
-  };
-  function goTo(id) {
-    if (R3) return R3.goTo(id);
-    const p = STAND[id];
-    return p ? ACTORS.sean.walkTo(p[0], p[1], p[2]) : Promise.resolve();
-  }
-  const gesture = () => (R3 ? R3.gesture() : ACTORS.sean.gesture());
-  function faceSean(id) {
-    if (R3) return R3.faceTo(id);
-    const p = STAND[id];
-    if (p) ACTORS.sean.faceTo(p[0] + p[2] * 40);
-  }
-  function glowOn(id) {
-    if (!id) return;
-    if (R3) return R3.setGlow(id);
-    const n = stage.querySelector(`[data-hs="${id}"]`);
-    if (n) n.classList.add("glow");
-  }
-  function scenePt(e) {
-    const svg = stage.querySelector("#ov svg");
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX; pt.y = e.clientY;
-    return pt.matrixTransform(svg.getScreenCTM().inverse());
-  }
-
-  function itemVerb(id, v) {
-    if (v === "Look") { run(() => lookItem(id)); return; }
-    S.sel = id;
-    renderInv();
-    idleText("Use the " + ITEMS[id].toLowerCase() + " on what? Tap something in the cabin.");
-  }
 
   async function run(fn) {
     if (S.busy) return;
@@ -546,400 +556,86 @@
     clearGlow();
     try { await fn(); } finally {
       S.busy = false;
-      if (S.part === "cabin") {
-        redraw();
-        idleText(objectiveText());
-        armIdle();
-      }
+      if (cfg) { refresh(); idleText(cfg.objective()); armIdle(); }
     }
-  }
-  function redraw() {
-    if (R3 && S.part === "cabin") R3.refresh(S); else ART.show("cabin", S);
-    renderInv();
   }
 
-  // ---------- Hints and gentle nudges ----------
+  // ---------- hints ----------
   let idleTimer = null;
-  function clearGlow() {
-    clearTimeout(idleTimer);
-    stage.querySelectorAll(".glow").forEach(n => n.classList.remove("glow"));
-    if (R3) R3.setGlow(null);
-  }
-  function nextTarget() {
-    const has = id => S.inv.includes(id);
-    switch (S.stage) {
-      case 0: return "comm";
-      case 1: return S.flags.plateMoved ? (has("chart") ? "table" : "chart") : "plate";
-      case 2: return "coat";
-      case 3: return has("packet") ? null : "packet";
-      default:
-        if (!has("coat")) return "coat";
-        if (!has("sword")) return "sword";
-        if (!has("packet")) return "packet";
-        return "door";
-    }
+  function clearGlow() { clearTimeout(idleTimer); GW().setGlow(null); chips.querySelectorAll(".sel").forEach(b => b.classList.remove("sel")); }
+  function glowOn(id) {
+    if (!id) return;
+    GW().setGlow(id);
+    const c = chips.querySelector(`[data-hs="${id}"]`); if (c) c.classList.add("sel");
   }
   function armIdle() {
     clearTimeout(idleTimer);
-    // Hazel gets a glowing nudge after a short wait. Olive can always ask for a hint.
-    if (S.player !== "hazel") return;
-    idleTimer = setTimeout(() => {
-      glowOn(nextTarget());
-    }, 20000);
-  }
-  function objectiveText() {
-    const has = id => S.inv.includes(id);
-    switch (S.stage) {
-      case 0: return "The communicator is crackling. Tap things in the cabin to look around.";
-      case 1: return "Shannon is waiting on the line. Find the chart and spread it out.";
-      case 2: return "Your father stood up.";
-      case 3: return has("packet") ? "Read the packet. Tap it below." : "Shannon's packet is on the table beside the communicator.";
-      default: {
-        const need = [];
-        if (!has("coat")) need.push("coat");
-        if (!has("sword")) need.push("Nightforge");
-        if (!has("packet")) need.push("the packet");
-        return need.length ? "Before he leaves: " + need.join(", ") + "." : "Everything's packed. The door.";
-      }
-    }
-  }
-  function hintFor() {
-    const hz = S.player === "hazel";
-    const has = id => S.inv.includes(id);
-    switch (S.stage) {
-      case 0: return hz ? "That blinking box on the table is the communicator. Tap it and answer it." : "Something on the table has been crackling for a full minute.";
-      case 1:
-        if (!S.flags.plateMoved) return hz ? "The chart is under his dinner plate. Take the plate first." : "The chart is under his dinner. Deal with dinner.";
-        if (!has("chart")) return "Now take the chart.";
-        return hz ? "Tap the chart below, choose “Use on…”, then tap the table." : "Spread the chart out on the table.";
-      case 2: return hz ? "Your father always grabs one thing before he runs off. It's hanging on a hook." : "What would your father reach for first?";
-      case 3: return has("packet") ? "Tap the packet below and choose Look." : "Take the packet from the table.";
-      default:
-        if (!has("coat")) return "His coat, on the hook by the door.";
-        if (!has("sword")) return "The saber on the wall. He never left without it.";
-        if (!has("packet")) return "Shannon's packet.";
-        return "Open the door.";
-    }
+    if (!cfg || (S.player !== "hazel" && !cfg.quick)) return;
+    idleTimer = setTimeout(() => glowOn(cfg.target && cfg.target()), cfg.quick ? 6000 : 20000);
   }
   hintBtn.addEventListener("click", () => {
-    if (S.part !== "cabin" || S.busy) return;
-    run(() => say("N", hintFor())).then(() => glowOn(nextTarget()));
+    if (!cfg || S.busy) return;
+    run(() => say("N", cfg.hint ? cfg.hint() : cfg.objective())).then(() => glowOn(cfg.target && cfg.target()));
   });
 
-  // Lines Shannon uses when a player tries something that never happened.
-  const NOPE = [
-    "No. Your father did not do that. I would have heard about it for years.",
-    "That isn't how it happened. Try something that did.",
-    "He has done many ridiculous things. That wasn't one of them.",
-    "No. Even he knew better than that."
-  ];
-  let nope = 0;
-  const no = () => say("N", NOPE[nope++ % NOPE.length]);
-
-  // ---------- The cabin: looking and using ----------
-  async function act(id, v) {
-    const f = S.flags, st = S.stage, has = x => S.inv.includes(x);
-    if (v === "Look") return look(id);
-
-    switch (id) {
-      case "comm":
-        if (st === 0) return callOne();
-        if (st === 1) return say("R", "The chart, Sean. The one under your dinner.");
-        if (st === 2) return say("N", "He did not sit back down and chat. Not with Deke in trouble. What did he reach for?");
-        if (st === 3) return say("R", "The packet. Beside the communicator. Where I said.");
-        return say("R", "Go.");
-
-      case "plate":
-        f.plateMoved = true;
-        await say("N", "He moved dinner to the bunk. Dinner did not object.");
-        if (S.player === "olive") await lines([["SIS", "Did Dad ever finish his dinner?"], ["N", "No. Nobody in this story gets to finish dinner."]]);
-        return;
-
-      case "chart":
-        if (f.chartSpread) return say("N", "It's already spread out. Blank sea, right where the island should be.");
-        if (!f.plateMoved) return say("N", "His dinner was sitting on it. Priorities.");
-        if (st < 1) return say("N", "He had no reason to look at a chart yet. He was eating.");
-        give("chart");
-        return say("N", "He pulled the chart free. It smelled like fish.");
-
-      case "coat":
-        if (st < 2) return say("N", st === 0 ? "He wasn't going anywhere yet. He was eating." : "Not yet. I was still talking.");
-        if (st === 2) return sitDown();
-        if (st === 3) return say("N", "His hand had fallen away from the coat. For once, he was listening.");
-        give("coat");
-        return say("N", "He pulled on his coat.");
-
-      case "door":
-        if (st < 2) return say("N", "Nowhere to go yet. That was about to change.");
-        if (st === 2) return sitDown();
-        if (st === 3) return say("R", "Ten seconds, Sean.");
-        if (!has("coat") || !has("sword") || !has("packet")) return say("N", objectiveText());
-        if (R3) await R3.goTo("door"); else await ACTORS.sean.walkTo(70, 424, -1);
-        return endChapter();
-
-      case "sword":
-        give("sword");
-        return say("N", st >= 4 ? "He hung Nightforge at his right hip." : "He buckled the saber on. It fit his hand. That was the only reason he'd ever kept it.");
-
-      case "packet":
-        give("packet");
-        return say("N", "He picked up the packet.");
-
-      case "receipts":
-        return say("N", "He doesn't need receipts. He needs to stop buying things in alleys.");
-      case "tides":
-        return say("N", "Tide tables. He would need them. He didn't know that yet.");
-    }
-    return no();
+  // ---------- free play ----------
+  let ticker = null;
+  function play(c) {
+    cfg = c;
+    S.sel = null;
+    where.textContent = c.where || "";
+    hintBtn.hidden = false;
+    if (W) W.allowed = id => !!(cfg && cfg.hs[id]);
+    refresh();
+    idleText(c.objective());
+    armIdle();
+    clearInterval(ticker);
+    if (c.tick) ticker = setInterval(() => { if (cfg === c && !S.busy) run(() => c.tick()); }, 400);
+    return new Promise(res => { finishPlay = res; });
+  }
+  function finish() {
+    clearInterval(ticker);
+    const r = finishPlay; finishPlay = null;
+    cfg = null; S.sel = null;
+    if (W) W.allowed = null;
+    clearGlow(); closeVerbs();
+    hintBtn.hidden = true; chips.hidden = true; inv.hidden = true;
+    if (r) setTimeout(r, 0);
   }
 
-  async function look(id) {
-    const f = S.flags, st = S.stage;
-    switch (id) {
-      case "door": return say("N", "The cabin door. It sticks when the weather turns. So does your father.");
-      case "coat": return say("N", "His coat. Long, dark, and patched at both elbows by someone who was not good at patching. Him.");
-      case "sword":
-        await say("N", "An old, dark-gray saber. There's a worn name cut near the guard: Nightforge.");
-        await say("N", "He found it years ago on one of my paid research errands, buried under collapsed shelving in an abandoned storehouse. No pedestal. No prophecy. No dead king holding the handle.");
-        return say("N", "Just an edge that refused to dull. I found one incomplete reference to Nightforge in an archive, and nothing more. Until that week, it had only ever been a sword.");
-      case "porthole": return say("N", "Night. Open sea. No land anywhere, and no reason yet to go looking for any.");
-      case "shelf": return say("N", "Books he meant to read. Charts he meant to fix. And his compass. It pointed north. For three more nights, it would keep doing that.");
-      case "bucket": return say("N", "The leak. He'd spent a year learning which leaks were harmless and which ones wanted him dead. This one was harmless. Mostly.");
-      case "bunk": return say("N", f.plateMoved ? "His bunk, now with dinner on it." : "His bunk. Unmade. It had been unmade for a year.");
-      case "table": return say("N", "Loose receipts, tide tables, the remains of dinner, and the communicator. He called this his navigation desk.");
-      case "receipts": return say("N", "Receipts, in no order. My brother keeps receipts the way some people keep grudges: everywhere, and forever.");
-      case "chart":
-        if (f.chartSpread) return say("N", "A sea chart. Where Bellgrave should be, there's nothing. Just open water with a circle he drew around it.");
-        return say("N", "A corner of a sea chart, sticking out from under his dinner plate.");
-      case "plate": return say("N", "I'm told it was fish. I choose not to investigate further.");
-      case "tides": return say("N", "Tide tables for the western routes, full of his handwriting. Most of it says “no.”");
-      case "comm":
-        if (st === 0) return say("N", "His long-range communicator. The light was blinking. It had been blinking for a full minute. That was me.");
-        return say("N", "The communicator's little image panel showed my face. I was not smiling.");
-      case "packet": return say("N", "A packet tied with string, beside the communicator. My handwriting on the front.");
-    }
-    return no();
+  // ---------- special moments ----------
+  async function reef(opts) {
+    steerEl.hidden = false;
+    idleText("Steer through the smoke.");
+    const res = await GW().ev("reef", opts);
+    steerEl.hidden = true;
+    return res || { done: true };
   }
-
-  async function lookItem(id) {
-    switch (id) {
-      case "chart": return say("N", "A sea chart of the western waters. Somewhere on it, an island that isn't there.");
-      case "coat": return look("coat");
-      case "sword": return look("sword");
-      case "packet":
-        if (S.stage === 3) return readPacket();
-        return say("N", "Coordinates, three safe routes, a list of ports where he is not welcome, and money. At the bottom, Deke's name, in my handwriting.");
-    }
-  }
-
-  async function useOn(item, target) {
-    const st = S.stage;
-    if (item === "chart" && (target === "table" || target === "comm")) {
-      if (st !== 1) return say("N", "He'd already looked at the chart.");
-      S.inv = S.inv.filter(x => x !== "chart");
-      S.flags.chartSpread = true;
-      redraw();
-      return callTwo();
-    }
-    if (item === "sword" && target === "comm") return say("N", "No. Your father did not stab my face through the communicator. I would remember.");
-    if (item === "sword" && target === "plate") return say("N", "He did not eat dinner with a sword. That we know of.");
-    if (item === "packet" && target === "comm") return say("R", "Yes, Sean. That's the packet. Read it.");
-    if (item === "coat" && target === "door") return act("door", "Open");
-    return no();
-  }
-
-  // ---------- Chapter One: the call ----------
-  async function callOne() {
-    await lines([
-      ["N", "He answered."],
-      ["R", "I found a mistake."],
-      ["N", "I don't believe in mistakes. Not in ledgers, maps, money, or history. Mistakes are just lies that haven't been organized properly."]
-    ]);
-    const c = await choose("What does your father say?", [
-      "“You called me on an Academy cipher to tell me someone misspelled a king?”",
-      "“Shannon, I'm eating.”",
-      "“What kind of mistake?”"
-    ]);
-    if (c === 0) await say("S", "You called me on an Academy cipher to tell me someone misspelled a king?");
-    else {
-      await say("S", c === 1 ? "Shannon, I'm eating." : "What kind of mistake?");
-      await say("N", "That's not what he said. He said something smug about a misspelled king. Close enough.");
-    }
-    await lines([
-      ["R", "I called because an island has been removed from six separate archives. Not misplaced. Removed."],
-      ["R", "The old population rolls list Bellgrave Island with six hundred and twelve residents. Forty years later, the shipping office records three hundred barrels of lamp oil delivered there."],
-      ["R", "The modern charts show open water, and the patrol schedules bend around the coordinates without explaining why. Look at your chart."],
-      ["N", "His chart was under his dinner. Of course it was."]
-    ]);
-    S.stage = 1;
-    save();
-  }
-
-  async function callTwo() {
-    await say("N", "He flattened the chart and found the spot. Blank sea.");
-    const c = await choose("What does your father say?", [
-      "“Could be a restricted base.”",
-      "“There's nothing here.”",
-      "“Maybe someone just made a mistake.”"
-    ]);
-    if (c === 0) await say("S", "Could be a restricted base.");
-    else if (c === 1) { await say("S", "There's nothing here."); await say("R", "That is exactly my point."); }
-    else { await say("S", "Maybe someone just made a mistake."); await say("R", "Were you listening to me at all?"); await say("N", "He wasn't. He guessed it was a restricted base. So let's say he guessed that."); }
-    await lines([
-      ["R", "Then the supply records would have changed classification. They wouldn't have been cut off midsentence. Someone went backward through the archive and cleaned it badly."],
-      ["S", "Badly enough for you to notice."],
-      ["R", "Most crimes are."],
-      ["R", "Local sailors also report bells beneath the water. That would be charming folklore if the oldest architectural survey didn't specifically say Bellgrave had no bell tower."]
-    ]);
-    if (S.player === "hazel") await lines([["SIS", "Like the bell Lily heard."], ["N", "Yes. Hold on to that."]]);
-    else await lines([["SIS", "The bell from under the island!"], ["N", "Yes. Remember it."]]);
-    await lines([
-      ["S", "Why are you telling me now?"],
-      ["N", "For the first time, I looked away. I remember that. I hate that I remember it."],
-      ["R", "Because a Central Authority Fleet survey team left for those coordinates five days ago. Deke's unit."],
-      ["N", "Deke was your father's best friend from the Naval Academy. You'll meet him soon."]
-    ]);
-    const d = await choose("What does your father say?", [
-      "“Does he know what he's sailing into?”",
-      "“Deke?”",
-      "“How long have you known?”"
-    ]);
-    if (d === 0) await say("S", "Does he know what he's sailing into?");
-    else if (d === 1) { await say("S", "Deke?"); await say("N", "Then he asked whether Deke knew what he was sailing into."); }
-    else { await say("S", "How long have you known?"); await say("R", "Long enough to warn him. Ask me the real question."); await say("S", "Does he know what he's sailing into?"); }
-    await lines([
-      ["R", "I warned him through the cipher we used at the Academy. I sent it twice."],
-      ["S", "Did he answer?"],
-      ["R", "No. That doesn't mean he ignored it. It means either he cannot answer, or someone is watching his communications."],
-      ["N", "Your father stood up."]
-    ]);
-    S.stage = 2;
-    save();
-  }
-
-  async function sitDown() {
-    await lines([
-      ["N", "He reached for his coat."],
-      ["R", "Sit down for ten more seconds. If you rush off before I finish, you will arrive brave, uninformed, and useless. In exactly that order."],
-      ["N", "He stayed standing. But he stopped moving. That is the most I have ever gotten out of him."],
-      ["R", "The preliminary survey report uses the phrase historical contaminant."],
-      ["N", "His hand fell away from the coat."],
-      ["N", "That was the phrase printed on the records that got him expelled from the Naval Academy."],
-      ["N", "He and Deke noticed it first as cadets: battles with impossible dates, islands that vanished between editions, whole bloodlines reduced to blank spaces."],
-      ["N", "Your father kept digging after the instructors ordered them to stop. The Academy forced him out and called it misconduct."],
-      ["N", "Deke wanted to leave with him. Your father made him stay. Someone decent needed to remain inside the machine."],
-      ["N", "It sounded sensible at the time. Now the machine had sent Deke to an island it planned to erase."]
-    ]);
-    const c = await choose("What does your father say?", [
-      "“Send me the coordinates.”",
-      "“I'm going.”",
-      "Say nothing."
-    ]);
-    if (c === 0) await say("S", "Send me the coordinates.");
-    else if (c === 1) { await say("S", "I'm going."); await say("R", "I know. You'll want the coordinates."); }
-    else { await say("N", "He said nothing for a long moment. Then: “Send me the coordinates.”"); }
-    await lines([
-      ["R", "They're already encoded in the packet beside the communicator. Along with three routes that avoid Fleet checkpoints, a list of ports where you are not welcome, and enough money to keep your wreck moving if you stop purchasing weapons from men in alleys."],
-      ["S", "That happened once."],
-      ["R", "It happened twice. The second man simply owned a doorway."]
-    ]);
-    if (S.player === "hazel") await lines([["SIS", "Dad bought weapons in alleys?"], ["N", "Twice. Don't get ideas."]]);
-    else await lines([["SIS", "What's an alley?"], ["N", "A narrow street where your father makes bad decisions."]]);
-    S.stage = 3;
-    save();
-  }
-
-  async function readPacket() {
-    await say("N", "I'd arranged everything by urgency and marked the safest route in green. At the bottom, under the practical instructions, I wrote Deke's name by hand.");
-    const c = await choose("What does your father say?", [
-      "“You're the best.”",
-      "“Thank you, Shannon.”",
-      "Say nothing."
-    ]);
-    if (c === 0) await say("S", "You're the best.");
-    else if (c === 1) { await say("S", "Thank you, Shannon."); await say("N", "Actually, he said “You're the best.” Quietly. I'm keeping it."); }
-    else await say("N", "He tried to say nothing. It lasted about a second. Then, quietly: “You're the best.”");
-    await lines([
-      ["R", "I know. Now listen to me."],
-      ["R", "If an erasure order has already been issued, you cannot fight whatever they send. You find Deke. You learn what the survey uncovered if, and only if, you can do it without getting both of you killed. Then you leave."],
-      ["S", "I'm not planning to fight a fleet."],
-      ["R", "You never plan to. That is what makes this conversation necessary."],
-      ["S", "What if he won't leave?"],
-      ["R", "Then remind him that staying alive is not the same as running away. And if he still refuses, you come home anyway."],
-      ["N", "He didn't answer."],
-      ["R", "I mean it. I will not lose my brother because the two of you decided loyalty requires a body count."]
-    ]);
-    const d = await choose("What does your father promise?", [
-      "“I'll find him.”",
-      "“I'll come home.”",
-      "Make a joke."
-    ]);
-    if (d === 0) await say("S", "I'll find him.");
-    else if (d === 1) {
-      await say("N", "No. He didn't promise that. He couldn't.");
-      await say("S", "I'll find him.");
-    } else {
-      await say("N", "He wanted to make a joke. My face stopped him.");
-      await say("S", "I'll find him.");
-    }
-    await lines([
-      ["N", "It was the only part of my instruction he could honestly give me."],
-      ["N", "Coat. Sword. Packet. Then the door."]
-    ]);
-    S.stage = 4;
-    save();
-  }
-
-  async function endChapter() {
-    S.part = "end";
-    save();
-    closeVerbs();
-    inv.hidden = true;
-    hintBtn.hidden = true;
-    setScene("frame");
-    where.textContent = "";
-    await say("N", "He left that night.");
-    if (S.player === "hazel") await lines([["SIS", "What was on the island, Aunt Shannon?"], ["N", "Next time."]]);
-    else await lines([["SIS", "Did Dad find his friend?"], ["N", "Next time."]]);
-    return showEnd();
-  }
-
-  async function showEnd() {
-    S.part = "end";
-    inv.hidden = true;
-    hintBtn.hidden = true;
-    setScene("card", { kicker: "End of Chapter One", name: "The Call" });
-    await say("CAP", "Next time: Chapter Two, The Reef. Three nights later, your father finds Bellgrave, and it is already burning.");
-    idleText("That's the end of this chapter for now. Tap Menu to go back to the start.");
-  }
-
-  // ---------- Opening: the frame, then Lily ----------
-  async function intro() {
-    S.part = "intro";
-    save();
-    where.textContent = "";
-    inv.hidden = true;
-    hintBtn.hidden = true;
-    setScene("frame");
-    await lines([
-      ["N", "Sit. Both of you."],
-      ["N", "Your father asked me to tell you this one. I remember the details. He remembers the parts where he was brave."],
-      ["N", "You found a burned map that said Bellgrave was not the first. You've been saying that name for days. So you should know what the name cost."]
-    ]);
-    if (S.player === "hazel") await lines([["SIS", "You were there?"], ["N", "No. I was the one who found it, in the archives. In some ways that's worse."]]);
-    else await lines([["SIS", "Is it a scary story?"], ["N", "Parts of it. It's also true. That's why I'm telling it."]]);
-    await lines([
-      ["N", "Tonight, " + me() + ", you are going to be your father. Younger. One bad ship. No plan."],
-      ["N", "If you do something he didn't do, I'll tell you. I will enjoy it."],
-      ["N", "But it doesn't start with him. It starts with the island."]
-    ]);
-    await lily();
-    return startCabin(true);
+  $("steerL").addEventListener("click", e => { e.stopPropagation(); GW().ev("steer", -1); });
+  $("steerR").addEventListener("click", e => { e.stopPropagation(); GW().ev("steer", 1); });
+  function controls(on) { menuBtn.hidden = !on; }
+  function newspaper() {
+    paper.innerHTML = `<div class="mast">THE CENTRAL AUTHORITY DISPATCH</div>
+      <h3>BLACKSTEEL BUTCHER DESTROYS FLEET RELIEF FORCE</h3>
+      <div class="cols">
+        <div><div class="pic" role="img" aria-label="A blurred surveillance image of a man in a harbor, darkness wrapped around his sword"></div>
+          <p><i>Surveillance image: the pirate in Bellgrave's harbor.</i></p></div>
+        <div><p>A pirate attack on an innocent archaeological mission has claimed the lives of thirty-one loyal Fleet troopers. The attacker kidnapped an unidentified child and destroyed Bellgrave while attempting to steal a Central Authority artifact.</p>
+          <p>Lieutenant Deke is praised as a heroic officer, killed defending civilians from the pirate's black steel.</p>
+          <div class="bounty">WANTED, DEAD OR ALIVE<b>310,000,000</b>&ldquo;BLACKSTEEL&rdquo;</div></div>
+      </div>`;
+    paper.hidden = false;
+    return new Promise(res => {
+      speak("CAP", "Blacksteel Butcher destroys Fleet relief force.");
+      const close = e => { e.stopPropagation(); paper.hidden = true; paper.removeEventListener("click", close); res(); };
+      paper.addEventListener("click", close);
+      idleText("Tap the newspaper to put it down.");
+    });
   }
 
   async function lily() {
     where.textContent = "Bellgrave";
-    setScene("lily");
+    await scene2d("lily");
     await lines([
       ["CAP", "On the last morning Bellgrave Island existed, Lily woke to the smell of cinnamon bread and her mother singing badly in the next room."],
       ["CAP", "Like every bell carved or painted on Bellgrave, the tiny bells on her ceiling beam had no clappers. Lily had once asked why. Her mother said bells did not need tongues when an island already knew its own name."],
@@ -951,111 +647,93 @@
       ["Lily", "Red jam?"],
       ["Lily's mother", "The very reddest."]
     ]);
-    setScene("village");
+    await scene2d("village");
     await lines([
       ["CAP", "Outside, Bellgrave was beginning its day. Fishermen rolled barrels toward the harbor, arguing about a catch none of them had actually seen."],
       ["CAP", "Children chased one another between bright houses built in widening rings around the old hilltop shrine. Someone practiced the same four notes on a flute. Someone else shouted for him to learn a fifth."],
       ["CAP", "At the well, the oldest residents talked about the tremor that had woken them before dawn. Nothing had broken badly enough to interrupt breakfast, so they moved on to whose goat had eaten the magistrate's laundry."]
     ]);
-    setScene("porch");
+    await scene2d("porch");
     await lines([
       ["CAP", "Lily ate on the porch steps with her doll propped beside her plate. Its yellow dress had faded to the color of old straw. One button eye was brown. The other was blue."],
       ["CAP", "Far offshore, shapes rested inside a bank of fog."]
     ]);
-    setScene("fog");
-    await lines([
-      ["Lily", "Mama, are those ships?"],
-      ["CAP", "Her mother squinted toward the horizon. For a moment, her hands stopped moving in Lily's hair."]
-    ]);
-    setScene("bell");
-    await lines([
-      ["CAP", "Then a bell began to ring."],
-      ["CAP", "Bellgrave had no bell tower."],
-      ["CAP", "The sound came from beneath the island."]
-    ]);
-    setScene("burning");
+    await scene2d("fog");
+    await lines([["Lily", "Mama, are those ships?"], ["CAP", "Her mother squinted toward the horizon. For a moment, her hands stopped moving in Lily's hair."]]);
+    await scene2d("bell");
+    await lines([["CAP", "Then a bell began to ring."], ["CAP", "Bellgrave had no bell tower."], ["CAP", "The sound came from beneath the island."]]);
+    await scene2d("burning");
     await say("CAP", "By the time Sean Cooke found Bellgrave, the island was already burning.");
     where.textContent = "";
-    setScene("frame");
+    await scene2d("frame");
     await say("N", "But that's three nights later. Three nights earlier, he was eating dinner on top of a chart.");
-    setScene("card", { kicker: "Chapter One", name: "The Call" });
-    await say("CAP", "Somewhere at sea. Three nights before Bellgrave.");
   }
 
-  function startCabin(fresh) {
-    S.part = "cabin";
-    if (fresh) { S.stage = 0; S.flags = {}; S.inv = []; }
-    save();
-    where.textContent = "Sean's cabin";
-    hintBtn.hidden = false;
-    if (R3) {
-      closeVerbs();
-      R3.place();
-      R3.show(S);
-      world2d.style.visibility = "hidden";
-    } else ACTORS.sean.place(330, 446, 1);
-    redraw();
-    idleText(objectiveText());
-    armIdle();
+  const G = {
+    S, me, sis, say, lines, choose, wait, card, lily, scene2d, scene3d, play, finish, give, drop, has, refresh,
+    reef, controls, newspaper,
+    tremor(on) { tremor = on; },
+    // for automated play-testing
+    debugTarget: () => (cfg && cfg.target ? cfg.target() : null),
+    debugQuick: () => !!(cfg && cfg.quick),
+    playing: () => !!cfg,
+    get W() { return GW(); }
+  };
+  window.__G = G;
+
+  // ---------- the story ----------
+  async function runStory() {
+    for (let i = S.ch; i < STORY.length; i++) {
+      S.ch = i; save();
+      await STORY[i].run(G);
+    }
+    S.ch = STORY.length; save();
+    await card("The End", "of the Prologue");
+    idleText("The Island That Never Existed. Tap Menu to play again, or to let your sister have a turn.");
   }
 
-  // ---------- Title screen ----------
+  // ---------- title ----------
   function showTitle() {
-    S.part = "title";
-    S.player = null;
-    S.busy = false;
-    S.sel = null;
-    advance = null;
-    clearGlow();
-    closeVerbs();
-    inv.hidden = true;
-    hintBtn.hidden = true;
-    menuBtn.hidden = true;
+    S.player = null; S.busy = false; S.sel = null; cfg = null; advance = null;
+    hush(); clearGlow(); closeVerbs(); clearInterval(ticker);
+    inv.hidden = chips.hidden = hintBtn.hidden = menuBtn.hidden = true; steerEl.hidden = true; paper.hidden = true;
     where.textContent = "";
-    setScene("title");
+    scene2d("title");
     const block = p => {
       const sv = load(p);
-      const resumable = sv && sv.part && sv.part !== "title";
+      const resumable = sv && sv.ch > 0 && sv.ch < STORY.length;
       return `<div class="p">
         ${PORTRAITS[NAMES[p]] ? `<div class="face" data-face="${NAMES[p]}"></div>` : ""}
         <button type="button" class="big" data-play="${p}">${NAMES[p]}</button>
-        ${resumable ? `<button type="button" class="small" data-restart="${p}">Start ${NAMES[p]}'s game over</button>` : ""}
+        ${resumable ? `<button type="button" class="small" data-restart="${p}">Start over (now at Chapter ${sv.ch + 1})</button>` : ""}
       </div>`;
     };
-    title.innerHTML = `
-      <h2>The Island That Never Existed</h2>
+    title.innerHTML = `<h2>The Island That Never Existed</h2>
       <div class="sub">A Blacksteel Pirates prologue, as told by Shannon</div>
       <div class="who">Who's playing tonight?</div>
       <div class="players">${block("olive")}${block("hazel")}</div>`;
     title.hidden = false;
     title.querySelectorAll("[data-face]").forEach(el => paintFace(el, el.dataset.face));
-    idleText("Each of you has your own game and your own save. Whoever isn't playing will be in the story, listening.");
+    idleText(W ? "Each of you has your own game and your own save. Whoever isn't playing will be in the story, listening." : "This device can't show the 3D scenes, so the story plays with paintings and a list of things to tap.");
     title.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => begin(b.dataset.play, false)));
     title.querySelectorAll("[data-restart]").forEach(b => b.addEventListener("click", () => begin(b.dataset.restart, true)));
   }
-
+  let gen = 0;
   function begin(p, restart) {
     if (restart) wipe(p);
+    // Browsers only allow speech after a tap: this tap unlocks it.
+    if (synth && voiceOn) { try { synth.speak(new SpeechSynthesisUtterance(" ")); } catch (e) { /* ignore */ } }
     S.player = p;
-    title.hidden = true;
-    menuBtn.hidden = false;
     const sv = load(p);
-    if (sv && sv.part === "cabin") {
-      S.stage = sv.stage || 0; S.flags = sv.flags || {}; S.inv = sv.inv || [];
-      return startCabin(false);
-    }
-    if (sv && sv.part === "end") return showEnd();
+    S.ch = sv && sv.ch < STORY.length ? sv.ch : 0;
     S.stage = 0; S.flags = {}; S.inv = [];
-    run2(intro);
+    title.hidden = true; menuBtn.hidden = false;
+    const mine = ++gen;
+    runStory().catch(err => { if (mine === gen) { console.error(err); idleText("Something went wrong. Tap Menu to go back."); } });
   }
-  // Story sequences outside the cabin also block input while they play.
-  async function run2(fn) {
-    S.busy = true;
-    try { await fn(); } finally { S.busy = false; }
-  }
+  menuBtn.addEventListener("click", () => { gen++; finishPlay = null; finish(); showTitle(); });
 
-  menuBtn.addEventListener("click", () => { save(); showTitle(); });
-
+  ART.preload();
   showTitle();
 })();
 </script>

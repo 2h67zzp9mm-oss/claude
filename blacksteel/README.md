@@ -1,46 +1,51 @@
 # The Blacksteel Pirates: The Island That Never Existed
 
-A King's Quest VII–style point-and-click retelling of the Blacksteel Pirates prologue. Shannon narrates. The player plays young Sean.
+A King's Quest VII–style 3D adventure game of the Blacksteel Pirates prologue. Shannon tells the story. The player plays young Sean.
 
-Open `index.html` in any browser (phone, tablet, or PC). No install, no server.
+Open `index.html` in a browser (phone, tablet, or PC). No install, no server. The 3D scenes use three.js from a CDN.
 
-## How it works
+## The story (all nine chapters of the written prologue)
 
-- Olive and Hazel each play separately and have their own save (stored in that browser).
-- Whoever isn't playing appears in Shannon's frame scenes as a listener, with her own lines.
-- If the player picks something Sean didn't do, Shannon corrects it, so the prologue stays canon.
-- Hazel's game adds glowing nudges after 20 seconds idle. Both players have a Hint button.
+1. **The Call**: Shannon's frame, Lily's morning (painted cutscene), then Sean's cabin in 3D.
+2. **The Reef**: steer the frigate between the reef rocks, through the smoke of each cannon shot.
+3. **Deke**: the beach. Deke, Harrow's order, and the mast.
+4. **The Shrine**: up the burning village (the doll, Mercer's pistol), the tunnels, the Record-Stone, the cradle.
+5. **The Name**: Olive.
+6. **Holding the Street**: Harrow's voice, Nia's orders, and three moments in the fight.
+7. **Not Them**: the cannons, Olive into Deke's arms, and the black arc (the player loses control on purpose).
+8. **After**: the waterline, the hand that won't let go, Mercer's news, and the farewell at sunrise.
+9. **Blacksteel**: the fishing boat, the news gull, the bounty, and "You're not theirs."
 
-## Built so far
+## How it plays
 
-- Title screen with a player picker
-- Frame scene: Shannon tells the story, with the sister listening
-- Lily's morning cutscene
-- Chapter One, The Call: Sean's cabin, the communicator call, the chart, "sit down for ten more seconds", the packet, and the promise
+- Olive and Hazel each play separately and have their own save, which resumes at the chapter they reached.
+- Whoever isn't playing is a listener in Shannon's frame scenes, with her own lines at the big moments.
+- If the player picks something Sean didn't say or do, Shannon corrects it, so the prologue stays canon.
+- Tap the floor to walk. Tap a person or object (or its name under "Things here") for what you can do.
+- Hint button for both players. In Hazel's game the next thing to try glows after a short wait.
+- **Voice**: every character is read aloud by the device's built-in voices, each with their own pitch and pace. **Auto** turns the page when a line finishes. Both can be switched off.
 
-## Next
+## Files
 
-- Chapter Two, The Reef
-- Chapter Three onward follows the prologue: Deke on the beach, the shrine, the name, holding the street, "Not them", the aftermath, and Blacksteel
+- `index.html`: the engine (dialogue, voices, verbs, inventory, hints, saves, title screen)
+- `story.js`: the nine chapters
+- `world3d.js`: the 3D engine (renderer, animated sea, fire, smoke, embers, camera moves, tap picking)
+- `sets3d.js`: the 3D places (cabin, frigate deck, beach, village, tunnels, Record-Stone chamber, fishing boat)
+- `people3d.js`: 3D characters (Sean, Deke, Mercer, Nia, troopers, Fleet soldiers, villagers, baby Olive) with walking and poses
+- `art.js`: painted 2D scenes (Shannon's archive, Lily's morning, chapter cards, the title)
+- `art/`: the family's artwork (title screen and portraits)
+- `ART_PROMPTS.md`: prompts for making more paintings in the family's style
 
 ## Canon decisions (from Sean)
 
 - The frame scene is canon: in-story Shannon tells in-story Olive and Hazel this story.
 - Both girls get the same intensity. Nothing is softened for Hazel.
-- Lily's morning is a cutscene with no narrator.
+- Lily's morning is a cutscene.
 - Hazel appears only in the frame scenes, never inside Bellgrave. Her origin stays unwritten.
-- No mystery gets answered: the Record-Stone, Olive's mark, the machinery, Nightforge, Deke and Mercer.
+- No mystery gets answered: the Record-Stone (its writing is deliberately unreadable), Olive's mark, the machinery, Nightforge, Deke and Mercer.
 
-## Files
+## Made up for the game (not in the written prologue)
 
-- `index.html`: the game engine, dialogue, and Chapter One's script
-- `art.js`: painted scenes and animation (moving lamp light, waves, fog, rain, embers, the rocking cabin)
-- `scene3d.js`: Sean's cabin in 3D (three.js): a modeled room with a swinging lantern that casts shadows, moonlight through the porthole, the ship rocking, and a jointed 3D Sean who walks, turns, reaches, and puts on his coat and sword when he takes them. Falls back to the 2D cabin if WebGL isn't available.
-- `chars.js`: the 2D walking rig, used when 3D isn't available.
-
-## Characters
-
-Characters are jointed rigs drawn in code (`chars.js`): hips, knees, ankles, shoulders and elbows follow a
-walk cycle that advances with distance walked, so the feet plant. Each character's look (`LOOKS`) follows the
-family's paintings: Sean is bald with glasses and a beard, in a long black coat with brass trim, a purple sash,
-boots, and a plain gray Nightforge. The paintings themselves are used for portraits and the title screen.
+- Shannon's asides and jokes, the sister's comments, and a few short lines (Mercer: "Lieutenant's by the boats").
+- Appearances of Deke, Mercer, Nia and the villagers, beyond what the prologue describes.
+- The newspaper's name ("The Central Authority Dispatch"). The currency stays unnamed.

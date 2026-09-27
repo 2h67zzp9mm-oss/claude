@@ -1209,6 +1209,7 @@
       }
     },
     bell: { bg: bellBG, fx: bellFX, init: () => ({}), shake: true },
+    black: { bg: () => wrap(`<rect width="800" height="480" fill="#000"/>`), fx: () => {}, init: () => ({}) },
     burning: {
       bg: burningBG, fx: burningFX,
       init: r => ({
