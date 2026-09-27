@@ -31,4 +31,14 @@ Open `index.html` in any browser (phone, tablet, or PC). No install, no server.
 - Hazel appears only in the frame scenes, never inside Bellgrave. Her origin stays unwritten.
 - No mystery gets answered: the Record-Stone, Olive's mark, the machinery, Nightforge, Deke and Mercer.
 
-Placeholder art is drawn in code (SVG). Scenes can be swapped for the girls' own drawings later.
+## Files
+
+- `index.html`: the game engine, dialogue, and Chapter One's script
+- `art.js`: painted scenes and animation (moving lamp light, waves, fog, rain, embers, the rocking cabin)
+- `chars.js`: walking characters. Tap the floor to walk; tap an object and Sean walks over before acting.
+
+## Adding the family's artwork
+
+Sean is a stand-in silhouette until real art is added. A character sprite sheet is a PNG with a transparent
+background: one row per direction (right, left), walk frames left to right, feet at the bottom center.
+Register it in `SPRITES` at the top of `chars.js`. Backgrounds can replace any scene's painted `bg`.

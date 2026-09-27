@@ -80,7 +80,12 @@
     overflow: hidden;
     touch-action: manipulation;
   }
-  #stage > svg { display: block; width: 100%; height: 100%; }
+  #world { position: absolute; inset: 0; transform-origin: 50% 58%; }
+  #world > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #world img.bg { object-fit: cover; opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+  #fxN, #chr, #fxL { pointer-events: none; }
+  #fxL { mix-blend-mode: screen; }
+  #ov svg { display: block; width: 100%; height: 100%; }
   #stage [data-hs] { cursor: pointer; fill: transparent; stroke: none; }
   #stage [data-hs].glow {
     stroke: var(--lamp);
@@ -171,7 +176,7 @@
     gap: 10px;
     text-align: center;
     padding: 16px;
-    background: radial-gradient(ellipse at 50% 35%, rgba(234,169,76,.18), transparent 60%), #0b1116;
+    background: linear-gradient(rgba(4,8,14,.05), rgba(4,8,14,.55));
     z-index: 6;
   }
   #title h2 {
@@ -199,7 +204,8 @@
     #line.N { font-size: 18px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    #stage [data-hs].glow, .blink, .fadein { animation: none; }
+    #stage [data-hs].glow, .blink { animation: none; }
+    #world img.bg { transition: none; }
   }
 </style>
 
@@ -222,6 +228,8 @@
   <div id="inv" hidden></div>
 </div>
 
+<script src="art.js"></script>
+<script src="chars.js"></script>
 <script>
 (() => {
   "use strict";
@@ -231,6 +239,7 @@
   const NAMES = { olive: "Olive", hazel: "Hazel" };
   const me = () => NAMES[S.player];
   const sis = () => (S.player === "olive" ? "Hazel" : "Olive");
+  window.__bsp = S;
   const saveKey = p => "blacksteel.prologue." + p;
 
   function save() {
@@ -252,10 +261,10 @@
         choices = $("choices"), tap = $("tap"), inv = $("inv"), title = $("title"),
         hintBtn = $("hintBtn"), menuBtn = $("menuBtn"), where = $("where");
 
-  function setScene(svg) {
+  ART.mount(stage);
+  function setScene(key, data) {
     closeVerbs();
-    [...stage.querySelectorAll("svg")].forEach(n => n.remove());
-    stage.insertAdjacentHTML("afterbegin", svg);
+    ART.show(key, S, data);
   }
 
   // ---------- Dialogue ----------
@@ -327,303 +336,6 @@
     }
   });
 
-  // ---------- Art ----------
-  const DEFS = `
-    <defs>
-      <radialGradient id="lampGlow" cx="400" cy="110" r="420" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="#f4bb62" stop-opacity=".45"/>
-        <stop offset=".45" stop-color="#c47a2c" stop-opacity=".14"/>
-        <stop offset="1" stop-color="#000" stop-opacity="0"/>
-      </radialGradient>
-      <radialGradient id="vignette" cx="400" cy="240" r="520" gradientUnits="userSpaceOnUse">
-        <stop offset=".55" stop-color="#000" stop-opacity="0"/>
-        <stop offset="1" stop-color="#000" stop-opacity=".6"/>
-      </radialGradient>
-      <linearGradient id="nightSea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#1d3752"/><stop offset="1" stop-color="#0a1824"/>
-      </linearGradient>
-      <linearGradient id="dawnSky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#9cc3d6"/><stop offset=".7" stop-color="#f3d9a2"/><stop offset="1" stop-color="#f6c77c"/>
-      </linearGradient>
-      <linearGradient id="goldSea" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#e8b35a"/><stop offset="1" stop-color="#6d7f86"/>
-      </linearGradient>
-      <pattern id="planks" width="64" height="480" patternUnits="userSpaceOnUse">
-        <rect width="64" height="480" fill="#3a291c"/>
-        <rect x="62" width="2" height="480" fill="#22160e"/>
-        <circle cx="18" cy="150" r="2.2" fill="#22160e"/>
-        <circle cx="44" cy="340" r="2.2" fill="#22160e"/>
-        <path d="M10 60 q14 6 30 0" stroke="#33241a" fill="none"/>
-      </pattern>
-      <pattern id="warmWall" width="40" height="40" patternUnits="userSpaceOnUse">
-        <rect width="40" height="40" fill="#e3c38b"/>
-        <path d="M0 20 h40" stroke="#d8b479" stroke-width="1"/>
-      </pattern>
-    </defs>`;
-
-  // A painted bell with no clapper, as on every Bellgrave threshold.
-  const bell = (x, y, s, c) =>
-    `<path d="M${x - 8 * s} ${y + 10 * s} q0 -16 ${8 * s} -18 q${8 * s} 2 ${8 * s} 18 z" fill="${c}"/>
-     <rect x="${x - 10 * s}" y="${y + 10 * s}" width="${20 * s}" height="${2.5 * s}" fill="${c}"/>`;
-
-  function doll(x, y, s) {
-    return `<g transform="translate(${x} ${y}) scale(${s})">
-      <path d="M-14 8 q14 -8 28 0 l6 30 q-20 8 -40 0 z" fill="#cdb77a"/>
-      <circle cx="0" cy="-4" r="11" fill="#e6d3b0"/>
-      <circle cx="-4" cy="-5" r="2" fill="#6b4524"/>
-      <circle cx="4" cy="-5" r="2" fill="#3f6fa0"/>
-      <path d="M-14 10 l-10 14" stroke="#e6d3b0" stroke-width="4" stroke-linecap="round"/>
-      <path d="M-20 16 l3 2 M-22 19 l3 2 M-24 22 l3 2" stroke="#111" stroke-width="1"/>
-      <path d="M14 10 l9 13" stroke="#e6d3b0" stroke-width="4" stroke-linecap="round"/>
-    </g>`;
-  }
-
-  function frameSVG() {
-    return `<svg viewBox="0 0 800 480" class="fadein" role="img" aria-label="A lamp-lit table covered in old archive books and a burned map fragment">
-      ${DEFS}
-      <rect width="800" height="480" fill="#141b21"/>
-      <rect y="300" width="800" height="180" fill="#2b2018"/>
-      <path d="M0 300 h800" stroke="#1a130d" stroke-width="4"/>
-      <!-- shelves of archive boxes -->
-      <g fill="#20292f">
-        <rect x="40" y="60" width="190" height="8"/><rect x="40" y="150" width="190" height="8"/><rect x="40" y="240" width="190" height="8"/>
-        <rect x="570" y="60" width="190" height="8"/><rect x="570" y="150" width="190" height="8"/><rect x="570" y="240" width="190" height="8"/>
-      </g>
-      <g fill="#2e3a40">
-        <rect x="48" y="96" width="36" height="54"/><rect x="88" y="104" width="30" height="46"/><rect x="122" y="92" width="42" height="58"/><rect x="170" y="100" width="34" height="50"/>
-        <rect x="52" y="186" width="44" height="54"/><rect x="100" y="194" width="28" height="46"/><rect x="134" y="182" width="40" height="58"/>
-        <rect x="580" y="94" width="40" height="56"/><rect x="626" y="102" width="30" height="48"/><rect x="662" y="90" width="44" height="60"/><rect x="712" y="100" width="36" height="50"/>
-        <rect x="590" y="186" width="34" height="54"/><rect x="630" y="192" width="46" height="48"/><rect x="684" y="184" width="30" height="56"/>
-      </g>
-      <!-- lamp -->
-      <path d="M392 150 h16 l14 70 h-44 z" fill="#8b6a3a"/>
-      <ellipse cx="400" cy="226" rx="36" ry="8" fill="#6d5230"/>
-      <path d="M386 160 q14 -24 28 0 q-2 34 -14 44 q-12 -10 -14 -44z" fill="#f6c46c"/>
-      <!-- books -->
-      <g>
-        <rect x="170" y="268" width="130" height="22" fill="#5b2f25"/><rect x="178" y="248" width="116" height="20" fill="#34453d"/><rect x="186" y="232" width="100" height="16" fill="#6e5a34"/>
-        <path d="M500 290 l120 -6 l14 16 l-124 6 z" fill="#d9c7a0"/>
-      </g>
-      <!-- burned map fragment -->
-      <g transform="rotate(-4 400 300)">
-        <path d="M300 272 l190 -4 l8 12 l-6 10 l6 14 l-10 10 l4 12 l-196 6 l-8 -14 l6 -10 l-6 -12 l8 -12 z" fill="#d6c294"/>
-        <path d="M300 272 l14 6 l10 -4 l12 8 l-6 10 l-16 2 l-8 -10z M470 318 l14 -8 l12 8 l-12 10z" fill="#3b2a1c" opacity=".85"/>
-        <text x="400" y="304" text-anchor="middle" font-family="IM Fell English SC, Georgia, serif" font-size="17" fill="#4a3522">BELLGRAVE WAS NOT THE FIRST</text>
-      </g>
-      <rect width="800" height="480" fill="url(#lampGlow)" pointer-events="none"/>
-      <rect width="800" height="480" fill="url(#vignette)" pointer-events="none"/>
-    </svg>`;
-  }
-
-  function lilyRoomSVG() {
-    return `<svg viewBox="0 0 800 480" class="fadein" role="img" aria-label="A small bedroom with sunlight through patched shutters and painted bells on the ceiling beam">
-      ${DEFS}
-      <rect width="800" height="480" fill="url(#warmWall)"/>
-      <rect y="0" width="800" height="46" fill="#7a5433"/>
-      ${[80, 180, 280, 380, 480, 580, 680].map((x, i) => bell(x, 10, 1.1, i % 2 ? "#3f6fa0" : "#b0413a")).join("")}
-      <!-- window and shutters -->
-      <rect x="70" y="110" width="160" height="150" fill="#fff1c8"/>
-      <rect x="60" y="100" width="180" height="10" fill="#8a603b"/>
-      <rect x="40" y="110" width="30" height="150" fill="#6f8a5e"/><rect x="230" y="110" width="30" height="150" fill="#6f8a5e"/>
-      <rect x="46" y="150" width="18" height="30" fill="#7f9a6d"/>
-      <!-- light bars -->
-      <path d="M90 260 L360 480 L440 480 L150 260z M160 260 L470 480 L530 480 L210 260z" fill="#fff5d6" opacity=".35"/>
-      <!-- basin -->
-      <path d="M640 250 h70 l-8 26 h-54 z" fill="#4c7fae"/><path d="M660 250 l6 8" stroke="#2c4b68" stroke-width="3"/>
-      <rect x="630" y="276" width="90" height="120" fill="#8a603b"/>
-      <!-- bed -->
-      <rect y="400" width="800" height="80" fill="#9a6b43"/>
-      <rect x="280" y="300" width="330" height="110" rx="10" fill="#6a4a2e"/>
-      <path d="M300 310 q150 -40 300 10 v70 h-300z" fill="#c9d4c8"/>
-      <path d="M340 316 q60 -30 120 -4 q40 18 100 0 v74 h-220z" fill="#a8b8c9"/>
-      ${doll(318, 318, .9)}
-      <circle cx="318" cy="352" r="9" fill="#8a5a3b"/>
-    </svg>`;
-  }
-
-  function villageSVG() {
-    const houses = [];
-    const cols = ["#d1674a", "#e8c15a", "#5e8fb8", "#8ab06a", "#e39a6b", "#b07ab0", "#f0e2c4"];
-    let k = 0;
-    [[150, 12], [230, 16], [310, 20]].forEach(([r, n], ring) => {
-      for (let i = 0; i < n; i++) {
-        const a = Math.PI * (0.08 + 0.84 * (i / (n - 1)));
-        const x = 400 - Math.cos(a) * r * 1.35, y = 150 + Math.sin(a) * r * 0.55;
-        const c = cols[k++ % cols.length];
-        houses.push(`<g><rect x="${x - 11}" y="${y - 12}" width="22" height="16" fill="${c}"/><path d="M${x - 13} ${y - 12} l13 -9 l13 9z" fill="#6b3b2a"/><rect x="${x - 3}" y="${y - 6}" width="6" height="10" fill="#3b2a1c"/></g>`);
-      }
-    });
-    return `<svg viewBox="0 0 800 480" class="fadein" role="img" aria-label="Bellgrave village in rings of bright houses around a hilltop shrine">
-      ${DEFS}
-      <rect width="800" height="480" fill="url(#dawnSky)"/>
-      <rect y="380" width="800" height="100" fill="url(#goldSea)"/>
-      <path d="M0 380 L0 250 L60 230 L90 300 L130 380z M800 380 L800 240 L740 220 L700 300 L670 380z" fill="#1b1d22"/>
-      <path d="M60 380 Q400 40 740 380z" fill="#6f8f59"/>
-      ${houses.join("")}
-      <!-- shrine -->
-      <path d="M372 140 h56 l-4 -30 h-48z" fill="#e9e1d0"/><path d="M364 112 l36 -24 l36 24z" fill="#7a3b2e"/>
-      ${bell(400, 120, 1, "#7a3b2e")}
-      <!-- harbor -->
-      <path d="M300 380 h200 l-10 12 h-180z" fill="#6b4a2e"/>
-      <path d="M330 372 q20 10 40 0 z M420 372 q18 9 36 0z" fill="#8b5a36"/>
-    </svg>`;
-  }
-
-  function porchSVG() {
-    return `<svg viewBox="0 0 800 480" class="fadein" role="img" aria-label="Porch steps with a plate of bread and red jam and a faded cloth doll">
-      ${DEFS}
-      <rect width="800" height="480" fill="url(#dawnSky)"/>
-      <rect y="260" width="800" height="220" fill="url(#goldSea)"/>
-      <path d="M0 260 L0 170 L90 150 L150 260z" fill="#1b1d22"/>
-      <rect x="0" y="300" width="800" height="180" fill="#8e643f"/>
-      <rect x="0" y="300" width="800" height="12" fill="#6f4a2d"/>
-      <rect x="0" y="390" width="800" height="12" fill="#6f4a2d"/>
-      <rect x="560" y="120" width="18" height="190" fill="#6f4a2d"/>
-      <!-- plate and bread -->
-      <ellipse cx="330" cy="352" rx="80" ry="16" fill="#e8e0cf"/>
-      <path d="M280 346 q50 -30 100 0 q-50 10 -100 0z" fill="#c78a4a"/>
-      <path d="M296 340 q34 -14 68 0 q-34 6 -68 0z" fill="#b3232f"/>
-      ${doll(470, 300, 1.8)}
-    </svg>`;
-  }
-
-  function fogSVG() {
-    return `<svg viewBox="0 0 800 480" class="fadein" role="img" aria-label="Shapes of ships in a fog bank offshore, seabirds rising">
-      ${DEFS}
-      <rect width="800" height="480" fill="url(#dawnSky)"/>
-      <rect y="250" width="800" height="230" fill="url(#goldSea)"/>
-      ${[0, 1, 2, 3, 4, 5, 6].map(i => `<path d="M${40 + i * 110} ${300 + (i % 3) * 40} q30 -6 60 0" stroke="#fff3d0" stroke-width="2" fill="none" opacity=".6"/>`).join("")}
-      <g fill="#59626a" opacity=".55">
-        ${[140, 260, 380, 500, 610].map((x, i) => `<path d="M${x} ${248 - i % 2 * 4} h70 l-12 14 h-46z"/><rect x="${x + 32}" y="${196 - i % 2 * 6}" width="4" height="54"/><path d="M${x + 36} ${200 - i % 2 * 6} l24 16 l-24 16z"/>`).join("")}
-      </g>
-      <rect x="0" y="180" width="800" height="90" fill="#e7e2d4" opacity=".55"/>
-      <g stroke="#2a2a2a" stroke-width="2.5" fill="none">
-        ${[[420, 150], [450, 130], [470, 160], [500, 120], [380, 135], [530, 145]].map(([x, y]) => `<path d="M${x - 8} ${y} q8 -7 8 0 q0 -7 8 0"/>`).join("")}
-      </g>
-    </svg>`;
-  }
-
-  function blackSVG(label) {
-    return `<svg viewBox="0 0 800 480" role="img" aria-label="${label}"><rect width="800" height="480" fill="#050608"/></svg>`;
-  }
-
-  function cardSVG(kicker, name) {
-    return `<svg viewBox="0 0 800 480" class="fadein" role="img" aria-label="${kicker}: ${name}">
-      <rect width="800" height="480" fill="#0b1116"/>
-      <text x="400" y="210" text-anchor="middle" font-family="IM Fell English SC, Georgia, serif" font-size="26" fill="#eaa94c" letter-spacing="4">${kicker}</text>
-      <text x="400" y="268" text-anchor="middle" font-family="IM Fell English SC, Georgia, serif" font-size="54" fill="#ecdfc2">${name}</text>
-      <path d="M300 300 h200" stroke="#b38e50" stroke-width="1.5"/>
-    </svg>`;
-  }
-
-  function cabinSVG() {
-    const f = S.flags, st = S.stage, has = id => S.inv.includes(id);
-    const plateOnTable = !f.plateMoved;
-    const chartUnder = !has("chart") && !f.chartSpread;
-    const packetOnTable = st >= 3 && !has("packet");
-    return `<svg viewBox="0 0 800 480" role="img" aria-label="Sean's cramped ship cabin at night">
-      ${DEFS}
-      <rect width="800" height="480" fill="url(#planks)"/>
-      <rect width="800" height="30" fill="#22170f"/>
-      <rect y="410" width="800" height="70" fill="#281b12"/>
-      ${[0, 1, 2, 3].map(i => `<path d="M0 ${426 + i * 16} h800" stroke="#1c130c"/>`).join("")}
-
-      <!-- door -->
-      <rect x="52" y="112" width="110" height="298" fill="#4a3423" stroke="#1d130c" stroke-width="3"/>
-      <rect x="66" y="130" width="82" height="110" fill="none" stroke="#352517" stroke-width="3"/>
-      <rect x="66" y="262" width="82" height="130" fill="none" stroke="#352517" stroke-width="3"/>
-      <circle cx="146" cy="262" r="6" fill="#b38e50"/>
-      <rect x="52" y="140" width="14" height="8" fill="#6d5230"/><rect x="52" y="360" width="14" height="8" fill="#6d5230"/>
-
-      <!-- coat on its hook -->
-      <circle cx="215" cy="136" r="5" fill="#b38e50"/>
-      ${has("coat") ? "" : `<path d="M194 146 q21 -14 42 0 l18 176 q-39 14 -78 0z" fill="#27313c"/>
-      <path d="M205 146 l10 40 l10 -40" stroke="#1a2129" stroke-width="3" fill="none"/>
-      <path d="M215 186 v130" stroke="#1a2129" stroke-width="2"/>`}
-
-      <!-- Nightforge on its pegs -->
-      <circle cx="306" cy="104" r="4" fill="#6d5230"/><circle cx="446" cy="104" r="4" fill="#6d5230"/>
-      ${has("sword") ? "" : `<g>
-        <path d="M312 110 Q392 102 474 114 L474 122 Q392 110 312 118 Z" fill="#3b3e44"/>
-        <rect x="282" y="108" width="30" height="11" rx="3" fill="#2b1d14"/>
-        <path d="M312 102 q-4 12 0 24 l4 -2 q-3 -10 0 -20z" fill="#5a5e64"/>
-        <circle cx="280" cy="113" r="4" fill="#5a5e64"/>
-      </g>`}
-
-      <!-- porthole -->
-      <circle cx="620" cy="170" r="58" fill="#8b6a3a"/>
-      <circle cx="620" cy="170" r="46" fill="url(#nightSea)"/>
-      <circle cx="640" cy="150" r="9" fill="#e9e2c8"/>
-      <path d="M580 190 q10 -6 20 0 q10 6 20 0 q10 -6 20 0 q10 6 20 0" stroke="#4d7596" stroke-width="2" fill="none"/>
-      ${[0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = i * Math.PI / 4; return `<circle cx="${620 + Math.cos(a) * 52}" cy="${170 + Math.sin(a) * 52}" r="3" fill="#5c4424"/>`; }).join("")}
-
-      <!-- bunk -->
-      <rect x="668" y="298" width="132" height="112" fill="#3a281b"/>
-      <rect x="668" y="298" width="132" height="22" fill="#6b5a45"/>
-      <path d="M690 318 q50 -16 110 0 v60 h-110z" fill="#44533f"/>
-      ${f.plateMoved ? `<ellipse cx="730" cy="300" rx="28" ry="6" fill="#cfc8b8"/><ellipse cx="728" cy="297" rx="12" ry="3" fill="#7a5a3a"/>` : ""}
-
-      <!-- table -->
-      <rect x="240" y="318" width="330" height="14" fill="#5a3f28"/>
-      <rect x="240" y="330" width="330" height="4" fill="#3d2a1a"/>
-      <rect x="258" y="334" width="14" height="78" fill="#4a3321"/><rect x="538" y="334" width="14" height="78" fill="#4a3321"/>
-
-      <!-- receipts -->
-      <path d="M252 316 l30 -4 l3 6 l-30 4z" fill="#e7dcc3"/>
-      <path d="M268 314 l28 2 l-1 6 l-28 -2z" fill="#d9ccb0"/>
-      <path d="M258 306 l24 -8 l4 8 l-24 8z" fill="#efe6d2"/>
-
-      <!-- chart: under the plate, or spread out -->
-      ${chartUnder ? `<path d="M298 316 L422 312 L428 320 L294 322 Z" fill="#d9c9a3"/>` : ""}
-      ${f.chartSpread ? `<g>
-        <path d="M292 318 L452 314 L460 322 L286 324 Z" fill="#dccca5"/>
-        <path d="M300 290 L446 286 L452 318 L296 320 Z" fill="#e3d4ae"/>
-        <path d="M312 300 q10 -6 18 0 q-8 8 -18 0z M424 296 q8 -4 14 2 q-6 6 -14 -2z" fill="#9b8a60"/>
-        <circle cx="372" cy="304" r="7" fill="none" stroke="#b0413a" stroke-width="2" stroke-dasharray="3 3"/>
-      </g>` : ""}
-
-      <!-- plate of dinner -->
-      ${plateOnTable ? `<ellipse cx="362" cy="312" rx="34" ry="7" fill="#cfc8b8"/>
-        <ellipse cx="358" cy="309" rx="16" ry="4" fill="#7a5a3a"/>
-        <path d="M384 305 l14 6" stroke="#9aa0a6" stroke-width="2"/>` : ""}
-
-      <!-- tide tables -->
-      <rect x="416" y="304" width="34" height="13" fill="#5f715c"/><rect x="418" y="306" width="30" height="2" fill="#8da187"/>
-
-      <!-- communicator -->
-      <path d="M528 262 l6 -34" stroke="#6d5230" stroke-width="3"/><circle cx="534" cy="227" r="3" fill="#b38e50"/>
-      <rect x="470" y="262" width="70" height="56" rx="4" fill="#8b6a3a"/>
-      <rect x="478" y="270" width="38" height="26" fill="${st === 0 ? "#223534" : "#2d5552"}"/>
-      ${st > 0 && st < 4 ? `<path d="M486 290 q11 -14 22 0" stroke="#86c0b4" stroke-width="2" fill="none"/>` : ""}
-      <circle cx="528" cy="276" r="4" fill="${st === 0 ? "#cf5a3a" : "#5b7a55"}" class="${st === 0 ? "blink" : ""}"/>
-      ${[0, 1, 2].map(i => `<path d="M480 ${302 + i * 5} h54" stroke="#5c4424"/>`).join("")}
-
-      <!-- Shannon's packet -->
-      ${packetOnTable ? `<rect x="546" y="300" width="22" height="17" fill="#c8b27d"/><path d="M546 308 h22 M557 300 v17" stroke="#7a5433"/>` : ""}
-
-      <!-- hanging lamp -->
-      <path d="M400 30 v36" stroke="#6d5230" stroke-width="2"/>
-      <path d="M388 66 h24 l6 34 h-36z" fill="#8b6a3a"/>
-      <path d="M393 72 q7 -8 14 0 v22 h-14z" fill="#f6c46c"/>
-      <rect width="800" height="480" fill="url(#lampGlow)" pointer-events="none"/>
-      <rect width="800" height="480" fill="url(#vignette)" pointer-events="none"/>
-
-      <!-- hotspots (drawn last so they sit on top) -->
-      <rect data-hs="door" x="46" y="106" width="122" height="306"/>
-      ${has("coat") ? "" : `<rect data-hs="coat" x="176" y="128" width="84" height="200"/>`}
-      ${has("sword") ? "" : `<rect data-hs="sword" x="272" y="94" width="208" height="36"/>`}
-      <rect data-hs="porthole" x="560" y="110" width="120" height="120"/>
-      <rect data-hs="bunk" x="664" y="284" width="136" height="126"/>
-      <rect data-hs="table" x="240" y="318" width="330" height="18"/>
-      <rect data-hs="receipts" x="246" y="294" width="46" height="26"/>
-      ${chartUnder || f.chartSpread ? `<rect data-hs="chart" x="292" y="${f.chartSpread ? 284 : 306}" width="136" height="${f.chartSpread ? 36 : 16}"/>` : ""}
-      ${plateOnTable ? `<rect data-hs="plate" x="326" y="298" width="76" height="22"/>` : ""}
-      <rect data-hs="tides" x="412" y="298" width="42" height="22"/>
-      <rect data-hs="comm" x="466" y="222" width="80" height="98"/>
-      ${packetOnTable ? `<rect data-hs="packet" x="542" y="294" width="32" height="26"/>` : ""}
-    </svg>`;
-  }
-
   // ---------- Inventory ----------
   const ITEMS = {
     chart: "Chart",
@@ -660,6 +372,8 @@
     coat: ["Coat", ["Look", "Take"]],
     sword: ["Saber on the wall", ["Look", "Take"]],
     porthole: ["Porthole", ["Look"]],
+    shelf: ["Shelf", ["Look"]],
+    bucket: ["Bucket", ["Look"]],
     bunk: ["Bunk", ["Look"]],
     table: ["Table", ["Look"]],
     receipts: ["Receipts", ["Look", "Take"]],
@@ -685,7 +399,8 @@
       b.addEventListener("click", e => {
         e.stopPropagation();
         closeVerbs();
-        if (isItem) itemVerb(id, v); else run(() => act(id, v));
+        if (isItem) itemVerb(id, v);
+        else run(async () => { if (v !== "Look") await goTo(id); return act(id, v); });
       });
       verbsEl.appendChild(b);
     });
@@ -704,17 +419,41 @@
     if (advance) { advance(); return; }
     if (S.part !== "cabin" || S.busy) return;
     const t = e.target.closest("[data-hs]");
-    if (!t) { closeVerbs(); if (S.sel) { S.sel = null; renderInv(); idleText(objectiveText()); } return; }
+    if (!t) {
+      const hadMenu = !!verbsEl;
+      closeVerbs();
+      if (S.sel) { S.sel = null; renderInv(); idleText(objectiveText()); return; }
+      if (!hadMenu) { const p = scenePt(e); ACTORS.sean.walkTo(p.x, p.y); }
+      return;
+    }
     const id = t.getAttribute("data-hs");
     if (S.sel) {
       const item = S.sel;
       S.sel = null;
       renderInv();
-      run(() => useOn(item, id));
+      run(async () => { await goTo(id); return useOn(item, id); });
       return;
     }
     openVerbs(id, HS[id][0], HS[id][1], null, false, { x: e.clientX, y: e.clientY });
   });
+
+  // Where Sean stands to reach each thing in the cabin, and which way he faces.
+  const STAND = {
+    door: [150, 432, -1], coat: [292, 430, -1], sword: [380, 424, 1], porthole: [586, 426, 1],
+    shelf: [640, 428, 1], bunk: [650, 440, 1], bucket: [566, 440, 1], table: [400, 444, 1],
+    receipts: [268, 442, 1], chart: [360, 444, 1], plate: [360, 444, 1], tides: [432, 444, 1],
+    comm: [500, 444, 1], packet: [556, 444, 1]
+  };
+  function goTo(id) {
+    const p = STAND[id];
+    return p ? ACTORS.sean.walkTo(p[0], p[1], p[2]) : Promise.resolve();
+  }
+  function scenePt(e) {
+    const svg = stage.querySelector("#ov svg");
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
 
   function itemVerb(id, v) {
     if (v === "Look") { run(() => lookItem(id)); return; }
@@ -736,7 +475,7 @@
       }
     }
   }
-  function redraw() { setScene(cabinSVG()); renderInv(); }
+  function redraw() { ART.show("cabin", S); renderInv(); }
 
   // ---------- Hints and gentle nudges ----------
   let idleTimer = null;
@@ -859,6 +598,7 @@
         if (st === 2) return sitDown();
         if (st === 3) return say("R", "Ten seconds, Sean.");
         if (!has("coat") || !has("sword") || !has("packet")) return say("N", objectiveText());
+        await ACTORS.sean.walkTo(70, 424, -1);
         return endChapter();
 
       case "sword":
@@ -886,7 +626,9 @@
         await say("N", "An old, dark-gray saber. There's a worn name cut near the guard: Nightforge.");
         await say("N", "He found it years ago on one of my paid research errands, buried under collapsed shelving in an abandoned storehouse. No pedestal. No prophecy. No dead king holding the handle.");
         return say("N", "Just an edge that refused to dull. I found one incomplete reference to Nightforge in an archive, and nothing more. Until that week, it had only ever been a sword.");
-      case "porthole": return say("N", "Night. Open sea. Somewhere below the waterline, a leak that wanted his attention.");
+      case "porthole": return say("N", "Night. Open sea. No land anywhere, and no reason yet to go looking for any.");
+      case "shelf": return say("N", "Books he meant to read. Charts he meant to fix. And his compass. It pointed north. For three more nights, it would keep doing that.");
+      case "bucket": return say("N", "The leak. He'd spent a year learning which leaks were harmless and which ones wanted him dead. This one was harmless. Mostly.");
       case "bunk": return say("N", f.plateMoved ? "His bunk, now with dinner on it." : "His bunk. Unmade. It had been unmade for a year.");
       case "table": return say("N", "Loose receipts, tide tables, the remains of dinner, and the communicator. He called this his navigation desk.");
       case "receipts": return say("N", "Receipts, in no order. My brother keeps receipts the way some people keep grudges: everywhere, and forever.");
@@ -1078,7 +820,7 @@
     closeVerbs();
     inv.hidden = true;
     hintBtn.hidden = true;
-    setScene(frameSVG());
+    setScene("frame");
     where.textContent = "";
     await say("N", "He left that night.");
     if (S.player === "hazel") await lines([["SIS", "What was on the island, Aunt Shannon?"], ["N", "Next time."]]);
@@ -1090,7 +832,7 @@
     S.part = "end";
     inv.hidden = true;
     hintBtn.hidden = true;
-    setScene(cardSVG("End of Chapter One", "The Call"));
+    setScene("card", { kicker: "End of Chapter One", name: "The Call" });
     await say("CAP", "Next time: Chapter Two, The Reef. Three nights later, your father finds Bellgrave, and it is already burning.");
     idleText("That's the end of this chapter for now. Tap Menu to go back to the start.");
   }
@@ -1102,7 +844,7 @@
     where.textContent = "";
     inv.hidden = true;
     hintBtn.hidden = true;
-    setScene(frameSVG());
+    setScene("frame");
     await lines([
       ["N", "Sit. Both of you."],
       ["N", "Your father asked me to tell you this one. I remember the details. He remembers the parts where he was brave."],
@@ -1121,7 +863,7 @@
 
   async function lily() {
     where.textContent = "Bellgrave";
-    setScene(lilyRoomSVG());
+    setScene("lily");
     await lines([
       ["CAP", "On the last morning Bellgrave Island existed, Lily woke to the smell of cinnamon bread and her mother singing badly in the next room."],
       ["CAP", "Like every bell carved or painted on Bellgrave, the tiny bells on her ceiling beam had no clappers. Lily had once asked why. Her mother said bells did not need tongues when an island already knew its own name."],
@@ -1133,33 +875,34 @@
       ["Lily", "Red jam?"],
       ["Lily's mother", "The very reddest."]
     ]);
-    setScene(villageSVG());
+    setScene("village");
     await lines([
       ["CAP", "Outside, Bellgrave was beginning its day. Fishermen rolled barrels toward the harbor, arguing about a catch none of them had actually seen."],
       ["CAP", "Children chased one another between bright houses built in widening rings around the old hilltop shrine. Someone practiced the same four notes on a flute. Someone else shouted for him to learn a fifth."],
       ["CAP", "At the well, the oldest residents talked about the tremor that had woken them before dawn. Nothing had broken badly enough to interrupt breakfast, so they moved on to whose goat had eaten the magistrate's laundry."]
     ]);
-    setScene(porchSVG());
+    setScene("porch");
     await lines([
       ["CAP", "Lily ate on the porch steps with her doll propped beside her plate. Its yellow dress had faded to the color of old straw. One button eye was brown. The other was blue."],
       ["CAP", "Far offshore, shapes rested inside a bank of fog."]
     ]);
-    setScene(fogSVG());
+    setScene("fog");
     await lines([
       ["Lily", "Mama, are those ships?"],
       ["CAP", "Her mother squinted toward the horizon. For a moment, her hands stopped moving in Lily's hair."]
     ]);
-    setScene(blackSVG("Darkness"));
+    setScene("bell");
     await lines([
       ["CAP", "Then a bell began to ring."],
       ["CAP", "Bellgrave had no bell tower."],
-      ["CAP", "The sound came from beneath the island."],
-      ["CAP", "By the time Sean Cooke found Bellgrave, the island was already burning."]
+      ["CAP", "The sound came from beneath the island."]
     ]);
+    setScene("burning");
+    await say("CAP", "By the time Sean Cooke found Bellgrave, the island was already burning.");
     where.textContent = "";
-    setScene(frameSVG());
+    setScene("frame");
     await say("N", "But that's three nights later. Three nights earlier, he was eating dinner on top of a chart.");
-    setScene(cardSVG("Chapter One", "The Call"));
+    setScene("card", { kicker: "Chapter One", name: "The Call" });
     await say("CAP", "Somewhere at sea. Three nights before Bellgrave.");
   }
 
@@ -1169,6 +912,7 @@
     save();
     where.textContent = "Sean's cabin";
     hintBtn.hidden = false;
+    ACTORS.sean.place(330, 446, 1);
     redraw();
     idleText(objectiveText());
     armIdle();
@@ -1187,7 +931,7 @@
     hintBtn.hidden = true;
     menuBtn.hidden = true;
     where.textContent = "";
-    setScene(frameSVG());
+    setScene("title");
     const block = p => {
       const sv = load(p);
       const resumable = sv && sv.part && sv.part !== "title";
