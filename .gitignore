@@ -2,3 +2,4 @@ node_modules/
 living-town/data/
 *.tmp-*
 *.zip
+living-town/viewer-token

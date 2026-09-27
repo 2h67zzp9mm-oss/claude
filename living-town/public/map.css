@@ -70,3 +70,18 @@
   touch-action: manipulation;
 }
 .interior-hint { margin: 0; max-width: 720px; color: #d9c6a5; font-size: 0.78rem; text-align: center; }
+
+/* Visitor's window: watch only, and no personal details. */
+html[data-viewer] #profileButton,
+html[data-viewer] #playButton,
+html[data-viewer] #editResident,
+html[data-viewer] .life-status,
+html[data-viewer] .family-block,
+html[data-viewer] #profileSummary,
+html[data-viewer] #latestMemory,
+html[data-viewer] .detail-tab[data-panel="historyPanel"],
+html[data-viewer] .detail-tab[data-panel="knowledgePanel"],
+html[data-viewer] div:has(> #residentAge),
+html[data-viewer] div:has(> #closestFriend) {
+  display: none !important;
+}

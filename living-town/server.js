@@ -28,6 +28,7 @@ const { createStore } = require("./lib/persistence");
 const { createAuth } = require("./lib/auth");
 const cast = require("./lib/cast");
 const { createMrE, ollamaGenerator } = require("./lib/mre");
+const { startViewer, readToken } = require("./lib/viewer");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
@@ -414,33 +415,77 @@ function broadcastRoster() {
   for (const r of state.residents) sentRevisions.set(r.id, r.lifeRevision);
   lastSentEventId = state.eventId;
   broadcast(fullStatePayload());
+  viewer?.broadcast(visitorFullState());
 }
 
 const sentRevisions = new Map();
 let lastSentEventId = state.eventId;
 
-function tickPayload() {
+function takeNewEvents() {
+  const events = state.events.filter(event => event.id >= lastSentEventId).reverse();
+  lastSentEventId = state.eventId;
+  return events;
+}
+
+function tickPayload(events) {
   const changed = [];
   for (const r of state.residents) {
     if (sentRevisions.get(r.id) !== r.lifeRevision) { changed.push(residentSummary(r)); sentRevisions.set(r.id, r.lifeRevision); }
   }
-  const events = state.events.filter(event => event.id >= lastSentEventId).reverse();
-  lastSentEventId = state.eventId;
   return JSON.stringify({ type: "tick", now: Date.now(), town: townPayload(), residents: state.residents.map(residentDynamic), changed, events });
+}
+
+// --- Visitor window ---
+// Family who aren't on the tailnet can watch through a read-only window.
+// Visitors get an allowlist of fields: where people are and what they're
+// doing, never ages, birthdays, histories, memories or relationships.
+
+function visitorResident(r) {
+  const needs = {};
+  for (const [key, value] of Object.entries(r.needs || {})) needs[key] = Math.round(value);
+  return {
+    id: r.id, name: r.name, color: r.color, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
+    place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: r.mood ? { label: r.mood.label } : null,
+    speech: r.speech && r.speech.until > Date.now() ? r.speech : null, look: r.look || {}, custom: Boolean(r.custom),
+    indoor: r.indoor || null, using: r.using?.kind || null, playable: false, lifeRevision: 0
+  };
+}
+
+const PRIVATE_EVENT = /birthday|\bturn(s|ed)\s+\d|\d+\s*(years?|yrs?)\s*old|\bage\b|\baged\b/i;
+function visitorEvents(events) {
+  return events.filter(e => !PRIVATE_EVENT.test(e.text)).map(e => ({ id: e.id, at: e.at, text: e.text, by: e.by }));
+}
+
+function visitorTown() {
+  const { mre: mrE, weather } = townPayload();
+  return { mre: mrE, weather };
+}
+
+function visitorFullState() {
+  return JSON.stringify({
+    type: "state", now: Date.now(), homes: cast.homeMap(state), town: visitorTown(), mreBrain: "", visitor: true,
+    state: { events: visitorEvents(state.events.slice(0, 50)), residents: state.residents.map(visitorResident) }
+  });
+}
+
+function visitorTickPayload(events) {
+  return JSON.stringify({ type: "tick", now: Date.now(), town: visitorTown(), residents: state.residents.map(visitorResident), changed: [], events: visitorEvents(events) });
 }
 
 // --- HTTP ---
 
-const app = express();
-app.disable("x-powered-by");
-app.use((req, res, next) => {
+function securityHeaders(req, res, next) {
   const host = String(req.headers.host || "").replace(/[^\w.:[\]-]/g, "");
   res.setHeader("Content-Security-Policy", `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://${host} wss://${host}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`);
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
   next();
-});
+}
+
+const app = express();
+app.disable("x-powered-by");
+app.use(securityHeaders);
 
 // The service worker cache name is derived from the served files, so every
 // change to the client automatically invalidates old caches.
@@ -790,7 +835,12 @@ const socketHealthInterval = setInterval(() => {
   });
 }, 30_000);
 
-const tickInterval = setInterval(() => { tick(); broadcast(tickPayload()); }, TICK_MS);
+const tickInterval = setInterval(() => {
+  tick();
+  const events = takeNewEvents();
+  broadcast(tickPayload(events));
+  viewer?.broadcast(visitorTickPayload(events));
+}, TICK_MS);
 const saveInterval = setInterval(saveState, AUTOSAVE_MS);
 const sessionInterval = setInterval(() => auth.pruneSessions(), 3_600_000);
 
@@ -813,6 +863,15 @@ process.on("uncaughtException", err => {
   if (dump) console.error(`Crash state written to ${dump}`);
   shutdown(1);
 });
+
+// The visitor window is off unless a token is set (viewer-token file or
+// LIVING_TOWN_VIEWER_TOKEN), and always off with LIVING_TOWN_VIEWER=off.
+// It listens on localhost only; Tailscale Funnel publishes it.
+const viewerToken = process.env.LIVING_TOWN_VIEWER === "off" ? null : readToken(path.join(__dirname, "viewer-token"));
+const viewer = viewerToken ? startViewer({
+  port: Number(process.env.LIVING_TOWN_VIEWER_PORT) || 4311, token: viewerToken,
+  publicDir: PUBLIC_DIR, sharedDir: SHARED_DIR, headers: securityHeaders, fullState: visitorFullState
+}) : null;
 
 server.listen(PORT, HOST, () => {
   console.log(`Living Town server running — http://${HOST}:${PORT}`);

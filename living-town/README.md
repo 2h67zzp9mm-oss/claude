@@ -2,7 +2,7 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.9.0
+## Honest status — 0.10.0
 
 Working now:
 
@@ -26,7 +26,7 @@ Not built yet:
 
 - Free-form generated dialogue. This is deliberately out of scope until the LLM review gate in `PROJECT_LOG.md` is passed.
 - Interiors, town editing, TV screensaver mode
-- Public internet hosting. This server is for Mouse and trusted family devices on Tailscale only.
+- Public internet hosting of the playable app. The main server is for Mouse and trusted family devices on Tailscale only; only the read-only visitor's window may be published (see below).
 
 ## Project layout
 
@@ -77,6 +77,25 @@ launchctl load ~/Library/LaunchAgents/com.livingtown.server.plist
 
 `KeepAlive` restarts the server after crashes and retries until Tailscale is up at boot. After installing, gather the review evidence listed in `PROJECT_LOG.md`: the release checksum, the installed plist, `lsof -iTCP:4310 -sTCP:LISTEN`, and `npm test` output from Mouse.
 
+## Visitor's window (optional)
+
+A read-only view of the town for family who aren't on Tailscale, such as the girls' mum. She opens a link in any browser, with no app and no account.
+
+- It is a separate little server on `127.0.0.1:4311` with none of the main server's routes: no accounts, no `/api`, no controls. A visitor's socket that sends anything is closed.
+- Everything is under a secret path, `/v/<token>/`. Anything else is a 404.
+- Visitors see the map, the houses, the feed and what everyone is doing. They never get ages, birthdays, background histories, memories or friendships, and birthday or age news is filtered out of the feed.
+- At most 12 visitors can watch at once.
+
+Set it up on Mouse:
+
+```bash
+npm run viewer-link                  # creates the secret and prints the link
+launchctl kickstart -k gui/$(id -u)/com.livingtown.server
+tailscale funnel --bg 4311           # publish only the visitor port
+```
+
+To cut off access, make a new link (`npm run viewer-link -- --new`) and restart. To take the window down completely, run `tailscale funnel reset`. Anyone with the link can watch, so only share it with people you'd happily have watching.
+
 ## Mr. E's local AI (optional)
 
 Mr. E works without any setup, using built-in surprises. To give him a real AI brain that runs privately on Mouse:
@@ -106,4 +125,4 @@ Nothing leaves the house: Ollama runs on Mouse and only listens locally.
 - Every control command re-checks the session, so logging out, PIN resets, and removed players take effect on open sockets immediately.
 - WebSocket connections from other sites are refused, and responses carry a strict Content-Security-Policy.
 
-This is not an internet-hardened service. Do not port-forward it.
+This is not an internet-hardened service. Do not port-forward it, and never publish port 4310. Only the read-only visitor's window (port 4311) may be published, with Tailscale Funnel.

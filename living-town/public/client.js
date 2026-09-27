@@ -3,6 +3,8 @@
 
   const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, setHomeAssignments, SKIN_TONES, HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
   const $ = selector => document.querySelector(selector);
+  // The read-only window for visiting family (see lib/viewer.js).
+  const VISITOR = document.documentElement.dataset.viewer === "1";
   const canvas = $("#townCanvas");
   const ctx = canvas.getContext("2d");
   const ui = {
@@ -83,12 +85,15 @@
   }
 
   // --- Networking ---
+  // Visitor mode is the read-only window for family off the tailnet: the
+  // socket lives under the page's secret path, and nothing is ever sent.
   function connect() {
     clearTimeout(reconnectTimer);
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    const path = VISITOR ? `${location.pathname.replace(/\/?$/, "/")}ws` : "/ws";
+    const ws = new WebSocket(`${proto}://${location.host}${path}`);
     socket = ws;
-    ws.addEventListener("open", () => { reconnectDelay = 1000; ui.connectionStatus.textContent = "Live · shared world"; });
+    ws.addEventListener("open", () => { reconnectDelay = 1000; ui.connectionStatus.textContent = VISITOR ? "Live · visiting" : "Live · shared world"; });
     ws.addEventListener("close", () => {
       if (socket !== ws) return; // replaced deliberately
       ui.connectionStatus.textContent = "Disconnected — retrying…";
@@ -111,6 +116,7 @@
   }
 
   function send(payload) {
+    if (VISITOR) return;
     if (socket && socket.readyState === 1) socket.send(JSON.stringify(payload));
   }
 
@@ -1294,12 +1300,15 @@
   function formatEventTime(at) { return new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
   function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[ch])); }
 
-  $("#profileButton").addEventListener("click", showProfileMenu);
+  if (!VISITOR) $("#profileButton").addEventListener("click", showProfileMenu);
+  else $(".zoom-hint").textContent = "Drag to explore · Pinch to zoom · Tap someone to check in";
   window.addEventListener("resize", applyCamera);
   camera.z = defaultZoom();
   centerOn(places.square.x, places.square.y - 20);
-  initializePlayers().catch(error => showToast(error.message));
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  if (!VISITOR) {
+    initializePlayers().catch(error => showToast(error.message));
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
   connect();
   requestAnimationFrame(frame);
 })();

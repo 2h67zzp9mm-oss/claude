@@ -32,7 +32,8 @@ function freePort() {
 function spawnServer(dataDir, port, extraEnv = {}, args = ["server.js"]) {
   const child = spawn(process.execPath, args, {
     cwd: root,
-    env: { ...process.env, HOST: "127.0.0.1", PORT: String(port), LIVING_TOWN_DATA_DIR: dataDir, ...extraEnv },
+    // The visitor window stays off unless a test turns it on.
+    env: { ...process.env, HOST: "127.0.0.1", PORT: String(port), LIVING_TOWN_DATA_DIR: dataDir, LIVING_TOWN_VIEWER: "off", ...extraEnv },
     stdio: ["ignore", "pipe", "pipe"]
   });
   children.add(child);

@@ -252,3 +252,20 @@ Save schema 3 migrates 0.2 through 0.4 saves in place.
 - **Checked in a headless iPhone-sized browser** against a throwaway server and a temporary town: walking home zooms inside, the sofa, a chair and a bed work from taps, and the front door takes you out, with no errors. `data/` was not touched.
 - **Not yet:** the cafe, workshop and market interiors (0.10) and upstairs floors (0.11).
 
+# Version 0.10.0: the visitor's window
+
+A read-only view of the town for family who aren't on the tailnet (the girls' mum), published with Tailscale Funnel so she needs no app and no account.
+
+## Network exposure review (checkpoints 1 and 3)
+
+This is the first thing published to the internet, so it was designed to expose as little as possible.
+
+- **Separate server, separate port.** `lib/viewer.js` runs its own HTTP server on `127.0.0.1:4311`. None of the main server's routes exist on it: no accounts, no `/api`, no commands. Funnel publishes only this port. The main server stays on the Tailscale address at 4310 and is never published.
+- **Secret link.** Everything is under `/v/<token>/`. The token has 24 random bytes (32 characters), lives in `viewer-token` (mode 600, git-ignored, not in `data/`) and is compared in constant time. Any other path, a wrong token, or a WebSocket from another site's page gets a 404. Replacing the token (`npm run viewer-link -- --new`, then a restart) cuts off the old link; `tailscale funnel reset` takes the window down.
+- **Read-only.** The visitor socket only sends; any incoming message closes it (code 1008), and nothing a visitor does can change the town. The visitor copy of the page never sends and never registers the offline cache.
+- **Allowlisted data.** Visitors get each resident's name, position, place, activity, intent, needs, mood label, speech bubble, looks and where they are inside their house, and Mr. E's position and announcements. Ages, birthdays, background histories, experiences, memories, learned facts, goals, careers and friendships are never sent, and feed items about birthdays or ages are filtered out. The page hides the profile menu, Play, editing and the history tabs.
+- **Limits.** At most 12 visitors at once, messages capped at 256 bytes, dead sockets dropped every 30 seconds, the same security headers as the main server, and `Cache-Control: no-store`.
+- **Remaining risk.** Anyone who has the link can watch, including anyone it gets forwarded to. They see the family's first names, what their residents are doing, and speech bubbles, which can retell stories from the residents' fictional histories. Replacing the link is the remedy. Funnel's public address carries this Mac's Tailscale machine name.
+- **Tests** (`test/viewer.test.js`): wrong or partial tokens, main-app paths and `/api` all get 404s; the page is marked read-only; foreign-origin and wrong-token sockets are refused; no private field reaches a visitor; roster changes still arrive; sending a message closes the socket and moves no one; the main server still requires sign-in; and the window stays off without a token. The normal test servers run with the window off.
+- **Checked in a headless phone-sized browser:** the visitor page loads live, makes no `/api` requests, shows no errors, and hides the profile menu, Play and editing.
+
