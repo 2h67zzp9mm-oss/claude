@@ -625,6 +625,9 @@ function runAutonomousExperience(state, resident, now = Date.now(), quiet = fals
   resident.mood.stress = clamp(resident.mood.stress + stressDelta * MOOD_IMPACT, 0, 100);
   resident.mood.label = moodFrom(resident.mood.valence, resident.mood.stress);
   resident.mood.reason = text;
+  // A life moment shows for a little while, then they go back to what they
+  // were doing (a shift at the cafe, a show in the square).
+  if (!resident.activityAfter) resident.activityAfter = resident.activity || null;
   resident.activity = kind === "career" || promoted ? "handling a work situation"
     : kind === "family" ? "having family time"
     : kind === "mentoring" ? "helping someone at the workbench"

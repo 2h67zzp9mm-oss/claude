@@ -119,3 +119,18 @@ function seeded(seed) {
 }
 
 module.exports = { seeded };
+
+test("a life moment shows for a while, then leaves what they were doing to come back", () => {
+  const now = Date.now();
+  const state = { residents: Object.keys(life.profiles).map(id => ({ id, name: life.profiles[id].name, place: "cafe", activity: "running the cafe counter", memories: [], relationships: {}, needs: { energy: 80, hunger: 80, social: 70, fun: 70 } })) };
+  life.hydrateLifeState(state, now);
+  const milo = state.residents.find(r => r.id === "milo");
+  milo.activity = "running the cafe counter";
+  life.runAutonomousExperience(state, milo, now, true);
+  assert.notStrictEqual(milo.activity, "running the cafe counter");
+  assert.strictEqual(milo.activityAfter, "running the cafe counter", "remembers the shift");
+  assert.ok(milo.activityUntil > now);
+  life.runAutonomousExperience(state, milo, now + 1000, true);
+  assert.strictEqual(milo.activityAfter, "running the cafe counter", "a second moment doesn't forget it");
+});
+

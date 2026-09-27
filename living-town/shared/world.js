@@ -130,8 +130,8 @@
   ];
 
   // The last few styles and accessories came with the Big Top troupe.
-  const HAIR_STYLES = ["short", "long", "pigtails", "buns", "curls", "swoop", "bald", "bunny", "yarn", "jester", "rook", "ribbons", "robot"];
-  const ACCESSORIES = ["none", "bow", "headband", "star", "glasses", "beard", "overalls", "stitches", "ruff", "partyMask"];
+  const HAIR_STYLES = ["short", "long", "pigtails", "buns", "curls", "swoop", "bald", "bunny", "yarn", "jester", "rook", "king", "ribbons", "robot"];
+  const ACCESSORIES = ["none", "bow", "headband", "star", "glasses", "beard", "overalls", "stitches", "ruff", "partyMask", "comedyMask", "robe"];
   const SKIN_TONES = ["#f6d5bd", "#f2c7a5", "#e0ac86", "#d8a47f", "#c68642", "#a8683c", "#8d5524", "#6f4125"];
 
   function nearestPlace(x, y) {

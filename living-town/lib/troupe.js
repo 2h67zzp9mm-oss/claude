@@ -24,8 +24,8 @@ const members = [
   },
   {
     id: "t-patches", name: "Patches", age: 34,
-    look: { skin: "#f3d9b1", hair: "#f2b705", style: "yarn", shirt: "#7fd1b9", pants: "#7fd1b9", shoes: "#8a5a36", accessory: "stitches" },
-    role: "Costume maker", summary: "Patches is a cheerful patchwork rag doll with honey-colored yarn hair. She sews every costume in the troupe and has a kind word for everyone.",
+    look: { skin: "#f3d9b1", hair: "#c0392b", style: "yarn", shirt: "#3d6fb6", pants: "#3d6fb6", shoes: "#8a5a36", accessory: "stitches" },
+    role: "Costume maker", summary: "Patches is a cheerful rag doll with red yarn hair, a blue dress and one button eye. She sews every costume in the troupe and has a kind word for everyone.",
     likes: ["sewing costumes", "tea parties", "cheering people up", "bright buttons"], dislikes: ["frowns", "loose threads", "rainy picnics"],
     traits: { openness: 0.6, conscientiousness: 0.7, extraversion: 0.7, agreeableness: 0.95, neuroticism: 0.35 },
     interests: ["craft", "people", "food", "stories"], speed: 1, wake: 7, bed: 22.5, weekendLie: 0.5,
@@ -34,8 +34,8 @@ const members = [
   },
   {
     id: "t-tumble", name: "Tumble", age: 19,
-    look: { skin: "#fbe3d0", hair: "#2e7d32", style: "jester", shirt: "#2e7d32", pants: "#f2c14e", shoes: "#2e7d32", accessory: "ruff" },
-    role: "Acrobat", summary: "Tumble is the newest jester in the troupe: a little nervous, surprisingly brave, and never happier than in the middle of a cartwheel.",
+    look: { skin: "#fdf6ee", hair: "#d62828", style: "jester", shirt: "#d62828", pants: "#2b59c3", shoes: "#2b59c3", accessory: "ruff" },
+    role: "Acrobat", summary: "Tumble is the newest jester in the troupe, in red and blue with big wide eyes: a little nervous, surprisingly brave, and never happier than in the middle of a cartwheel.",
     likes: ["cartwheels", "maps", "quiet mornings", "the trampoline"], dislikes: ["getting lost", "loud surprises", "being rushed"],
     traits: { openness: 0.65, conscientiousness: 0.55, extraversion: 0.45, agreeableness: 0.75, neuroticism: 0.7 },
     interests: ["sport", "play", "exploring", "music"], speed: 1.3, wake: 7.5, bed: 22.5, weekendLie: 1,
@@ -44,8 +44,8 @@ const members = [
   },
   {
     id: "t-rook", name: "Rook", age: 72,
-    look: { skin: "#e8e4da", hair: "#cfc9bb", style: "rook", shirt: "#e8e4da", pants: "#3a3a4a", shoes: "#3a3a4a", accessory: "glasses" },
-    role: "Ringmaster emeritus", summary: "Rook is a kindly old chess-castle gentleman who ran the ring for years. He is fond of puzzles and his little garden, and forgets where he put his spectacles.",
+    look: { skin: "#e8e4da", hair: "#f2c14e", style: "king", shirt: "#6c3483", pants: "#3a3a4a", shoes: "#3a3a4a", accessory: "robe" },
+    role: "Ringmaster emeritus", summary: "Rook is a kindly old chess-king gentleman in a purple robe who ran the ring for years. He is fond of puzzles and his little garden, and forgets where he put his spectacles.",
     likes: ["puzzles", "his little garden", "long stories", "a good game of chess"], dislikes: ["hurrying", "losing his spectacles", "cold tea"],
     traits: { openness: 0.55, conscientiousness: 0.6, extraversion: 0.45, agreeableness: 0.85, neuroticism: 0.3 },
     interests: ["games", "nature", "stories", "birds"], speed: 0.7, wake: 6, bed: 21, weekendLie: 0,
@@ -54,8 +54,8 @@ const members = [
   },
   {
     id: "t-ribbons", name: "Ribbons", age: 23,
-    look: { skin: "#fff0f5", hair: "#ff6f91", style: "ribbons", shirt: "#ff6f91", pants: "#ffd1dc", shoes: "#ff6f91", accessory: "partyMask" },
-    role: "Ribbon dancer", summary: "Ribbons is a shy dancer made of pink streamers who wears a starry party mask. On stage she twirls like a spinning top.",
+    look: { skin: "#fff0f5", hair: "#e84a6f", style: "ribbons", shirt: "#e84a6f", pants: "#ff8fab", shoes: "#e84a6f", accessory: "comedyMask" },
+    role: "Ribbon dancer", summary: "Ribbons is a shy dancer made of pink ribbons who wears a smiling white mask. On stage she twirls like a spinning top.",
     likes: ["dancing", "music boxes", "baking cookies", "sparkly things"], dislikes: ["crowds that are too close", "tangles", "loud bangs"],
     traits: { openness: 0.7, conscientiousness: 0.6, extraversion: 0.3, agreeableness: 0.85, neuroticism: 0.65 },
     interests: ["music", "art", "food", "design"], speed: 1.1, wake: 8, bed: 23, weekendLie: 1,
@@ -76,6 +76,24 @@ const members = [
 ];
 
 const byId = new Map(members.map(m => [m.id, m]));
+
+// Looks the troupe arrived with in 0.12. A member still wearing one of these
+// gets the current look; anyone the family has restyled keeps theirs.
+const originalLooks = {
+  "t-patches": { skin: "#f3d9b1", hair: "#f2b705", style: "yarn", shirt: "#7fd1b9", pants: "#7fd1b9", shoes: "#8a5a36", accessory: "stitches" },
+  "t-tumble": { skin: "#fbe3d0", hair: "#2e7d32", style: "jester", shirt: "#2e7d32", pants: "#f2c14e", shoes: "#2e7d32", accessory: "ruff" },
+  "t-rook": { skin: "#e8e4da", hair: "#cfc9bb", style: "rook", shirt: "#e8e4da", pants: "#3a3a4a", shoes: "#3a3a4a", accessory: "glasses" },
+  "t-ribbons": { skin: "#fff0f5", hair: "#ff6f91", style: "ribbons", shirt: "#ff6f91", pants: "#ffd1dc", shoes: "#ff6f91", accessory: "partyMask" }
+};
+
+/** The look a member should have now, or null to leave them as they are. */
+function updatedLook(resident) {
+  const member = memberFor(resident);
+  const old = member && originalLooks[member.id];
+  if (!old) return null;
+  const same = Object.keys(old).length === Object.keys(resident.look || {}).length && Object.entries(old).every(([k, v]) => resident.look?.[k] === v);
+  return same ? { ...member.look } : null;
+}
 
 function memberFor(resident) { return resident?.custom?.troupe ? byId.get(resident.custom.troupe) || null : null; }
 
@@ -115,8 +133,9 @@ function tick(state, now, addEvent) {
   const end = new Date(date);
   end.setHours(SHOW.to, 0, 0, 0);
   const others = state.residents.filter(r => !memberFor(r)).map(r => r.id);
-  state.effects.push({ id: `${now}-show`, kind: "happening", show: true, place: "square", pull: 1.8, residentIds: others, until: end.getTime(), reason: "watching the circus show" });
+  // Tempting, not irresistible: plenty come to watch, some carry on with their day.
+  state.effects.push({ id: `${now}-show`, kind: "happening", show: true, place: "square", pull: 1.1, residentIds: others, until: end.getTime(), reason: "watching the circus show" });
   addEvent("🎪 The Big Top troupe's circus show is starting in the Town Square! Everyone's invited.", now);
 }
 
-module.exports = { members, memberFor, profileFor, mindFor, showOn, tick, SHOW };
+module.exports = { members, memberFor, profileFor, mindFor, showOn, tick, updatedLook, SHOW };

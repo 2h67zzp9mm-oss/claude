@@ -176,7 +176,7 @@
     setTimeout(() => pendingInspections.delete(r.id), 3000);
   }
 
-  const LOOK_LABELS = { bunny: "bunny ears", yarn: "yarn hair", jester: "jester hat", rook: "castle crown", ribbons: "streamers", robot: "robot head", overalls: "overalls", stitches: "rag-doll stitches", ruff: "jester ruff", partyMask: "party mask" };
+  const LOOK_LABELS = { bunny: "bunny ears", yarn: "yarn hair", jester: "jester hat", rook: "castle crown", king: "king's crown", ribbons: "streamers", robot: "robot head", overalls: "overalls", stitches: "rag-doll stitches", ruff: "jester ruff", partyMask: "party mask", comedyMask: "smiling mask", robe: "royal robe" };
 
   // --- Pixel-art sprites ---
   // Residents are drawn as small pixel sprites (one sprite pixel = PX map
@@ -232,6 +232,7 @@
     if (style === "bunny") { px(5, 0, H, 2, 4); px(9, 0, H, 2, 4); px(6, 1, "#f7b2c4", 1, 3); px(9, 1, "#f7b2c4", 1, 3); }
     if (style === "yarn") { px(4, 2, H, 8, 3); [5, 7, 9].forEach(x => px(x, 1, H)); px(4, 5, H, 1, 5); px(11, 5, H, 1, 5); px(3, 7, H, 1, 4); px(12, 7, H, 1, 4); px(3, 7, "#e63946"); px(12, 7, "#e63946"); }
     if (style === "jester") { px(4, 3, H, 4, 2); px(8, 3, pants, 4, 2); px(3, 1, H, 2, 2); px(2, 0, "#ffd166"); px(11, 1, pants, 2, 2); px(13, 0, "#ffd166"); }
+    if (style === "king") { px(5, 2, H, 6, 2); px(5, 1, H); px(10, 1, H); px(7, 0, H, 1, 2); px(6, 1, H, 3, 1); px(6, 3, "#e63946"); px(9, 3, "#4a90d9"); }
     if (style === "rook") { px(4, 1, H, 8, 3); g.clearRect(6, 1, 1, 1); g.clearRect(9, 1, 1, 1); px(4, 3, shade(H, -0.14), 8, 1); }
     if (style === "ribbons") { px(4, 4, H, 1, 9); px(11, 4, shade(H, -0.1), 1, 8); px(3, 7, shade(H, 0.12), 1, 7); px(12, 6, H, 1, 7); px(2, 12, H, 1, 3); px(13, 11, shade(H, 0.12), 1, 3); }
     if (style === "robot") { px(5, 3, shade(skin, -0.15), 6, 1); px(7, 1, "#555a60", 1, 2); px(7, 0, H, 1, 1); px(4, 6, shade(skin, -0.2), 1, 2); px(11, 6, shade(skin, -0.2), 1, 2); }
@@ -241,14 +242,19 @@
     px(7, 8, "#b0645a", 2, 1);
     if (style === "robot") { px(6, 6, "#6fd6ff"); px(9, 6, "#6fd6ff"); px(6, 8, "#555a60", 4, 1); }
     if (style === "bunny") px(7, 9, "#ffffff", 2, 1);
+    // Big wide jester eyes.
+    if (style === "jester") { px(6, 5, "#ffffff"); px(9, 5, "#ffffff"); px(6, 6, "#1c2a4a"); px(9, 6, "#1c2a4a"); }
     if (acc === "beard") { px(5, 7, H, 1, 4); px(10, 7, H, 1, 4); px(6, 9, H, 4, 2); px(6, 8, H); px(9, 8, H); }
     if (acc === "glasses") { px(5, 5, "#3a3a4a", 3, 1); px(8, 5, "#3a3a4a", 3, 1); ["#cfe3f0"].forEach(c2 => { px(5, 6, c2); px(7, 6, c2); px(8, 6, c2); px(10, 6, c2); }); }
     if (acc === "bow") { px(10, 2, "#f7d56b", 3, 2); px(11, 2, "#d9a93a", 1, 2); }
     if (acc === "headband") px(5, 4, "#e76f8a", 6, 1);
     if (acc === "star") { px(11, 2, "#ffd166"); px(10, 3, "#ffd166", 3, 1); px(11, 4, "#ffd166"); }
     if (acc === "overalls") { px(6, 11, pants, 4, 4); px(5, 11, pants, 1, 3); px(10, 11, pants, 1, 3); px(6, 12, "#ffd166"); px(9, 12, "#ffd166"); }
-    if (acc === "stitches") { px(7, 8, skin, 2, 1); px(6, 8, "#8a3b3b"); px(9, 8, "#8a3b3b"); px(7, 9, "#8a3b3b", 2, 1); px(5, 7, "#f28482"); px(10, 7, "#f28482"); px(6, 6, "#3a2a20"); px(9, 6, "#3a2a20"); }
+    // Rag doll: one button eye, a stitched smile and rosy cheeks.
+    if (acc === "stitches") { px(7, 8, skin, 2, 1); px(6, 8, "#8a3b3b"); px(9, 8, "#8a3b3b"); px(7, 9, "#8a3b3b", 2, 1); px(5, 7, "#f28482"); px(10, 7, "#f28482"); px(5, 5, "#1c2a4a", 2, 2); px(5, 5, "#6f93bf"); px(9, 6, "#3a2a20"); }
     if (acc === "ruff") { px(4, 10, "#ffd166", 8, 1); for (let i = 4; i < 12; i += 2) px(i, 11, "#ffd166"); }
+    if (acc === "comedyMask") { px(5, 4, "#f4f1ea", 6, 6); px(5, 6, OUTLINE); px(6, 5, OUTLINE); px(9, 5, OUTLINE); px(10, 6, OUTLINE); px(6, 8, OUTLINE); px(7, 9, OUTLINE, 2, 1); px(9, 8, OUTLINE); px(5, 8, "#ff8fab"); px(10, 8, "#ff8fab"); }
+    if (acc === "robe") { px(3, 10, "#6c3483", 1, 9); px(12, 10, "#6c3483", 1, 9); px(4, 10, "#f4f1ea", 8, 1); [5, 8, 10].forEach(x => px(x, 10, OUTLINE)); }
     if (acc === "partyMask") { px(5, 5, "#ffd166", 6, 2); px(6, 6, OUTLINE); px(9, 6, OUTLINE); px(4, 4, "#ffd166"); px(11, 4, "#ffd166"); px(8, 5, "#fff6c2"); }
 
     const data = g.getImageData(0, 0, SPRITE_W, SPRITE_H).data;

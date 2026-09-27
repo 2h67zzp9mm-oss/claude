@@ -27,6 +27,15 @@ test("the troupe: six original characters with valid looks, gentle words and the
   assert.ok(world.homeBuildings.some(b => b.id === "bigTop" && b.tent));
 });
 
+test("members still in their original looks get the new ones; restyled members keep theirs", () => {
+  const patches = troupe.members.find(m => m.id === "t-patches");
+  const original = { skin: "#f3d9b1", hair: "#f2b705", style: "yarn", shirt: "#7fd1b9", pants: "#7fd1b9", shoes: "#8a5a36", accessory: "stitches" };
+  assert.deepStrictEqual(troupe.updatedLook({ custom: { troupe: "t-patches" }, look: original }), patches.look);
+  assert.strictEqual(troupe.updatedLook({ custom: { troupe: "t-patches" }, look: { ...original, shirt: "#ff0000" } }), null, "a restyle is kept");
+  assert.strictEqual(troupe.updatedLook({ custom: { troupe: "t-plum" }, look: {} }), null, "Plum was already right");
+  assert.strictEqual(troupe.updatedLook({ id: "olive", look: original }), null, "only the troupe");
+});
+
 test("show time pulls everyone else to the square, once per show, only on weekend afternoons", () => {
   const events = [];
   const state = { residents: [{ id: "olive" }, { id: "t-plum", custom: { troupe: "t-plum" } }], effects: [] };

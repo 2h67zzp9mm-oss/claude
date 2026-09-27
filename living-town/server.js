@@ -30,6 +30,7 @@ const cast = require("./lib/cast");
 const { createMrE, ollamaGenerator } = require("./lib/mre");
 const { startViewer, readToken } = require("./lib/viewer");
 const troupe = require("./lib/troupe");
+const crowd = require("./lib/crowd");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
@@ -193,18 +194,65 @@ function walkTo(resident, x, y) {
   // Leaving the house ends whatever they were doing inside.
   resident.indoor = null;
   resident.using = null;
+  resident.millStroll = false;
+  resident.activityAfter = null;
   resident.targetX = x;
   resident.targetY = y;
   resident.path = route(resident.x, resident.y, x, y);
   resident.arrived = false;
 }
 
-function setDestination(resident, placeKey) {
+// Everyone out on the map (people inside buildings don't take up space).
+function othersOutside(resident) {
+  return state.residents.filter(o => o !== resident && !interiors.locate(o, world));
+}
+
+const DOORS = world.buildings.map(b => ({ x: world.walkNodes[b.node][0], y: world.walkNodes[b.node][1] }));
+
+// How far people spread out at each place: the open plaza, park and market
+// have room; the cafe terrace and workshop yard are cosier.
+const SPREAD = { square: 64, park: 52, market: 52, cafe: 34, workshop: 38 };
+
+// A free spot at a place, with room around it (see lib/crowd.js).
+function freeSpotAt(resident, placeKey, spread = SPREAD[placeKey] || 34) {
   const spot = spotFor(resident.id, placeKey);
-  // Spread people out a little so they don't stack; stay close at front doors.
-  const [spreadX, spreadY] = placeKey === "homes" ? [6, 4] : [28, 16];
+  return crowd.freeSpot(othersOutside(resident), spot, { spread, placeRadius: PLACE_RADIUS - 8, snap: p => snapToWalkable(p.x, p.y), avoid: DOORS });
+}
+
+function setDestination(resident, placeKey) {
   resident.place = placeKey;
-  walkTo(resident, spot.x + (Math.random() - 0.5) * spreadX, spot.y + (Math.random() - 0.5) * spreadY);
+  // Home means through your own front door; anywhere else, a free spot.
+  if (placeKey === "homes") {
+    const spot = spotFor(resident.id, placeKey);
+    return walkTo(resident, spot.x, spot.y);
+  }
+  const performing = placeKey === "square" && troupe.memberFor(resident) && troupe.showOn(new Date());
+  const p = freeSpotAt(resident, placeKey, performing ? 22 : undefined);
+  walkTo(resident, p.x, p.y);
+}
+
+// People standing around outdoors shift to a new free spot now and then,
+// and step aside if someone ends up on top of them. Performers move about
+// the square more often during a show. Not saved: it's only who moves when.
+const nextMill = new Map();
+function millAbout(now) {
+  for (const r of state.residents) {
+    if (r.asleep || isControlled(r.id) || r.path.length || !r.place || r.place === "homes" || interiors.locate(r, world)) continue;
+    const performing = /circus show/.test(r.activity || "") && troupe.memberFor(r);
+    const due = nextMill.get(r.id) ?? now + (performing ? 8_000 : 30_000) * Math.random();
+    const squashed = crowd.crowded(r, othersOutside(r));
+    if (now < due && !squashed) { nextMill.set(r.id, due); continue; }
+    nextMill.set(r.id, now + (performing ? 15_000 + Math.random() * 10_000 : 45_000 + Math.random() * 75_000));
+    // Performers keep to a little stage in front of the fountain.
+    const p = freeSpotAt(r, r.place, performing ? 22 : undefined);
+    // Stay put if the new spot is barely a step away.
+    if (Math.hypot(p.x - r.x, p.y - r.y) < 4) continue;
+    const { activityAfter } = r;
+    walkTo(r, p.x, p.y);
+    // A short stroll isn't a new visit: they keep doing what they were doing.
+    r.millStroll = true;
+    r.activityAfter = activityAfter;
+  }
 }
 
 function isControlled(id) {
@@ -250,14 +298,20 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
   }
   if (r.path.length) {
     r.asleep = false;
-    r.activity = controlled ? "heading where the player pointed" : `walking to ${placeName(r)}`;
+    if (!r.millStroll) r.activity = controlled ? "heading where the player pointed" : `walking to ${placeName(r)}`;
     return;
   }
 
   if (!r.arrived) {
     r.arrived = true;
-    if (Number(r.activityUntil || 0) <= date.getTime()) mind.onArrive(r, r.place, date);
+    if (r.millStroll) r.millStroll = false;
+    else if (Number(r.activityUntil || 0) <= date.getTime()) { mind.onArrive(r, r.place, date); r.activityAfter = null; }
     if (controlled && !r.place) r.activity = "exploring the street";
+  }
+  // A life moment is over: back to what they were doing.
+  if (r.activityAfter && Number(r.activityUntil || 0) <= date.getTime()) {
+    r.activity = r.activityAfter;
+    r.activityAfter = null;
   }
 
   r.asleep = !controlled && r.place === "homes" && mind.isAsleepTime(r.id, date);
@@ -292,6 +346,7 @@ function tick() {
   const date = new Date(now);
   const dtHours = elapsedSeconds / 3600;
   for (const resident of state.residents) updateResident(resident, dtHours, elapsedSeconds, date);
+  millAbout(now);
 
   if (now - lastSocialCheck >= 15_000) {
     lastSocialCheck = now;
@@ -334,11 +389,13 @@ function catchUpOnBoot(now) {
     groups.get(placeKey).push(r);
   }
   for (const [placeKey, group] of groups) {
-    group.forEach((r, index) => {
-      const spot = spotFor(r.id, placeKey);
-      r.x = spot.x + ((index % 3) - 1) * 14;
-      r.y = spot.y + Math.floor(index / 3) * 10;
+    group.forEach(r => {
+      // Home is through the front door; anywhere else, a free spot with room around it.
+      const p = placeKey === "homes" ? spotFor(r.id, placeKey) : freeSpotAt(r, placeKey);
+      r.x = p.x;
+      r.y = p.y;
       r.targetX = r.x;
+      r.activityAfter = null;
       r.targetY = r.y;
       r.path = [];
       r.arrived = false;
@@ -385,6 +442,20 @@ function welcomeTroupe(now) {
   if (arrived.length) addEvent(`🎪 A traveling circus troupe has put up the Big Top by the market: ${arrived.map(r => r.name).join(", ")}. Welcome to Living Town!`, now);
 }
 welcomeTroupe(bootTime);
+
+// Before 0.14, a life moment's activity never wore off. Anyone still stuck
+// on an expired one picks a fresh activity for where they are.
+const LIFE_MOMENT = /^(handling a work situation|having family time|helping someone at the workbench|following a personal interest)$/;
+for (const r of state.residents) {
+  if (r.asleep || !r.place || r.activityAfter || Number(r.activityUntil || 0) > bootTime || !LIFE_MOMENT.test(r.activity || "")) continue;
+  mind.onArrive(r, r.place, new Date(bootTime));
+}
+
+// Troupe members still in their original 0.12 looks get the current ones.
+for (const r of state.residents) {
+  const look = troupe.updatedLook(r);
+  if (look) { r.look = cast.sanitizeLook(look); r.color = r.look.shirt; }
+}
 
 catchUpOnBoot(bootTime);
 
@@ -471,12 +542,15 @@ function tickPayload(events) {
 // doing, never ages, birthdays, histories, memories or relationships.
 
 function visitorResident(r) {
+  // Speech can retell someone's history ("…when I was 7 years old…"), so
+  // bubbles about birthdays or ages are left out, like the feed.
+  const speech = r.speech && r.speech.until > Date.now() && !PRIVATE_EVENT.test(r.speech.text || "") ? r.speech : null;
   const needs = {};
   for (const [key, value] of Object.entries(r.needs || {})) needs[key] = Math.round(value);
   return {
     id: r.id, name: r.name, color: r.color, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: r.mood ? { label: r.mood.label } : null,
-    speech: r.speech && r.speech.until > Date.now() ? r.speech : null, look: r.look || {}, custom: Boolean(r.custom),
+    speech, look: r.look || {}, custom: Boolean(r.custom),
     indoor: r.indoor || null, using: r.using?.kind || null, playable: false, lifeRevision: 0
   };
 }

@@ -37,7 +37,8 @@ test("visitor's window: secret link, read-only, no personal details", async () =
   const server = spawnServer(dataDir, port, { LIVING_TOWN_MRE_AI: "off", LIVING_TOWN_VIEWER: "on", LIVING_TOWN_VIEWER_TOKEN: TOKEN, LIVING_TOWN_VIEWER_PORT: String(viewerPort) });
   await waitForStart(server);
   const base = `http://127.0.0.1:${viewerPort}`;
-  await until(async () => (await fetch(`${base}/`).catch(() => null))?.status === 404, "visitor window listening");
+  // Ready when the secret page itself is served (not just when something answers the port).
+  await until(async () => (await fetch(`${base}/v/${TOKEN}/`).catch(() => null))?.status === 200, "visitor window serving", 15000);
 
   // Only the secret path works; nothing of the main app is reachable here.
   for (const path of ["/", "/index.html", "/client.js", "/api/auth/status", "/ws", `/v/wrong-token-abcdefghijklmnopqrs/`, `/v/${TOKEN.slice(0, -1)}/`]) {

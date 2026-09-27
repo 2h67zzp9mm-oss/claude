@@ -311,3 +311,26 @@ This is the first thing published to the internet, so it was designed to expose 
 - **Tests:** every floor of every building is checked (spots can be reached, nothing blocks doors or stairs, the stairs lead somewhere, the front door is downstairs); every room on every floor can be reached from the front door, with routes that stay on the floor except when using the stairs; everyone's bed is upstairs and family time is downstairs; and the server test takes Sean upstairs for a bubble bath and ignores a floor that doesn't exist.
 - **Checked on a headless phone-sized browser:** walk home, tap the stairs, the view follows upstairs, bath, back down, out the front door, with no errors.
 
+# Version 0.14.0: personal space, and closer troupe looks
+
+- **Nobody stands on anybody** (`lib/crowd.js`). Before, everyone at a place picked a random point near its centre, so a busy square (like the whole town at the circus show) became a pile of overlapping people.
+  - Now everyone picks a free spot at least 13 map units from anyone else (where they stand and where they're heading), trying near the middle first and spreading outward. Spots stay on the walkways, near the place, and off building doorsteps.
+  - People standing around outdoors mill about to a new free spot every 45–120 seconds, and at once if someone ends up on top of them. Performers move around the square every 15–25 seconds during a show.
+  - A stroll keeps what they were doing ("performing in the circus show" stays); a real change of plan still gets a new activity.
+  - Startup catch-up uses the same free spots.
+  - Spots are spread evenly across a place's area, not packed into the middle. The open square, park and market get a wide area (64, 52 and 52 units); the cafe terrace and workshop yard a cosier one.
+  - During a show the performers keep to a small stage in front of the fountain, and the audience spreads around the plaza. The show is now tempting rather than irresistible (pull 1.1, was 1.8), so some people carry on with their day.
+- **Troupe looks** are now much closer to the characters of the animated circus show the family asked for, while keeping our own names:
+  - Patches: red yarn hair, a blue dress, one button eye.
+  - Tumble: red and blue with a pale face and big eyes.
+  - Rook: a chess king with a cross on his crown and a purple robe.
+  - Ribbons: pink ribbons with a smiling white mask.
+  - Plum (a purple bunny in orange overalls) and Bolt are unchanged.
+  - These are small pixel-art likenesses for the family's own town. Because the visitor's window can be seen by anyone with its link, that link should stay within the family.
+- **Life moments no longer wipe out what people are doing.** A life event used to replace someone's activity with a generic line ("following a personal interest") that never went away. That cost performers their "performing in the circus show", and could pop Milo out of the cafe mid-shift, because his shift is what puts him inside. Now the moment shows for 45 seconds and then they go back to what they were doing. A fresh arrival somewhere new always gets a fresh activity. A test covers it.
+- **Visitor's window privacy fix.** Speech bubbles can retell someone's history, like "…when I was 7 years old…". The feed was already filtered for birthdays and ages, but speech bubbles weren't, so a visitor could briefly see an age in a bubble. Bubbles are now filtered the same way. This is what made the visitor test fail about one run in ten: it was catching a real leak, not flaking.
+- **Process note:** during this release one restart happened while a test was failing, because the restart check looked for the test summary line rather than a failure count of zero. That test was the visitor leak above. Restarts are now gated on "fail 0".
+- **New editor looks:** king's crown, smiling mask and royal robe.
+- **Live update:** troupe members still wearing their 0.12 looks switch to the new ones on the next start. Anyone the family has restyled keeps their look.
+- **Tests** (`test/crowd.test.js`, `test/troupe.test.js`, `test/life.test.js`): 16 people arriving at the square all get their own spots on the walkways; being crowded is detected, but walking past isn't; on a real server with the troupe, nobody standing still overlaps anybody within a few seconds, and it stays that way; and the look update applies only to unchanged troupe looks.
+
