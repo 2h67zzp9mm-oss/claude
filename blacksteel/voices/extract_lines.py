@@ -77,6 +77,9 @@ def scan(src, chapter_fn):
         if m.group(1) not in VOICE: continue
         end = match_bracket(src, m.start() + 3, "(", ")")
         for t in re.findall(STR, src[m.end():end]): add(VOICE[m.group(1)], t, chapter_fn(m.start()))
+    # narration stored in objects and read with G.say("N", m.say) / G.say("N", m.done)
+    for m in re.finditer(r'\b(?:say|done):\s*' + STR, src):
+        add("Shannon", m.group(1), chapter_fn(m.start()))
     # chapter cards: card("Chapter One", "The Call", "subtitle")
     for m in re.finditer(r'card\(\s*' + STR + r'\s*,\s*' + STR + r'\s*,\s*' + STR, src):
         add("Narrator", m.group(3), chapter_fn(m.start()))

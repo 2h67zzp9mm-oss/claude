@@ -326,22 +326,22 @@
   // Every line is recorded ahead of time (voices/generate.py) and packed into one file per chapter.
   // voices/manifest.json maps "<voice>|<exact text>" to [chapter, start, duration].
   const VOICE_OF = { N: "Shannon", R: "Shannon", CAP: "Narrator", S: "Sean", Deke: "Deke", Mercer: "Mercer", Nia: "Nia", Harrow: "Harrow", Lily: "Lily", "Lily's mother": "LilyMother" };
-  const VO = { manifest: null, ctx: null, buffers: {}, src: null };
+  const VO = { manifest: null, ctx: null, buffers: {}, src: null, chapters: new Set() };
   let voiceOn = pref("voice", true), autoOn = pref("auto", false);
   voiceBtn.setAttribute("aria-pressed", String(voiceOn));
   autoBtn.setAttribute("aria-pressed", String(autoOn));
   voiceBtn.hidden = true;
-  fetch("voices/manifest.json").then(r => (r.ok ? r.json() : null)).then(m => { if (m) { VO.manifest = m; voiceBtn.hidden = false; } }).catch(() => {});
+  fetch("voices/manifest.json").then(r => (r.ok ? r.json() : null)).then(m => { if (m) { VO.manifest = m; VO.chapters = new Set(Object.values(m).map(v => v[0])); voiceBtn.hidden = false; } }).catch(() => {});
   function voCtx() {
     if (!VO.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) VO.ctx = new AC(); }
     if (VO.ctx && VO.ctx.state === "suspended") VO.ctx.resume();
     return VO.ctx;
   }
   function voBuffer(ch) {
-    if (!VO.manifest || !voCtx()) return Promise.resolve(null);
+    if (!VO.manifest || !voCtx() || !VO.chapters.has(ch)) return Promise.resolve(null);
     if (!VO.buffers[ch]) {
       VO.buffers[ch] = fetch(`voices/ch${ch}.mp3`).then(r => r.arrayBuffer())
-        .then(b => new Promise((res, rej) => VO.ctx.decodeAudioData(b, res, rej))).catch(() => null);
+        .then(b => new Promise((res, rej) => { const p = VO.ctx.decodeAudioData(b, res, rej); if (p && p.catch) p.catch(() => {}); })).catch(() => null);
     }
     return VO.buffers[ch];
   }
