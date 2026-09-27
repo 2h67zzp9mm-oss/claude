@@ -87,6 +87,43 @@
 
   const homeBuildings = buildings.filter(building => Array.isArray(building.residents));
 
+  // --- House interiors ---
+  // Every home shares one room layout (a 120x90 pixel grid, feet positions
+  // for spots); houses differ in palette and number of beds.
+  const ROOM = { width: 120, height: 90, minX: 6, maxX: 114, minY: 32, maxY: 86 };
+
+  // What using each piece of furniture does: activity text and hourly need boosts.
+  const furniture = {
+    bed: { activity: "napping in bed", needs: { energy: 30 } },
+    sofa: { activity: "relaxing on the sofa", needs: { fun: 10, energy: 6 } },
+    table: { activity: "sitting at the kitchen table", needs: { hunger: 12, social: 6 } },
+    fridge: { activity: "grabbing a snack from the fridge", needs: { hunger: 45 } },
+    bookshelf: { activity: "reading a book from the shelf", needs: { fun: 14 } },
+    rug: { activity: "playing a board game on the rug", needs: { fun: 16, social: 5 } }
+  };
+
+  const roomStyles = {
+    seanHouse: { beds: 3, wall: "#5d7fa8", trim: "#3f5d82", floor: "#b98a5a", floorLine: "#a4764a", sofa: "#3f6f74", rug: "#e9c46a", blankets: ["#4fc3a1", "#a98cff", "#f28482"] },
+    miloHouse: { beds: 3, wall: "#e0a458", trim: "#b97d3a", floor: "#8a5a3b", floorLine: "#7a4c30", sofa: "#6a994e", rug: "#ff6f91", blankets: ["#ff9966", "#ff6f91", "#ffd166"] },
+    finnCottage: { beds: 2, wall: "#8a6f4d", trim: "#6b5236", floor: "#6e4b2e", floorLine: "#5f3f25", sofa: "#7a4e3a", rug: "#64b5f6", blankets: ["#64b5f6", "#c9ada7"] },
+    roseCottage: { beds: 3, wall: "#e8a0b4", trim: "#c47a90", floor: "#c89f7a", floorLine: "#b48a66", sofa: "#9d8189", rug: "#a8dadc", blankets: ["#ffafcc", "#bde0fe", "#cdb4db"] }
+  };
+
+  function roomFor(buildingId) {
+    const style = roomStyles[buildingId];
+    if (!style) return null;
+    const objects = [];
+    for (let i = 0; i < style.beds; i++) objects.push({ id: `bed${i + 1}`, kind: "bed", x: 6 + i * 18, y: 40, w: 16, h: 26, spot: [14 + i * 18, 56] });
+    objects.push(
+      { id: "bookshelf", kind: "bookshelf", x: 6, y: 4, w: 18, h: 24, spot: [15, 36] },
+      { id: "sofa", kind: "sofa", x: 40, y: 20, w: 30, h: 12, spot: [55, 34], seats: [[48, 34], [62, 34]] },
+      { id: "fridge", kind: "fridge", x: 100, y: 8, w: 14, h: 24, spot: [106, 38] },
+      { id: "table", kind: "table", x: 74, y: 50, w: 24, h: 13, spot: [70, 62], seats: [[70, 62], [102, 62], [86, 74]] },
+      { id: "rug", kind: "rug", x: 34, y: 64, w: 30, h: 16, spot: [49, 76], seats: [[43, 76], [55, 76]] }
+    );
+    return { id: buildingId, ...ROOM, style, objects };
+  }
+
   // Custom residents (and anyone who moves) get an explicit home assignment
   // that overrides the built-in household lists.
   const homeAssignments = {};
@@ -205,5 +242,5 @@
     return { x: best.x + (x - best.x) * k, y: best.y + (y - best.y) * k };
   }
 
-  return { MAP, places, walkNodes, walkEdges, buildings, homeBuildings, setHomeAssignments, SKIN_TONES, homeOf, spotFor, route, snapToWalkable, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, HAIR_STYLES, ACCESSORIES, nearestPlace };
+  return { MAP, places, walkNodes, walkEdges, buildings, homeBuildings, ROOM, furniture, roomFor, setHomeAssignments, SKIN_TONES, homeOf, spotFor, route, snapToWalkable, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, HAIR_STYLES, ACCESSORIES, nearestPlace };
 });

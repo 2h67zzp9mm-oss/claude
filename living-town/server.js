@@ -87,6 +87,8 @@ function normalizeResident(resident) {
   resident.targetY = finiteOr(resident.targetY, resident.y);
   if (!places[resident.place]) resident.place = placeAt(resident, resident.x, resident.y) || "homes";
   resident.path = Array.isArray(resident.path) ? resident.path.filter(p => Number.isFinite(p?.x) && Number.isFinite(p?.y)) : [];
+  if (!(resident.indoor && Number.isFinite(resident.indoor.x) && Number.isFinite(resident.indoor.y))) resident.indoor = null;
+  if (!(resident.using && world.furniture[resident.using.kind] && Number.isFinite(resident.using.until))) resident.using = null;
   if (typeof resident.activity !== "string") resident.activity = "settling in";
   if (typeof resident.color !== "string") resident.color = "#8899aa";
   resident.lastTalk = finiteOr(resident.lastTalk, 0);
@@ -185,6 +187,9 @@ function placeAt(resident, x, y) {
 }
 
 function walkTo(resident, x, y) {
+  // Leaving the house ends whatever they were doing inside.
+  resident.indoor = null;
+  resident.using = null;
   resident.targetX = x;
   resident.targetY = y;
   resident.path = route(resident.x, resident.y, x, y);
@@ -254,6 +259,12 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
 
   r.asleep = !controlled && r.place === "homes" && mind.isAsleepTime(r.id, date);
   if (r.asleep) r.activity = "asleep";
+
+  // Furniture a player chose inside their house adds its own boosts.
+  if (r.using) {
+    if (r.using.until <= date.getTime() || r.place !== "homes") r.using = null;
+    else for (const [need, rate] of Object.entries(world.furniture[r.using.kind].needs)) r.needs[need] = clamp(r.needs[need] + rate * dtHours, 0, 100);
+  }
 
   const place = places[r.place];
   const spot = r.place ? spotFor(r.id, r.place) : null;
@@ -365,6 +376,7 @@ function residentSummary(r) {
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs: r.needs,
     relationships: r.relationships, profile: r.profile, career: r.career, goals: r.goals, mood: publicMood(r.mood),
     lifeRevision: r.lifeRevision, speech: r.speech || null, playable: isPlayable(r.id), look: r.look || {}, custom: Boolean(r.custom),
+    indoor: r.indoor || null, using: r.using?.kind || null,
     experiences: (r.experiences || []).slice(0, 5), memories: (r.memories || []).slice(0, 5),
     experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length
   };
@@ -376,7 +388,8 @@ function residentDynamic(r) {
   return {
     id: r.id, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: publicMood(r.mood),
-    speech: r.speech && r.speech.until > Date.now() ? r.speech : null, lifeRevision: r.lifeRevision
+    speech: r.speech && r.speech.until > Date.now() ? r.speech : null, lifeRevision: r.lifeRevision,
+    indoor: r.indoor || null, using: r.using?.kind || null
   };
 }
 
@@ -645,6 +658,15 @@ function validateClientMessage(raw) {
     return { type: "control", residentId: msg.residentId, x: msg.x, y: msg.y };
   }
   if (msg.type === "release") return { type: "release" };
+  if (msg.type === "use") {
+    if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId) || typeof msg.objectId !== "string" || msg.objectId.length > 20) return null;
+    return { type: "use", residentId: msg.residentId, objectId: msg.objectId };
+  }
+  if (msg.type === "indoor-move") {
+    if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId)) return null;
+    if (!Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return null;
+    return { type: "indoor-move", residentId: msg.residentId, x: msg.x, y: msg.y };
+  }
   if (msg.type === "inspect") {
     if (typeof msg.residentId !== "string" || msg.residentId.length > 64) return null;
     return { type: "inspect", residentId: msg.residentId };
@@ -659,6 +681,33 @@ function detailPayload(resident) {
   const json = JSON.stringify({ type: "resident-detail", resident: residentDetail(resident) });
   detailCache.set(resident.id, { revision: resident.lifeRevision, json });
   return json;
+}
+
+// Inside your own house: walk around the room or use a piece of furniture.
+function handleIndoor(ws, msg) {
+  const reject = reason => send(ws, { type: "control-rejected", residentId: msg.residentId, reason });
+  const profile = auth.profileForToken(ws.token);
+  if (!profile) return reject("Sign in to play.");
+  if (profile.residentId !== msg.residentId) return reject("You can only move your own resident.");
+  const r = state.residents.find(item => item.id === msg.residentId);
+  const home = r && world.homeOf(r.id);
+  const room = home && world.roomFor(home.id);
+  if (!room) return reject("That resident doesn't have a house.");
+  if (r.place !== "homes" || r.path.length) return reject("Walk home first, then you can move around inside.");
+  controllers.set(ws, r.id);
+  r.asleep = false;
+  if (msg.type === "use") {
+    const object = room.objects.find(o => o.id === msg.objectId);
+    if (!object) return reject("There's nothing like that in this room.");
+    r.indoor = { x: object.spot[0], y: object.spot[1], objectId: object.id };
+    r.using = { kind: object.kind, until: Date.now() + 30 * 60_000 };
+    r.activity = world.furniture[object.kind].activity;
+  } else {
+    r.indoor = { x: clamp(msg.x, room.minX, room.maxX), y: clamp(msg.y, room.minY, room.maxY) };
+    r.using = null;
+    r.activity = "pottering around the house";
+  }
+  r.activityUntil = Date.now() + 30 * 60_000;
 }
 
 function handleControl(ws, msg) {
@@ -693,6 +742,7 @@ wss.on("connection", (ws, req) => {
     if (!msg) return;
     if (msg.type === "control") handleControl(ws, msg);
     else if (msg.type === "release") releaseController(ws);
+    else if (msg.type === "use" || msg.type === "indoor-move") handleIndoor(ws, msg);
     else if (msg.type === "inspect") {
       // Rate-limited: a burst of requests collapses into the latest one.
       ws.pendingInspect = msg.residentId;

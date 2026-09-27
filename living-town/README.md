@@ -2,10 +2,11 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.6.1
+## Honest status — 0.7.0
 
 Working now:
 
+- **House interiors**: tap a house sign to look inside. People at home go indoors, sleep in their own beds, and sit at the table, on the sofa or on the rug depending on what they're doing. In Play mode you can walk around your own house and use the bed, sofa, table, fridge, bookshelf or rug, and each one helps your character's needs.
 - **Mr. E**, a mysterious town storyteller who stirs up gentle surprises: festivals, rain and sunshine, gifts, riddles, meet-ups, free treats, and lost-and-found stories. He runs on a local AI model on Mouse, or on built-in surprises when the AI is off.
 - **Character customization**: skin, hair style and color, clothes, and accessory, with a live pixel preview. The owner can add new residents (name, age, home) and link any of them to a player.
 

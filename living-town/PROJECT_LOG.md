@@ -216,3 +216,14 @@ Save schema 3 migrates 0.2 through 0.4 saves in place.
   - The owner can add residents with a name, age and home, including the new Rose Cottage. New residents get a personality, schedule and voice generated from their age.
   - Any custom resident can be linked to a player.
   - The owner can rename, rehome or age custom residents, or let them move away.
+
+# Version 0.7.0: house interiors
+
+- Each home (Sean's House, Milo & Zara's, Finn's Cottage and Rose Cottage) has a pixel-art room with beds, a sofa, a kitchen table and chairs, a fridge and counter, a bookshelf, a rug and a plant, in its own palette. At night the window goes dark and the room dims.
+- Residents who have arrived home are drawn inside instead of at the door. House signs show how many people are in, with a "z" if anyone is asleep.
+- Inside, residents are placed by what they're doing: sleepers in their own beds (with floating z's), family time at the table, reading or resting on the sofa, games on the rug.
+- In Play mode, at your own house:
+  - Tap the floor to walk around.
+  - Tap furniture to use it: nap, snack, read, relax or play. Each gives a 30-minute need boost.
+  - The server checks ownership, that you're home, and that the furniture exists, and it keeps movement inside the room.
+- Leaving the house clears indoor state.

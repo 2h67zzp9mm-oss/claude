@@ -25,6 +25,15 @@
         <div class="place-chip" id="placeChip">Living Town</div>
         <div class="zoom-hint">Drag to explore · Pinch to zoom · Tap to move</div>
         <button id="recenterButton" class="map-button" aria-label="Center map">⌖</button>
+        <div id="interior" class="interior hidden" aria-live="polite">
+          <div class="interior-bar">
+            <button id="leaveInterior" class="interior-back">‹ Town</button>
+            <strong id="interiorTitle">Home</strong>
+            <span id="interiorCount"></span>
+          </div>
+          <canvas id="roomCanvas" width="480" height="360" aria-label="Inside the house"></canvas>
+          <p id="interiorHint" class="interior-hint"></p>
+        </div>
       </section>
 
       <section id="residentSheet" class="bottom-sheet" aria-live="polite">

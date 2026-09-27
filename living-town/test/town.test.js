@@ -97,3 +97,35 @@ test("Mr. E: owner can ask for a surprise, which reaches the feed", async () => 
   client.ws.close();
   assert.strictEqual(await stop(server), 0);
 });
+
+test("inside your own house: use furniture, walk around, leave", async () => {
+  const dataDir = tempDir("living-town-home-");
+  const port = await freePort();
+  const server = spawnServer(dataDir, port, env);
+  await waitForStart(server);
+  const owner = (await api(port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
+  const sean = await connectClient(port, { cookie: owner });
+  const world = require("../shared/world");
+  const [doorX, doorY] = world.walkNodes.seanHome;
+  const dad = () => sean.residents.get("dad");
+  await until(() => dad(), "Sean loaded");
+
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "bed1" }));
+  await until(() => sean.messages.some(m => m.type === "control-rejected" && /Walk home first/.test(m.reason)) || dad().place === "homes", "must be home to use furniture");
+
+  sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: doorX, y: doorY }));
+  await until(() => dad().place === "homes" && Math.hypot(dad().x - doorX, dad().y - doorY) < 1, "Sean walks home", 15000);
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "bed1" }));
+  await until(() => dad().indoor?.objectId === "bed1" && dad().using === "bed" && dad().activity === "napping in bed", "napping in bed");
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "spaceship" }));
+  await until(() => sean.messages.some(m => m.type === "control-rejected" && /nothing like that/.test(m.reason)), "unknown furniture rejected");
+  sean.ws.send(JSON.stringify({ type: "indoor-move", residentId: "dad", x: 999, y: -5 }));
+  await until(() => dad().indoor && !dad().indoor.objectId && dad().indoor.x === 114 && dad().indoor.y === 32, "walks inside, clamped to the room");
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "olive", objectId: "bed2" }));
+  await until(() => sean.messages.some(m => m.type === "control-rejected" && /own resident/.test(m.reason)), "can't move someone else inside");
+
+  sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: 477, y: 330 }));
+  await until(() => dad().indoor === null && dad().using === null, "leaving the house clears indoor state");
+  sean.ws.close();
+  assert.strictEqual(await stop(server), 0);
+});

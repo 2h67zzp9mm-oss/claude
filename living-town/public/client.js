@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, setHomeAssignments, SKIN_TONES, HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
+  const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, setHomeAssignments, SKIN_TONES, HAIR_STYLES, ACCESSORIES, roomFor, furniture } = window.LivingTownWorld;
   const $ = selector => document.querySelector(selector);
   const canvas = $("#townCanvas");
   const ctx = canvas.getContext("2d");
@@ -334,7 +334,8 @@
       if (Math.hypot(r.x - r.drawX, r.y - r.drawY) > 120) { r.drawX = r.x; r.drawY = r.y; }
     }
     followPlayer(dt);
-    if (backing) drawTown();
+    if (interior.id) drawInterior(dt);
+    else if (backing) drawTown();
     updateClock();
     requestAnimationFrame(frame);
   }
@@ -342,7 +343,7 @@
   // Sizes given in screen pixels, converted to map units at the current zoom.
   function screenPx(px) { return px / camera.z; }
 
-  function hiddenInside(r) { return r.asleep && Boolean(homeOf(r.id)); }
+  function hiddenInside(r) { return isInside(r); }
 
   function drawTown() {
     ctx.setTransform(backing, 0, 0, backing, 0, 0);
@@ -491,8 +492,8 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const b of buildings) {
-      const sleeping = [...residents.values()].filter(r => hiddenInside(r) && homeOf(r.id)?.id === b.id).length;
-      const label = sleeping ? `${b.name} · z${"z".repeat(Math.min(2, sleeping - 1))}` : b.name;
+      const home = b.residents ? occupantsOf(b) : [];
+      const label = home.length ? `${b.name} · ${home.length}${home.some(r => r.asleep) ? " z" : ""}` : b.name;
       const w = ctx.measureText(label).width + fs * 1.3, h = fs * 1.7;
       const x0 = b.x - w / 2, y0 = b.y - h / 2;
       ctx.fillStyle = "rgba(59,38,22,.9)";
@@ -613,6 +614,252 @@
     ui.date.textContent = d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
   }
 
+  // --- House interiors ---
+  const interior = { id: null, base: null, baseKey: "", placed: [] };
+  const roomCanvas = $("#roomCanvas");
+  const roomCtx = roomCanvas.getContext("2d");
+  const RS = 4; // backing pixels per room pixel
+
+  // A resident is "inside" once they've arrived at their own front door.
+  function isInside(r) { return r.place === "homes" && Boolean(homeOf(r.id)) && Math.hypot(r.targetX - r.x, r.targetY - r.y) < 3; }
+
+  function occupantsOf(b) {
+    const order = r => { const i = (b.residents || []).indexOf(r.id); return i < 0 ? 100 : i; };
+    return [...residents.values()].filter(r => isInside(r) && homeOf(r.id)?.id === b.id).sort((a, c) => order(a) - order(c) || a.id.localeCompare(c.id));
+  }
+
+  function roomSpot(r, room, index) {
+    const find = id => room.objects.find(o => o.id === id);
+    const beds = room.objects.filter(o => o.kind === "bed");
+    const seat = (object, i = index) => { const [x, y] = object.seats[i % object.seats.length]; return { x, y }; };
+    if (r.indoor) {
+      const object = r.indoor.objectId ? find(r.indoor.objectId) : null;
+      return { x: r.indoor.x, y: r.indoor.y, bed: object?.kind === "bed" ? object : null };
+    }
+    if (r.asleep) return beds[index] ? { x: beds[index].spot[0], y: beds[index].spot[1], bed: beds[index] } : seat(find("sofa"));
+    const activity = r.activity || "";
+    if (/family|table|eat/.test(activity)) return seat(find("table"));
+    if (/game|rug/.test(activity)) return seat(find("rug"));
+    if (/snack|fridge/.test(activity)) return { x: 106, y: 38 };
+    if (/book|shelf/.test(activity)) return { x: 15, y: 36 };
+    return seat(find("sofa"));
+  }
+
+  function drawRoomBase(room, night) {
+    const c = document.createElement("canvas");
+    c.width = room.width;
+    c.height = room.height;
+    const g = c.getContext("2d");
+    const st = room.style;
+    const px = (x, y, w, h, color) => { g.fillStyle = color; g.fillRect(x, y, w, h); };
+    // Wall with soft stripes, trim, and wooden floor planks.
+    px(0, 0, 120, 30, st.wall);
+    for (let x = 3; x < 120; x += 8) px(x, 0, 2, 28, shade(st.wall, 0.04));
+    px(0, 28, 120, 2, st.trim);
+    px(0, 30, 120, 60, st.floor);
+    for (let y = 35; y < 90; y += 6) {
+      px(0, y, 120, 1, st.floorLine);
+      for (let x = (y / 6) % 2 ? 10 : 25; x < 120; x += 30) px(x, y - 5, 1, 5, st.floorLine);
+    }
+    // Window: day sky or night with a star.
+    px(76 - 26, 5, 18, 14, "#e8dcc0");
+    px(52, 7, 14, 10, night ? "#1f3354" : "#9fd3f0");
+    if (night) px(62, 9, 1, 1, "#fff6c2");
+    px(58, 7, 1, 10, "#e8dcc0");
+    px(52, 11, 14, 1, "#e8dcc0");
+    // Bookshelf.
+    px(6, 4, 18, 24, "#6b4226");
+    for (let row = 0; row < 3; row++) {
+      px(7, 6 + row * 7, 16, 1, "#4a2c18");
+      ["#e76f51", "#2a9d8f", "#e9c46a", "#8ab17d", "#264653", "#f4a261"].forEach((color, i) => px(8 + i * 2 + (row % 2), 7 + row * 7, 1, 5, color));
+    }
+    // Kitchen counter with stove, and fridge.
+    px(78, 16, 20, 13, "#8a5a3b");
+    px(78, 16, 20, 3, "#d9d2c3");
+    px(82, 17, 3, 1, "#333"); px(89, 17, 3, 1, "#333");
+    px(100, 8, 14, 24, "#e8eef2");
+    px(100, 18, 14, 1, "#b8c4cc");
+    px(111, 11, 1, 5, "#7a8a94"); px(111, 21, 1, 7, "#7a8a94");
+    // Sofa against the wall.
+    px(40, 20, 30, 12, st.sofa);
+    px(40, 20, 30, 5, shade(st.sofa, -0.12));
+    px(40, 24, 3, 8, shade(st.sofa, -0.18)); px(67, 24, 3, 8, shade(st.sofa, -0.18));
+    px(55, 25, 1, 6, shade(st.sofa, -0.1));
+    // Beds with headboard, pillow and blanket.
+    room.objects.filter(o => o.kind === "bed").forEach((bed, i) => {
+      px(bed.x, bed.y, bed.w, 3, "#6b4226");
+      px(bed.x, bed.y + 3, bed.w, bed.h - 3, "#f4f1ea");
+      px(bed.x + 3, bed.y + 4, bed.w - 6, 4, "#ffffff");
+      const blanket = st.blankets[i % st.blankets.length];
+      px(bed.x, bed.y + 10, bed.w, bed.h - 10, blanket);
+      px(bed.x, bed.y + 10, bed.w, 2, shade(blanket, 0.15));
+    });
+    // Table with three chairs.
+    px(74, 50, 24, 10, "#a0643a");
+    px(74, 50, 24, 2, "#c07c4a");
+    px(75, 60, 2, 3, "#6b4226"); px(95, 60, 2, 3, "#6b4226");
+    px(68, 52, 5, 8, "#7a4e2d"); px(99, 52, 5, 8, "#7a4e2d"); px(83, 64, 6, 5, "#7a4e2d");
+    // Rug with a border.
+    px(34, 64, 30, 16, st.rug);
+    px(36, 66, 26, 12, shade(st.rug, 0.12));
+    px(36, 66, 26, 1, shade(st.rug, -0.1)); px(36, 77, 26, 1, shade(st.rug, -0.1));
+    // Plant, and a doormat by the door.
+    px(112, 76, 5, 6, "#b5651d"); px(111, 70, 7, 6, "#3a7d44"); px(113, 67, 3, 3, "#4f9d5a");
+    px(54, 86, 12, 4, "#5b3a24");
+    return c;
+  }
+
+  function drawSleeper(r, bed, blanket) {
+    const look = lookFor(r);
+    const g = roomCtx;
+    g.save();
+    g.scale(RS, RS);
+    g.drawImage(spriteFor(r, 0), bed.x, bed.y - 1);
+    g.fillStyle = shade(look.skin, -0.25);
+    g.fillRect(bed.x + 6, bed.y + 5, 1, 1); g.fillRect(bed.x + 9, bed.y + 5, 1, 1);
+    g.fillStyle = blanket;
+    g.fillRect(bed.x, bed.y + 10, bed.w, bed.h - 10);
+    g.fillStyle = shade(blanket, 0.15);
+    g.fillRect(bed.x, bed.y + 10, bed.w, 2);
+    g.restore();
+  }
+
+  function canActInside(b) {
+    const mine = me && residents.get(me.residentId);
+    return mode === "play" && mine && homeOf(mine.id)?.id === b.id && isInside(mine);
+  }
+
+  function drawInterior(dt) {
+    const b = buildings.find(x => x.id === interior.id);
+    const room = b && roomFor(b.id);
+    if (!room) return closeInterior();
+    const hour = new Date(nowMs()).getHours();
+    const night = hour < 7 || hour >= 20;
+    const key = `${b.id}|${night}`;
+    if (interior.baseKey !== key) { interior.base = drawRoomBase(room, night); interior.baseKey = key; }
+    roomCtx.imageSmoothingEnabled = false;
+    roomCtx.clearRect(0, 0, roomCanvas.width, roomCanvas.height);
+    roomCtx.drawImage(interior.base, 0, 0, room.width * RS, room.height * RS);
+
+    const people = occupantsOf(b);
+    interior.placed = people.map((r, i) => {
+      const spot = roomSpot(r, room, i);
+      if (r.roomFor !== b.id) { r.roomX = spot.x; r.roomY = spot.y; r.roomFor = b.id; }
+      const k = Math.min(1, dt * 5);
+      r.roomX += (spot.x - r.roomX) * k;
+      r.roomY += (spot.y - r.roomY) * k;
+      return { r, spot, index: i };
+    }).sort((a, c) => a.r.roomY - c.r.roomY);
+
+    for (const { r, spot } of interior.placed) {
+      if (spot.bed) {
+        const bedIndex = room.objects.filter(o => o.kind === "bed").indexOf(spot.bed);
+        drawSleeper(r, spot.bed, room.style.blankets[Math.max(0, bedIndex) % room.style.blankets.length]);
+        continue;
+      }
+      const moving = Math.hypot(spot.x - r.roomX, spot.y - r.roomY) > 0.5;
+      const step = Math.floor(performance.now() / 170) % 4;
+      roomCtx.save();
+      roomCtx.scale(RS, RS);
+      roomCtx.fillStyle = "rgba(20,12,8,.3)";
+      roomCtx.fillRect(Math.round(r.roomX) - 5, Math.round(r.roomY), 10, 2);
+      roomCtx.drawImage(spriteFor(r, moving ? [1, 0, 2, 0][step] : 0), Math.round(r.roomX - 8), Math.round(r.roomY - FEET_ROW));
+      roomCtx.restore();
+    }
+
+    // Name tags and speech, in screen-friendly sizes.
+    roomCtx.textAlign = "center";
+    roomCtx.textBaseline = "middle";
+    for (const { r, spot } of interior.placed) {
+      const bedIndex = spot.bed ? room.objects.filter(o => o.kind === "bed").indexOf(spot.bed) : 0;
+      const x = (spot.bed ? spot.bed.x + spot.bed.w / 2 : r.roomX) * RS;
+      // Beds sit side by side, so stagger their name tags.
+      const y = (spot.bed ? spot.bed.y + spot.bed.h + 3 + (bedIndex % 2) * 5 : r.roomY + 4) * RS;
+      const label = r.name;
+      if (spot.bed) {
+        const t = performance.now() / 700 + bedIndex;
+        roomCtx.fillStyle = "rgba(255,255,255,.85)";
+        roomCtx.font = "800 14px system-ui";
+        ["z", "z", "Z"].forEach((z, i) => {
+          const phase = (t + i * 0.6) % 2;
+          roomCtx.globalAlpha = Math.max(0, 1 - phase / 2);
+          roomCtx.fillText(z, (spot.bed.x + spot.bed.w - 2 + i * 2) * RS, (spot.bed.y - 1 - phase * 3 - i * 2) * RS);
+        });
+        roomCtx.globalAlpha = 1;
+      }
+      roomCtx.font = "700 14px system-ui";
+      const w = roomCtx.measureText(label).width + 12;
+      roomCtx.fillStyle = r.id === selectedId ? "rgba(255,224,102,.95)" : "rgba(18,28,43,.8)";
+      roomCtx.beginPath(); roomCtx.roundRect(x - w / 2, y - 10, w, 20, 10); roomCtx.fill();
+      roomCtx.fillStyle = r.id === selectedId ? "#1a2940" : "#fff";
+      roomCtx.fillText(label, x, y);
+      if (r.speech && nowMs() >= r.speech.from && nowMs() < r.speech.until) {
+        roomCtx.font = "700 15px system-ui";
+        const text = r.speech.text.length > 40 ? `${r.speech.text.slice(0, 38)}…` : r.speech.text;
+        const bw = Math.min(roomCanvas.width - 8, roomCtx.measureText(text).width + 20);
+        const bx = Math.max(4, Math.min(roomCanvas.width - bw - 4, x - bw / 2));
+        const by = Math.max(4, (r.roomY - FEET_ROW - 10) * RS);
+        roomCtx.fillStyle = "rgba(255,255,248,.96)";
+        roomCtx.beginPath(); roomCtx.roundRect(bx, by, bw, 26, 12); roomCtx.fill();
+        roomCtx.fillStyle = "#1a2940";
+        roomCtx.fillText(text, bx + bw / 2, by + 13);
+      }
+    }
+    if (night) {
+      roomCtx.fillStyle = "rgba(15,20,50,.28)";
+      roomCtx.fillRect(0, 0, roomCanvas.width, roomCanvas.height);
+    }
+
+    const count = people.length;
+    $("#interiorCount").textContent = count ? `${count} inside${people.some(r => r.asleep) ? " · shh, someone's sleeping" : ""}` : "Nobody's home";
+    $("#interiorHint").textContent = canActInside(b)
+      ? "Tap the floor to walk around. Tap the bed, sofa, table, fridge, bookshelf or rug to use it."
+      : mode === "play" && me && homeOf(me.residentId)?.id === b.id
+        ? "Tap the room to walk home and come inside."
+        : "Tap someone to check on them.";
+  }
+
+  function openInterior(b) {
+    interior.id = b.id;
+    interior.baseKey = "";
+    $("#interiorTitle").textContent = b.name;
+    $("#interior").classList.remove("hidden");
+  }
+
+  function closeInterior() {
+    interior.id = null;
+    $("#interior").classList.add("hidden");
+  }
+
+  $("#leaveInterior").addEventListener("click", closeInterior);
+  roomCanvas.addEventListener("click", event => {
+    const b = buildings.find(x => x.id === interior.id);
+    const room = b && roomFor(b.id);
+    if (!room) return;
+    const rect = roomCanvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width * room.width;
+    const y = (event.clientY - rect.top) / rect.height * room.height;
+    const acting = canActInside(b);
+    const hit = [...interior.placed].reverse().find(({ r, spot }) => {
+      if (acting && r.id === me.residentId) return false;
+      if (spot.bed) return x >= spot.bed.x && x <= spot.bed.x + spot.bed.w && y >= spot.bed.y && y <= spot.bed.y + spot.bed.h;
+      return Math.abs(r.roomX - x) < 8 && y > r.roomY - FEET_ROW - 2 && y < r.roomY + 3;
+    });
+    if (hit) return select(hit.r.id);
+    const object = room.objects.find(o => x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h);
+    if (acting) {
+      if (object) send({ type: "use", residentId: me.residentId, objectId: object.id });
+      else send({ type: "indoor-move", residentId: me.residentId, x, y });
+      return;
+    }
+    if (mode === "play" && me && homeOf(me.residentId)?.id === b.id) {
+      const [doorX, doorY] = walkNodes[b.node];
+      send({ type: "control", residentId: me.residentId, x: doorX, y: doorY });
+      return showToast("Heading home…");
+    }
+    if (object) showToast(`${capitalize(object.kind)}: ${furniture[object.kind].activity}. Play at home to use it.`);
+  });
+
   // --- Input ---
   function viewPoint(event) {
     const rect = view.getBoundingClientRect();
@@ -651,13 +898,17 @@
     if (hit) return select(hit.id);
     const pad = screenPx(6);
     const sign = signBoxes.find(s => p.x >= s.x0 - pad && p.x <= s.x1 + pad && p.y >= s.y0 - pad && p.y <= s.y1 + pad);
-    if (!playing) { if (sign) showBuilding(sign.b); return; }
+    if (!playing) {
+      if (sign) { if (sign.b.residents) openInterior(sign.b); else showBuilding(sign.b); }
+      return;
+    }
     // Tap a sign to walk to that building's door; tap anywhere else to walk
     // to the nearest point on the paths.
     const door = sign ? walkNodes[sign.b.node] : null;
     const target = door ? { x: door[0], y: door[1] } : snapToWalkable(p.x, p.y);
     send({ type: "control", residentId: me.residentId, x: target.x, y: target.y });
     if (sign) showToast(`Walking to ${sign.b.name}`);
+    if (sign?.b.residents) openInterior(sign.b);
     tapMarker = { x: target.x, y: target.y, at: performance.now() };
     select(me.residentId, false);
   }
@@ -682,7 +933,7 @@
   let pinch = null;
   let gestureMoved = false;
   view.addEventListener("pointerdown", event => {
-    if (event.target.closest("button")) return;
+    if (event.target.closest("button, .interior")) return;
     view.setPointerCapture(event.pointerId);
     const p = viewPoint(event);
     pointers.set(event.pointerId, { x: p.x, y: p.y, startX: p.x, startY: p.y });

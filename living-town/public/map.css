@@ -19,3 +19,45 @@
   object-fit: contain;
   image-rendering: pixelated;
 }
+
+.interior {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 78px 12px 0;
+  background: radial-gradient(circle at 50% 35%, #3a2a1f, #140e0a 75%);
+}
+.interior.hidden { display: none; }
+.interior-bar {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffe9b8;
+}
+.interior-bar strong { flex: 1; font-size: 1rem; }
+.interior-bar span { font-size: 0.75rem; color: #d9c6a5; }
+.interior-back {
+  border: 1px solid #e8c27a;
+  background: #3b2616;
+  color: #ffe9b8;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+}
+#roomCanvas {
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 4 / 3;
+  image-rendering: pixelated;
+  border: 3px solid #5b3a24;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px #000a;
+  touch-action: manipulation;
+}
+.interior-hint { margin: 0; max-width: 520px; color: #d9c6a5; font-size: 0.78rem; text-align: center; }

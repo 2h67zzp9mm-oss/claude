@@ -124,3 +124,17 @@ test("walkway routes stay on the paths and every family has its own door", () =>
   const onRoof = world.snapToWalkable(560, 440); // the middle of the houses' roofs
   assert.ok(Math.hypot(onRoof.x - 560, onRoof.y - 440) > 5, "roof taps are pulled onto a path");
 });
+
+test("every home has a room whose furniture and spots fit inside it", () => {
+  const world = require("../shared/world");
+  for (const b of world.homeBuildings) {
+    const room = world.roomFor(b.id);
+    assert.ok(room, b.id);
+    assert.ok(room.objects.filter(o => o.kind === "bed").length >= 2, `${b.id} has beds`);
+    for (const o of room.objects) {
+      assert.ok(o.x >= 0 && o.y >= 0 && o.x + o.w <= room.width && o.y + o.h <= room.height, `${b.id} ${o.id} inside the room`);
+      assert.ok(world.furniture[o.kind], `${o.kind} has an effect`);
+      for (const [x, y] of [o.spot, ...(o.seats || [])]) assert.ok(x >= 0 && x <= room.width && y >= 0 && y <= room.height);
+    }
+  }
+});
