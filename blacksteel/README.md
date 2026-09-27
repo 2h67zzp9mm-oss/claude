@@ -35,7 +35,8 @@ Open `index.html` in any browser (phone, tablet, or PC). No install, no server.
 
 - `index.html`: the game engine, dialogue, and Chapter One's script
 - `art.js`: painted scenes and animation (moving lamp light, waves, fog, rain, embers, the rocking cabin)
-- `chars.js`: walking characters. Tap the floor to walk; tap an object and Sean walks over before acting.
+- `scene3d.js`: Sean's cabin in 3D (three.js): a modeled room with a swinging lantern that casts shadows, moonlight through the porthole, the ship rocking, and a jointed 3D Sean who walks, turns, reaches, and puts on his coat and sword when he takes them. Falls back to the 2D cabin if WebGL isn't available.
+- `chars.js`: the 2D walking rig, used when 3D isn't available.
 
 ## Characters
 

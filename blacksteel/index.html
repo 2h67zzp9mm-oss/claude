@@ -85,6 +85,7 @@
   #world img.bg { object-fit: cover; opacity: 0; transition: opacity .45s ease; pointer-events: none; }
   #fxN, #chr, #fxL { pointer-events: none; }
   #fxL { mix-blend-mode: screen; }
+  #cabin3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   #grade {
     pointer-events: none;
     mix-blend-mode: soft-light;
@@ -255,6 +256,8 @@
   <div id="inv" hidden></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="scene3d.js"></script>
 <script src="art.js"></script>
 <script src="chars.js"></script>
 <script>
@@ -289,8 +292,12 @@
         hintBtn = $("hintBtn"), menuBtn = $("menuBtn"), where = $("where");
 
   ART.mount(stage);
+  // The playable cabin is 3D when WebGL is available; otherwise the 2D cabin is used.
+  const R3 = window.CABIN3D && window.CABIN3D.init(stage) ? window.CABIN3D : null;
+  const world2d = stage.querySelector("#world");
   function setScene(key, data) {
     closeVerbs();
+    if (R3 && R3.active) { R3.hide(); world2d.style.visibility = ""; }
     ART.show(key, S, data);
   }
 
@@ -447,8 +454,8 @@
         closeVerbs();
         if (isItem) itemVerb(id, v);
         else run(async () => {
-          if (v === "Look") { const p = STAND[id]; if (p) ACTORS.sean.faceTo(p[0] + p[2] * 40); }
-          else { await goTo(id); await ACTORS.sean.gesture(); }
+          if (v === "Look") faceSean(id);
+          else { await goTo(id); await gesture(); }
           return act(id, v);
         });
       });
@@ -468,12 +475,20 @@
   stage.addEventListener("click", e => {
     if (advance) { advance(); return; }
     if (S.part !== "cabin" || S.busy) return;
-    const t = e.target.closest("[data-hs]");
+    let t = null, floorPt = null;
+    if (R3) {
+      const hit = R3.pick(e);
+      if (hit.hs) t = { getAttribute: () => hit.hs };
+      floorPt = hit.floor || null;
+    } else t = e.target.closest("[data-hs]");
     if (!t) {
       const hadMenu = !!verbsEl;
       closeVerbs();
       if (S.sel) { S.sel = null; renderInv(); idleText(objectiveText()); return; }
-      if (!hadMenu) { const p = scenePt(e); ACTORS.sean.walkTo(p.x, p.y); }
+      if (!hadMenu) {
+        if (R3) { if (floorPt) R3.walkTo(floorPt); }
+        else { const p = scenePt(e); ACTORS.sean.walkTo(p.x, p.y); }
+      }
       return;
     }
     const id = t.getAttribute("data-hs");
@@ -481,7 +496,7 @@
       const item = S.sel;
       S.sel = null;
       renderInv();
-      run(async () => { await goTo(id); await ACTORS.sean.gesture(); return useOn(item, id); });
+      run(async () => { await goTo(id); await gesture(); return useOn(item, id); });
       return;
     }
     openVerbs(id, HS[id][0], HS[id][1], null, false, { x: e.clientX, y: e.clientY });
@@ -495,8 +510,21 @@
     comm: [500, 444, 1], packet: [556, 444, 1]
   };
   function goTo(id) {
+    if (R3) return R3.goTo(id);
     const p = STAND[id];
     return p ? ACTORS.sean.walkTo(p[0], p[1], p[2]) : Promise.resolve();
+  }
+  const gesture = () => (R3 ? R3.gesture() : ACTORS.sean.gesture());
+  function faceSean(id) {
+    if (R3) return R3.faceTo(id);
+    const p = STAND[id];
+    if (p) ACTORS.sean.faceTo(p[0] + p[2] * 40);
+  }
+  function glowOn(id) {
+    if (!id) return;
+    if (R3) return R3.setGlow(id);
+    const n = stage.querySelector(`[data-hs="${id}"]`);
+    if (n) n.classList.add("glow");
   }
   function scenePt(e) {
     const svg = stage.querySelector("#ov svg");
@@ -525,13 +553,17 @@
       }
     }
   }
-  function redraw() { ART.show("cabin", S); renderInv(); }
+  function redraw() {
+    if (R3 && S.part === "cabin") R3.refresh(S); else ART.show("cabin", S);
+    renderInv();
+  }
 
   // ---------- Hints and gentle nudges ----------
   let idleTimer = null;
   function clearGlow() {
     clearTimeout(idleTimer);
     stage.querySelectorAll(".glow").forEach(n => n.classList.remove("glow"));
+    if (R3) R3.setGlow(null);
   }
   function nextTarget() {
     const has = id => S.inv.includes(id);
@@ -552,9 +584,7 @@
     // Hazel gets a glowing nudge after a short wait. Olive can always ask for a hint.
     if (S.player !== "hazel") return;
     idleTimer = setTimeout(() => {
-      const id = nextTarget();
-      const n = id && stage.querySelector(`[data-hs="${id}"]`);
-      if (n) n.classList.add("glow");
+      glowOn(nextTarget());
     }, 20000);
   }
   function objectiveText() {
@@ -593,11 +623,7 @@
   }
   hintBtn.addEventListener("click", () => {
     if (S.part !== "cabin" || S.busy) return;
-    run(() => say("N", hintFor())).then(() => {
-      const id = nextTarget();
-      const n = id && stage.querySelector(`[data-hs="${id}"]`);
-      if (n) n.classList.add("glow");
-    });
+    run(() => say("N", hintFor())).then(() => glowOn(nextTarget()));
   });
 
   // Lines Shannon uses when a player tries something that never happened.
@@ -648,7 +674,7 @@
         if (st === 2) return sitDown();
         if (st === 3) return say("R", "Ten seconds, Sean.");
         if (!has("coat") || !has("sword") || !has("packet")) return say("N", objectiveText());
-        await ACTORS.sean.walkTo(70, 424, -1);
+        if (R3) await R3.goTo("door"); else await ACTORS.sean.walkTo(70, 424, -1);
         return endChapter();
 
       case "sword":
@@ -962,7 +988,12 @@
     save();
     where.textContent = "Sean's cabin";
     hintBtn.hidden = false;
-    ACTORS.sean.place(330, 446, 1);
+    if (R3) {
+      closeVerbs();
+      R3.place();
+      R3.show(S);
+      world2d.style.visibility = "hidden";
+    } else ACTORS.sean.place(330, 446, 1);
     redraw();
     idleText(objectiveText());
     armIdle();
