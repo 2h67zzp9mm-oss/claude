@@ -132,6 +132,20 @@
     cursor: default;
   }
   #box.waiting { cursor: pointer; }
+  .speaker { display: flex; gap: 14px; align-items: flex-start; }
+  .said { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  #portrait, .face {
+    flex: none;
+    width: 84px;
+    height: 84px;
+    border-radius: 8px;
+    border: 2px solid var(--brass);
+    background-repeat: no-repeat;
+    background-color: #0b1116;
+    box-shadow: 0 2px 10px rgba(0,0,0,.5);
+  }
+  #title .face { width: 96px; height: 112px; align-self: center; }
+  @media (max-width: 520px) { #portrait { width: 64px; height: 64px; } #title .face { width: 64px; height: 76px; } }
   #who {
     font: 600 13px/1 var(--body);
     letter-spacing: .1em;
@@ -220,8 +234,13 @@
   </header>
   <div id="stage"><div id="title" hidden></div></div>
   <section id="box" aria-live="polite">
-    <div id="who"></div>
-    <p id="line"></p>
+    <div class="speaker">
+      <div id="portrait" hidden></div>
+      <div class="said">
+        <div id="who"></div>
+        <p id="line"></p>
+      </div>
+    </div>
     <div id="choices"></div>
     <div id="tap" hidden>Tap to continue</div>
   </section>
@@ -279,8 +298,25 @@
   };
   let advance = null;
 
+  // Family artwork. Each portrait crops the painting to the face.
+  const PORTRAITS = {
+    Hazel: { src: "art/hazel.webp", size: "300% auto", pos: "50% 24%" }
+  };
+  function paintFace(el, name) {
+    const p = PORTRAITS[name];
+    el.hidden = !p;
+    if (!p) return;
+    el.style.backgroundImage = `url("${p.src}")`;
+    el.style.backgroundSize = p.size;
+    el.style.backgroundPosition = p.pos;
+    el.setAttribute("role", "img");
+    el.setAttribute("aria-label", name);
+  }
+  const portrait = $("portrait");
+
   function show(sp, text) {
     const known = LABEL[sp];
+    paintFace(portrait, sp === "SIS" ? sis() : sp);
     who.textContent = known ? known() : sp;
     who.className = known ? sp : "";
     line.textContent = text;
@@ -936,6 +972,7 @@
       const sv = load(p);
       const resumable = sv && sv.part && sv.part !== "title";
       return `<div class="p">
+        ${PORTRAITS[NAMES[p]] ? `<div class="face" data-face="${NAMES[p]}"></div>` : ""}
         <button type="button" class="big" data-play="${p}">${NAMES[p]}</button>
         ${resumable ? `<button type="button" class="small" data-restart="${p}">Start ${NAMES[p]}'s game over</button>` : ""}
       </div>`;
@@ -946,6 +983,7 @@
       <div class="who">Who's playing tonight?</div>
       <div class="players">${block("olive")}${block("hazel")}</div>`;
     title.hidden = false;
+    title.querySelectorAll("[data-face]").forEach(el => paintFace(el, el.dataset.face));
     idleText("Each of you has your own game and your own save. Whoever isn't playing will be in the story, listening.");
     title.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => begin(b.dataset.play, false)));
     title.querySelectorAll("[data-restart]").forEach(b => b.addEventListener("click", () => begin(b.dataset.restart, true)));
