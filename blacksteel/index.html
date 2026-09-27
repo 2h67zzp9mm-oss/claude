@@ -219,6 +219,7 @@
   #title .p { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
   #title .p button.big { font: 22px/1 var(--display); padding: 12px 26px; background: #2a2016; border-color: var(--brass); color: var(--parchment); }
   #title .p button.small { font-size: 13px; padding: 6px 10px; color: var(--muted); }
+  #title .p button.small.cont { color: var(--parchment); border-color: var(--brass); font-size: 14px; }
 
   @media (max-width: 520px) {
     #title .sub { display: none; }
@@ -302,9 +303,20 @@
   const me = () => NAMES[S.player];
   const sis = () => (S.player === "olive" ? "Hazel" : "Olive");
   const saveKey = p => "blacksteel.prologue.v2." + p;
-  function save() { if (!S.player) return; try { localStorage.setItem(saveKey(S.player), JSON.stringify({ ch: S.ch })); } catch (e) { /* no storage: play on */ } }
-  function load(p) { try { return JSON.parse(localStorage.getItem(saveKey(p)) || "null"); } catch (e) { return null; } }
-  function wipe(p) { try { localStorage.removeItem(saveKey(p)); } catch (e) { /* ignore */ } }
+  // A save is the chapter reached plus an optional checkpoint inside it (so a long chapter doesn't start over).
+  function save() { if (!S.player) return; try { localStorage.setItem(saveKey(S.player), JSON.stringify({ ch: S.ch, cp: S.cp || null })); } catch (e) { /* no storage: play on */ } }
+  function load(p) {
+    try {
+      const sv = JSON.parse(localStorage.getItem(saveKey(p)) || "null");
+      if (sv) return sv;
+      // Saves from the first version of the game (Chapter One only).
+      const old = JSON.parse(localStorage.getItem("blacksteel.prologue." + p) || "null");
+      if (old && old.part === "end") return { ch: 1, cp: null };
+      if (old && old.part === "cabin") return { ch: 0, cp: "cabin" };
+      return null;
+    } catch (e) { return null; }
+  }
+  function wipe(p) { try { localStorage.removeItem(saveKey(p)); localStorage.removeItem("blacksteel.prologue." + p); } catch (e) { /* ignore */ } }
   const pref = (k, d) => { try { const v = localStorage.getItem("blacksteel.pref." + k); return v === null ? d : v === "1"; } catch (e) { return d; } };
   const setPref = (k, v) => { try { localStorage.setItem("blacksteel.pref." + k, v ? "1" : "0"); } catch (e) { /* ignore */ } };
 
@@ -685,6 +697,9 @@
     S, me, sis, say, lines, choose, wait, card, lily, scene2d, scene3d, play, finish, give, drop, has, refresh,
     reef, controls, newspaper,
     tremor(on) { tremor = on; },
+    // Checkpoints inside a chapter: save one, and ask on resume whether we saved one.
+    checkpoint(name) { S.cp = name; save(); },
+    resumeAt: () => S.cp,
     // for automated play-testing
     debugTarget: () => (cfg && cfg.target ? cfg.target() : null),
     debugQuick: () => !!(cfg && cfg.quick),
@@ -695,12 +710,15 @@
 
   // ---------- the story ----------
   async function runStory() {
+    const first = S.ch;
     for (let i = S.ch; i < STORY.length; i++) {
-      S.ch = i; save();
+      S.ch = i;
+      if (i !== first) S.cp = null;   // a resumed checkpoint only applies to the chapter it was saved in
+      save();
       voPrepare(i);
       await STORY[i].run(G);
     }
-    S.ch = STORY.length; save();
+    S.ch = STORY.length; S.cp = null; save();
     await card("The End", "of the Prologue");
     idleText("The Island That Never Existed. Tap Menu to play again, or to let your sister have a turn.");
   }
@@ -714,11 +732,14 @@
     scene2d("title");
     const block = p => {
       const sv = load(p);
-      const resumable = sv && sv.ch > 0 && sv.ch < STORY.length;
+      const resumable = sv && (sv.ch > 0 || sv.cp) && sv.ch < STORY.length;
+      const done = sv && sv.ch >= STORY.length;
+      const where = resumable ? `Chapter ${sv.ch + 1}: ${STORY[sv.ch].title}` : "";
       return `<div class="p">
         ${PORTRAITS[NAMES[p]] ? `<div class="face" data-face="${NAMES[p]}"></div>` : ""}
-        <button type="button" class="big" data-play="${p}">${NAMES[p]}</button>
-        ${resumable ? `<button type="button" class="small" data-restart="${p}">Start over (now at Chapter ${sv.ch + 1})</button>` : ""}
+        <button type="button" class="big" data-play="${p}" aria-label="${resumable ? `Continue ${NAMES[p]}'s game at ${where}` : `Play as ${NAMES[p]}`}">${NAMES[p]}</button>
+        ${resumable ? `<button type="button" class="small cont" data-play="${p}">Continue · ${where}</button><button type="button" class="small" data-restart="${p}">Start over</button>` : ""}
+        ${done ? `<button type="button" class="small" data-restart="${p}">Finished! Play again</button>` : ""}
       </div>`;
     };
     title.innerHTML = `<h2>The Island That Never Existed</h2>
@@ -739,6 +760,7 @@
     S.player = p;
     const sv = load(p);
     S.ch = sv && sv.ch < STORY.length ? sv.ch : 0;
+    S.cp = sv && sv.ch < STORY.length ? sv.cp || null : null;
     S.stage = 0; S.flags = {}; S.inv = [];
     title.hidden = true; menuBtn.hidden = false;
     const mine = ++gen;

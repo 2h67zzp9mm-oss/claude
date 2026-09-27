@@ -38,6 +38,7 @@
     id: "call", title: "The Call",
     async run(G) {
       const S = G.S;
+      if (G.resumeAt() !== "cabin") {
       await G.scene2d("frame");
       await G.lines([
         ["N", "Sit. Both of you."],
@@ -53,6 +54,8 @@
         ["N", "But it doesn't start with him. It starts with the island."]
       ]);
       await G.lily();
+      G.checkpoint("cabin");
+      }
       await G.card("Chapter One", "The Call", "Somewhere at sea. Three nights before Bellgrave.");
 
       S.stage = 0; S.flags = {}; S.inv = [];
@@ -479,6 +482,8 @@
       const S = G.S;
       await G.card("Chapter Four", "The Shrine", "Up through the burning village.");
       S.flags = {};
+      const at = G.resumeAt();
+      if (!at) {
       await G.scene3d("village", { mode: "run" });
       await G.lines([
         ["N", "Bellgrave's village had been built in rings around the old shrine. The islanders had spent generations carving tiny bells into the stone above every threshold. None of the carvings had clappers."],
@@ -522,7 +527,10 @@
       });
       G.W.shake(.8, .15);
       await G.say("N", "The north square erupted behind them. A cannon strike tore the roof from the building beside the shrine. They descended into darkness.");
-
+      G.checkpoint("tunnel");
+      }
+      if (at !== "chamber") {
+      if (!G.has("pistol")) G.give("pistol");
       await G.scene3d("tunnel");
       await G.say("N", "The bombardment became a distant heartbeat inside the tunnels. They followed passages lined with ancient masonry, carvings worn smooth long before Bellgrave's first house was built.");
       const right = ["ahead", "left"];
@@ -551,6 +559,9 @@
         await G.W.fade(0, 400);
       }
 
+      G.checkpoint("chamber");
+      }
+      if (!G.has("pistol")) G.give("pistol");
       await G.scene3d("chamber");
       S.flags = {};
       await G.lines([
@@ -923,6 +934,7 @@
       const S = G.S;
       await G.card("Chapter Eight", "After", "The waterline.");
       S.flags = {}; S.inv = [];
+      if (G.resumeAt() !== "sunrise") {
       await G.scene3d("beach", { mode: "after" });
       await G.W.fade(0, 900);
       await G.lines([
@@ -1000,8 +1012,10 @@
         ["N", "Including Deke. Including Mercer."],
         ["N", "The lie began before the fires went out."]
       ]);
-
+      G.checkpoint("sunrise");
       await G.W.fade(1, 700);
+      }
+      G.tremor(true);
       await G.scene3d("beach", { mode: "sunrise" });
       await G.W.fade(0, 900);
       await G.lines([
