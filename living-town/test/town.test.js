@@ -116,7 +116,7 @@ test("inside your own house: use furniture, walk around, leave", async () => {
   await until(() => dad(), "Sean loaded");
 
   sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "bed1" }));
-  await until(() => sean.messages.some(m => m.type === "control-rejected" && /Walk home first/.test(m.reason)) || dad().place === "homes", "must be home to use furniture");
+  await until(() => sean.messages.some(m => m.type === "control-rejected" && /Walk home first|nothing like that/.test(m.reason)) || dad().place === "homes", "must be home to use furniture");
 
   sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: doorX, y: doorY }));
   await until(() => dad().place === "homes" && Math.hypot(dad().x - doorX, dad().y - doorY) < 1, "Sean walks home", 15000);
@@ -149,6 +149,17 @@ test("inside your own house: use furniture, walk around, leave", async () => {
   await until(() => dad().using === "fridge", "a snack");
   sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: 477, y: 330 }));
   await until(() => dad().indoor === null && dad().using === null, "walking off across town clears indoor state");
+
+  // The cafe: walk in through its door, have some cake, walk out again.
+  const [cafeX, cafeY] = world.walkNodes.cafe;
+  sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: cafeX, y: cafeY }));
+  await until(() => dad().place === "cafe" && Math.hypot(dad().x - cafeX, dad().y - cafeY) < 1, "Sean walks to the cafe", 45000);
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "cakes" }));
+  await until(() => dad().using === "cakes" && dad().activity === "choosing a slice of cake", "cake at the cafe");
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "bed1" }));
+  await until(() => sean.messages.some(m => m.type === "control-rejected" && /nothing like that/.test(m.reason)), "no beds at the cafe");
+  sean.ws.send(JSON.stringify({ type: "leave-home", residentId: "dad" }));
+  await until(() => dad().place === null && dad().using === null, "out of the cafe door");
   sean.ws.close();
   assert.strictEqual(await stop(server), 0);
 });

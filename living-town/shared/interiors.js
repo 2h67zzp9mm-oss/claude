@@ -56,7 +56,29 @@
     binoculars: { label: "Binoculars", activity: "watching birds through the binoculars", needs: { fun: 14 } },
     birdhouse: { label: "Birdhouse", activity: "painting a little birdhouse", needs: { fun: 12 } },
     logs: { label: "Log pile", activity: "putting a log on the fire", needs: { fun: 4 } },
-    console: { label: "Game console", activity: "playing an old game on the TV", needs: { fun: 16 } }
+    console: { label: "Game console", activity: "playing an old game on the TV", needs: { fun: 16 } },
+    // The cafe, workshop and market.
+    cafeCounter: { label: "Counter", activity: "ordering at the counter", needs: { hunger: 25, social: 5 } },
+    coffee: { label: "Hot chocolate machine", activity: "making a hot chocolate", needs: { hunger: 10, fun: 5 } },
+    cakes: { label: "Cake case", activity: "choosing a slice of cake", needs: { hunger: 30 } },
+    cafeTable: { label: "Cafe table", activity: "sharing a table", needs: { hunger: 8, social: 10 }, sit: true },
+    booth: { label: "Booth", activity: "sitting in a cozy booth", needs: { social: 8, fun: 6 }, sit: true },
+    piano: { label: "Piano", activity: "playing a tune on the piano", needs: { fun: 16 } },
+    toolwall: { label: "Tool wall", activity: "picking a tool off the wall", needs: { fun: 6 } },
+    panel: { label: "Control panel", activity: "wiring up a control panel", needs: { fun: 12 } },
+    bike: { label: "Bike stand", activity: "fixing a bike", needs: { fun: 14 } },
+    lumber: { label: "Wood rack", activity: "sorting the wood", needs: { fun: 6 } },
+    paints: { label: "Paint shelf", activity: "mixing paint colors", needs: { fun: 12 } },
+    craftTable: { label: "Craft table", activity: "making something at the craft table", needs: { fun: 14, social: 5 }, sit: true },
+    orders: { label: "Order desk", activity: "sorting out orders", needs: { fun: 6 } },
+    kettle: { label: "Kettle", activity: "making a cup of tea", needs: { hunger: 8, social: 4 } },
+    till: { label: "Shop counter", activity: "chatting at the counter", needs: { social: 10 } },
+    produce: { label: "Fruit and veg", activity: "picking fresh fruit", needs: { hunger: 20 } },
+    groceries: { label: "Shelves", activity: "filling a basket with groceries", needs: { hunger: 15 } },
+    flowers: { label: "Flowers", activity: "smelling the flowers", needs: { fun: 8 } },
+    sweets: { label: "Sweet jars", activity: "choosing a sweet treat", needs: { hunger: 10, fun: 6 } },
+    boxes: { label: "Boxes", activity: "stacking boxes", needs: { fun: 4 } },
+    bread: { label: "Bread shelves", activity: "choosing warm bread", needs: { hunger: 25 } }
   };
   // Furniture you sit on (the rest you stand at).
   for (const kind of ["sofa", "armchair", "table"]) furniture[kind].sit = true;
@@ -211,10 +233,136 @@
         { kind: "plant", x: 180, y: 126, w: 8, h: 12 }, { kind: "picture", x: 40, y: 67, w: 14, h: 9, art: "bird" }
       ],
       entrance: [92, 134]
+    },
+
+    // --- Public buildings ---
+    // `inside` says which activities happen indoors (the rest stay on the
+    // map), and `activities` sends each one to the right spot; "staff"
+    // stands behind the counter or at the bench.
+    cafe: {
+      id: "cafe", ...PLAN, public: true,
+      inside: /cafe counter|special|radio|booth|notebook/,
+      activities: [[/cafe counter/, "counter", "staff"], [/special|something to eat/, "cakes"], [/radio/, "radio"], [/booth|sketch/, "booth"], [/notebook|news|coffee/, "cafeTable1"]],
+      rooms: [
+        room("kitchen", "Kitchen", 0, 0, 112, 60, { wall: "#f4d58d", wallTrim: "#c9a24f", pattern: "tiles", floor: "tile", floorColor: "#e7dcc6" }),
+        room("office", "Milo's office", 112, 0, 80, 60, { wall: "#a3c4bc", wallTrim: "#6f948b", pattern: "stripes", floor: "wood", floorColor: "#8a5f3a" }),
+        room("cafe", "Moonbeam Cafe", 0, 60, 192, 84, { wall: "#2f4858", wallTrim: "#e0a458", pattern: "stars", floor: "wood", floorColor: "#9a6a45" })
+      ],
+      doors: [hDoor(20, ["kitchen", "cafe"], 60), hDoor(160, ["office", "cafe"], 60)],
+      frontDoor: { x: 88, w: 16, room: "cafe" },
+      objects: [
+        { id: "counter", kind: "cafeCounter", x: 14, y: 90, w: 56, h: 12, spot: [42, 110], staff: [42, 86] },
+        { id: "cakes", kind: "cakes", x: 70, y: 88, w: 26, h: 14, spot: [83, 110] },
+        { id: "coffee", kind: "coffee", x: 42, y: 64, w: 14, h: 18, spot: [49, 86] },
+        { id: "radio", kind: "records", x: 100, y: 66, w: 14, h: 14, spot: [107, 86] },
+        { id: "cafeTable1", kind: "cafeTable", x: 118, y: 92, w: 16, h: 10, spot: [112, 102], seats: [[112, 102], [140, 102]] },
+        { id: "cafeTable2", kind: "cafeTable", x: 146, y: 114, w: 16, h: 10, spot: [140, 124], seats: [[140, 124], [168, 124]] },
+        { id: "cafeTable3", kind: "cafeTable", x: 112, y: 122, w: 16, h: 10, spot: [134, 132], seats: [[134, 132], [108, 116]] },
+        { id: "booth", kind: "booth", x: 162, y: 80, w: 26, h: 16, spot: [175, 100], seats: [[168, 100], [182, 100]] },
+        { id: "piano", kind: "piano", x: 4, y: 108, w: 24, h: 16, spot: [16, 130] },
+        { id: "stove", kind: "stove", x: 40, y: 8, w: 14, h: 14, spot: [47, 30] },
+        { id: "fridge", kind: "fridge", x: 92, y: 2, w: 14, h: 24, spot: [99, 32] },
+        { id: "desk1", kind: "desk", x: 118, y: 10, w: 22, h: 16, spot: [129, 32] },
+        { id: "bookshelf", kind: "bookshelf", x: 168, y: 4, w: 18, h: 24, spot: [177, 34] },
+        { id: "armchair", kind: "armchair", x: 144, y: 30, w: 16, h: 14, spot: [152, 50], seats: [[152, 48]] }
+      ],
+      decor: [
+        { kind: "counter", x: 56, y: 8, w: 34, h: 14 }, { kind: "sink", x: 64, y: 9, w: 10, h: 6 }, { kind: "counter", x: 4, y: 8, w: 36, h: 14 },
+        { kind: "sacks", x: 6, y: 40, w: 14, h: 12 }, { kind: "window", x: 18, y: 3, w: 14, h: 10, curtains: false },
+        { kind: "window", x: 150, y: 3, w: 12, h: 10 }, { kind: "window", x: 124, y: 64, w: 16, h: 10 }, { kind: "window", x: 177, y: 64, w: 12, h: 10 },
+        { kind: "poster", x: 66, y: 63, w: 18, h: 11, art: "menu" }, { kind: "picture", x: 8, y: 63, w: 12, h: 10, art: "moon" },
+        { kind: "plant", x: 180, y: 126, w: 8, h: 12 }, { kind: "plant", x: 70, y: 126, w: 8, h: 12 },
+        { kind: "floorLamp", x: 150, y: 76, w: 6, h: 16, light: true }
+      ],
+      entrance: [96, 134]
+    },
+
+    workshop: {
+      id: "workshop", ...PLAN, public: true,
+      inside: /Sean's Systems|control panel|studio class|taking apart|planing|paint|orders|shop trick/,
+      activities: [[/Sean's Systems|taking apart|shop trick/, "workbench1", "staff"], [/control panel/, "panel", "staff"], [/studio class/, "craftTable", "staff"], [/planing/, "workbench2"], [/paint/, "paints"], [/orders/, "orders"]],
+      rooms: [
+        room("shop", "Workshop", 0, 0, 120, 144, { wall: "#7d8b99", wallTrim: "#56626f", pattern: "planks", floor: "tile", floorColor: "#b8b2a7" }),
+        room("studio", "Zara's studio", 120, 0, 72, 80, { wall: "#e8d5b7", wallTrim: "#c4a882", pattern: "dots", floor: "wood", floorColor: "#c9a877" }),
+        room("office", "Order office", 120, 80, 72, 64, { wall: "#dfe7ea", wallTrim: "#a9b8bf", pattern: "stripes", floor: "carpet", floorColor: "#6d8a96" })
+      ],
+      doors: [vDoor(40, ["shop", "studio"], 120), vDoor(108, ["shop", "office"], 120)],
+      frontDoor: { x: 52, w: 16, room: "shop" },
+      objects: [
+        { id: "workbench1", kind: "workbench", x: 6, y: 22, w: 36, h: 16, spot: [24, 46], staff: [24, 44] },
+        { id: "workbench2", kind: "workbench", x: 54, y: 22, w: 36, h: 16, spot: [72, 46] },
+        { id: "toolwall", kind: "toolwall", x: 8, y: 3, w: 40, h: 12, spot: [28, 22], hanging: true },
+        { id: "panel", kind: "panel", x: 98, y: 4, w: 16, h: 22, spot: [106, 32], staff: [104, 32] },
+        { id: "bike", kind: "bike", x: 8, y: 70, w: 26, h: 16, spot: [21, 94] },
+        { id: "lumber", kind: "lumber", x: 96, y: 60, w: 18, h: 40, spot: [86, 82] },
+        { id: "paints", kind: "paints", x: 124, y: 4, w: 22, h: 20, spot: [135, 32] },
+        { id: "easel1", kind: "easel", x: 152, y: 24, w: 14, h: 22, spot: [159, 52] },
+        { id: "easel2", kind: "easel", x: 172, y: 24, w: 14, h: 22, spot: [179, 52] },
+        { id: "craftTable", kind: "craftTable", x: 134, y: 56, w: 32, h: 10, spot: [150, 72], seats: [[130, 70], [170, 70]], staff: [150, 72] },
+        { id: "orders", kind: "orders", x: 126, y: 88, w: 24, h: 16, spot: [138, 112] },
+        { id: "kettle", kind: "kettle", x: 170, y: 88, w: 14, h: 12, spot: [177, 108] },
+        { id: "armchair", kind: "armchair", x: 168, y: 118, w: 16, h: 14, spot: [176, 138], seats: [[176, 136]] }
+      ],
+      decor: [
+        { kind: "window", x: 60, y: 3, w: 14, h: 10, curtains: false }, { kind: "window", x: 164, y: 3, w: 14, h: 10 }, { kind: "window", x: 156, y: 83, w: 10, h: 9 },
+        { kind: "crates", x: 60, y: 100, w: 20, h: 14 }, { kind: "sawhorse", x: 44, y: 70, w: 22, h: 10 },
+        { kind: "floorLamp", x: 44, y: 22, w: 6, h: 16, light: true }, { kind: "plant", x: 124, y: 126, w: 8, h: 12 }, { kind: "picture", x: 132, y: 83, w: 12, h: 9, art: "painting" }
+      ],
+      entrance: [60, 134]
+    },
+
+    market: {
+      id: "market", ...PLAN, public: true,
+      inside: /market floor|rearranging|shopping at the market/,
+      activities: [[/market floor/, "till", "staff"], [/rearranging/, "island"], [/shopping at the market/, "groceries"]],
+      rooms: [
+        room("shop", "Corner Market", 0, 0, 136, 144, { wall: "#b5d99c", wallTrim: "#7fa866", pattern: "stripes", floor: "tile", floorColor: "#efe6d2" }),
+        room("store", "Storeroom", 136, 0, 56, 72, { wall: "#b7a58c", wallTrim: "#8c7a60", pattern: "planks", floor: "wood", floorColor: "#8a6440" }),
+        room("bakery", "Bread corner", 136, 72, 56, 72, { wall: "#f6d6ad", wallTrim: "#d0a878", pattern: "tiles", floor: "tile", floorColor: "#f3e9d8" })
+      ],
+      doors: [vDoor(34, ["shop", "store"], 136), vDoor(104, ["shop", "bakery"], 136)],
+      frontDoor: { x: 60, w: 16, room: "shop" },
+      objects: [
+        { id: "till", kind: "till", x: 90, y: 108, w: 32, h: 12, spot: [106, 128], staff: [106, 104] },
+        { id: "produce", kind: "produce", x: 6, y: 22, w: 18, h: 52, spot: [32, 48] },
+        { id: "groceries", kind: "groceries", x: 36, y: 4, w: 44, h: 18, spot: [58, 30] },
+        { id: "island", kind: "groceries", x: 42, y: 52, w: 40, h: 12, spot: [62, 72] },
+        { id: "sweets", kind: "sweets", x: 94, y: 22, w: 16, h: 14, spot: [102, 44] },
+        { id: "flowers", kind: "flowers", x: 6, y: 92, w: 22, h: 14, spot: [17, 114] },
+        { id: "boxes", kind: "boxes", x: 150, y: 22, w: 30, h: 20, spot: [165, 50] },
+        { id: "bread", kind: "bread", x: 146, y: 74, w: 38, h: 16, spot: [165, 100] },
+        { id: "chair1", kind: "chair", x: 170, y: 118, w: 6, h: 8, spot: [173, 126] }
+      ],
+      decor: [
+        { kind: "window", x: 84, y: 3, w: 14, h: 10 }, { kind: "window", x: 112, y: 3, w: 14, h: 10 },
+        { kind: "poster", x: 16, y: 3, w: 14, h: 10, art: "flower" }, { kind: "baskets", x: 90, y: 128, w: 14, h: 8 },
+        { kind: "plant", x: 120, y: 126, w: 8, h: 12 }
+      ],
+      entrance: [68, 134]
     }
   };
 
   function planFor(buildingId) { return plans[buildingId] || null; }
+
+  /** Is this activity one that happens indoors? Always true at home. */
+  function indoorActivity(plan, activity) { return !plan.public || plan.inside.test(String(activity || "")); }
+
+  /**
+   * Where someone is: the one building they're inside, or null when they're
+   * out on the map. The map, every interior and the building signs all ask
+   * this, so nobody can be in two places at once. Inside means they've
+   * arrived and are either at home, doing something indoors at the cafe,
+   * workshop or market, or standing right at its door (a player walking in).
+   */
+  function locate(r, world) {
+    if (!r || !Number.isFinite(r.x) || !Number.isFinite(r.y)) return null;
+    const b = r.place === "homes" ? world.homeOf(r.id) : world.buildings.find(x => x.place === r.place && !x.residents && plans[x.id]);
+    if (!b || !plans[b.id]) return null;
+    if (Math.hypot((r.targetX ?? r.x) - r.x, (r.targetY ?? r.y) - r.y) >= 3) return null;
+    if (b.residents) return b;
+    const [doorX, doorY] = world.walkNodes[b.node];
+    return r.indoor || indoorActivity(plans[b.id], r.activity) || Math.hypot(r.x - doorX, r.y - doorY) < 3 ? b : null;
+  }
 
   // --- Geometry ---
   const inRect = (x, y, r, pad = 0) => x >= r.x + pad && x <= r.x + r.w - pad && y >= r.y + pad && y <= r.y + r.h - pad;
@@ -358,6 +506,16 @@
       }
       if (o.asleep && mine) { result.set(o.id, { x: mine.bed.spot[0], y: mine.bed.spot[1], objectId: mine.bed.id, bed: mine.bed, slot: mine.slot }); continue; }
       const text = String(o.activity || "");
+      // The building's own activities first: staff go behind the counter.
+      const own = (plan.activities || []).find(([pattern]) => pattern.test(text));
+      const target = own && byId(own[1]);
+      if (target && own[2] === "staff" && target.staff) {
+        const n = taken.get(`staff:${target.id}`) || 0;
+        taken.set(`staff:${target.id}`, n + 1);
+        result.set(o.id, { x: target.staff[0] + n * 10, y: target.staff[1], objectId: null, staff: true });
+        continue;
+      }
+      if (target) { result.set(o.id, seatAt(target)); continue; }
       let object = null;
       for (const [pattern, kinds] of activityKinds) {
         if (!pattern.test(text)) continue;
@@ -401,5 +559,5 @@
     plan.decor = decor;
   }
 
-  return { PLAN, WALL, furniture, plans, planFor, floorOf, frontDoorRect, isWalkable, roomAt, snapInside, routeInside, assignBeds, placeHousehold };
+  return { PLAN, WALL, furniture, plans, planFor, indoorActivity, locate, floorOf, frontDoorRect, isWalkable, roomAt, snapInside, routeInside, assignBeds, placeHousehold };
 });

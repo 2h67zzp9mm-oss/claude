@@ -199,6 +199,8 @@
       case "painting": px(ix, iy, iw, ih, "#264653"); px(ix, iy + ih / 2, iw, ih / 2, "#2a9d8f"); px(ix + 2, iy + 1, 3, 3, "#e9c46a"); px(ix + iw - 5, iy + 2, 4, 2, "#e76f51"); break;
       case "stars": px(ix, iy, iw, ih, "#1d2951"); [[1, 1], [4, 3], [7, 1], [9, 4], [2, 4]].forEach(([a, b]) => px(ix + a, iy + b, 1, 1, "#fff6c2")); break;
       case "flower": px(ix, iy, iw, ih, "#fbeec1"); px(ix + iw / 2, iy + 2, 1, ih - 2, "#4f9d5a"); px(ix + iw / 2 - 1, iy + 1, 3, 2, "#ff6f91"); break;
+      case "menu": px(ix, iy, iw, ih, "#2b2b2b"); for (let j = 1; j < ih - 1; j += 2) px(ix + 1, iy + j, iw - 4 - (j % 3), 1, "#f1e6cc"); px(ix + iw - 3, iy + 1, 2, 2, "#ffd166"); break;
+      case "moon": px(ix, iy, iw, ih, "#1d2951"); px(ix + 2, iy + 1, 4, 4, "#fff1a8"); px(ix + 4, iy + 1, 2, 3, "#1d2951"); px(ix + iw - 3, iy + ih - 2, 1, 1, "#fff6c2"); break;
       case "bird": px(ix, iy, iw, ih, "#cfe3f0"); px(ix + 3, iy + 2, 4, 2, "#b55b36"); px(ix + 7, iy + 1, 2, 2, "#b55b36"); px(ix + 9, iy + 2, 1, 1, "#f4a261"); px(ix, iy + ih - 1, iw, 1, "#6a994e"); break;
     }
   }
@@ -347,6 +349,147 @@
         px(x + 2, y + 6, 6, 1, "#9aa0a6"); px(x + 7, y + 5, 2, 3, "#5b3a24");
         px(x + w - 10, y + 7, 7, 1, "#9aa0a6"); for (let i = x + w - 10; i < x + w - 3; i += 2) px(i, y + 8, 1, 1, "#9aa0a6");
         break;
+      case "cafeCounter":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#6b4226");
+        px(x, y, w, 4, "#c9a877"); px(x, y + 4, w, 1, "#8a6440");
+        for (let i = x + 3; i < x + w - 4; i += 9) px(i, y + 6, 6, h - 8, shade("#6b4226", 0.08));
+        // Till and a jar of cookies.
+        box(x + w - 14, y - 5, 9, 7, "#3a3f44", { light: 0.15 }); px(x + w - 12, y - 4, 5, 2, "#8ab17d");
+        px(x + 6, y - 4, 5, 5, "#d9e8f0"); px(x + 7, y - 2, 3, 2, "#c9853e");
+        break;
+      case "cakes":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y + 4, w, h - 4, "#6b4226");
+        box(x + 1, y - 2, w - 2, 9, "#dff3f7", { outline: "#9fb8bf", light: 0.05, dark: 0 });
+        [["#f7c6d9", "#fff"], ["#8a5a36", "#f2e2b8"], ["#ffd166", "#fff"]].forEach(([c, top], i) => { px(x + 3 + i * 8, y + 1, 6, 4, c); px(x + 3 + i * 8, y + 1, 6, 1, top); });
+        break;
+      case "coffee":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#9aa0a6", { light: 0.18 });
+        px(x + 2, y + 2, w - 4, 4, "#3a3f44"); px(x + 3, y + 3, 2, 1, "#e63946"); px(x + 8, y + 3, 2, 1, "#8ab17d");
+        px(x + 4, y + 8, w - 8, 2, "#3a3f44"); box(x + 4, y + h - 7, 6, 5, "#fdfcdc", { light: 0 });
+        break;
+      case "cafeTable":
+        shadow(x + 2, y + h, w - 2, 2);
+        px(x + 2, y, w - 4, h - 3, OUTLINE); px(x, y + 2, w, h - 7, OUTLINE);
+        px(x + 3, y + 1, w - 6, h - 5, "#e8dcc0"); px(x + 1, y + 3, w - 2, h - 9, "#e8dcc0");
+        px(x + w / 2 - 1, y + h - 4, 2, 4, "#3a2a20");
+        px(x + 4, y + 2, 3, 2, "#ffffff"); px(x + w - 7, y + 2, 3, 2, "#c9853e");
+        for (const [sx] of [[x - 4], [x + w]]) box(sx, y + 1, 5, 7, "#7a4e2d");
+        break;
+      case "booth": {
+        const c = "#b5523b";
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, shade(c, -0.15));
+        box(x + 2, y + 6, w - 4, h - 8, c, { outline: shade(c, -0.3), light: 0.12 });
+        px(x + Math.floor(w / 2), y + 7, 1, h - 9, shade(c, -0.22));
+        box(x + 6, y + h + 1, w - 12, 5, "#e8dcc0");
+        break;
+      }
+      case "piano":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#3a2a20", { light: 0.18 });
+        px(x + 1, y + 7, w - 2, 4, "#f4f1ea");
+        for (let i = x + 2; i < x + w - 2; i += 3) px(i, y + 7, 1, 2, "#111");
+        px(x + 4, y + 2, 5, 3, "#fdfcdc");
+        break;
+      case "toolwall":
+        box(x, y, w, h, "#b08d57", { light: 0 });
+        for (let i = x + 3; i < x + w - 2; i += 3) for (let j = y + 2; j < y + h - 1; j += 3) px(i, j, 1, 1, "#8a6a3a");
+        px(x + 4, y + 2, 1, 7, "#6b4226"); px(x + 3, y + 2, 3, 2, "#9aa0a6");
+        px(x + 11, y + 2, 1, 8, "#e63946"); px(x + 10, y + 2, 3, 1, "#9aa0a6");
+        px(x + 18, y + 3, 5, 5, "#9aa0a6"); px(x + 19, y + 4, 3, 3, "#b08d57");
+        px(x + 27, y + 2, 2, 8, "#ffd166"); px(x + 33, y + 3, 4, 1, "#9aa0a6"); px(x + 34, y + 3, 1, 6, "#2a9d8f");
+        break;
+      case "panel":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#5c6b73", { light: 0.14 });
+        px(x + 2, y + 2, w - 4, 8, "#1c2427");
+        [["#8ab17d", 3], ["#ffd166", 6], ["#e63946", 9]].forEach(([c, i]) => px(x + i, y + 4, 2, 2, c));
+        for (let j = y + 12; j < y + h - 3; j += 3) px(x + 3, j, w - 6, 1, j % 2 ? "#e76f51" : "#64b5f6");
+        break;
+      case "bike":
+        px(x + 1, y + 6, 9, 9, OUTLINE); px(x + 2, y + 7, 7, 7, "#9aa0a6"); px(x + 4, y + 9, 3, 3, OUTLINE);
+        px(x + w - 10, y + 6, 9, 9, OUTLINE); px(x + w - 9, y + 7, 7, 7, "#9aa0a6"); px(x + w - 7, y + 9, 3, 3, OUTLINE);
+        px(x + 6, y + 6, w - 12, 2, "#e63946"); px(x + 10, y + 2, 2, 6, "#e63946"); px(x + 8, y + 1, 5, 2, "#3a2a20"); px(x + w - 8, y + 3, 2, 4, "#3a3f44");
+        break;
+      case "lumber":
+        shadow(x - 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#6b4226");
+        for (let j = y + 3; j < y + h - 3; j += 6) { px(x + 1, j, w - 2, 4, "#d9b38c"); px(x + 1, j + 3, w - 2, 1, "#b08d57"); }
+        break;
+      case "paints":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#8a6440");
+        px(x + 1, y + 9, w - 2, 1, "#5b3a24");
+        ["#e63946", "#ffd166", "#2a9d8f", "#a98cff", "#f4a261"].forEach((c, i) => { px(x + 2 + i * 4, y + 4, 3, 5, c); px(x + 2 + i * 4, y + 12, 3, 5, ["#64b5f6", "#8ab17d", "#ff6f91", "#ffffff", "#264653"][i]); });
+        break;
+      case "craftTable":
+        shadow(x + 2, y + h, w, 2);
+        box(x, y, w, h - 2, "#c9a877", { light: 0.12 });
+        px(x + 3, y + 2, 6, 4, "#ff6f91"); px(x + 12, y + 3, 7, 3, "#64b5f6"); px(x + 22, y + 2, 4, 4, "#ffd166");
+        px(x + 1, y + h - 2, 2, 2, "#5b3a24"); px(x + w - 3, y + h - 2, 2, 2, "#5b3a24");
+        break;
+      case "orders":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y + 5, w, h - 5, "#8a5a36");
+        px(x + 1, y + 5, w - 2, 3, "#b07a4a");
+        px(x + 3, y + 1, 7, 6, "#fdfcdc"); px(x + 4, y + 2, 5, 1, "#6b7278"); px(x + 4, y + 4, 4, 1, "#6b7278");
+        px(x + 13, y + 3, 7, 4, "#3a3f44"); px(x + 14, y + 4, 5, 2, "#6fd6ff");
+        break;
+      case "kettle":
+        box(x, y + 4, w, h - 4, "#9c6b43"); px(x, y + 4, w, 2, "#e6dfd2");
+        px(x + 3, y, 6, 5, "#e63946"); px(x + 9, y + 1, 2, 1, "#e63946"); px(x + 4, y - 1, 4, 1, "#3a2a20");
+        break;
+      case "till":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#7fa866");
+        px(x, y, w, 3, "#e6dfd2"); px(x, y + 3, w, 1, "#b8ada0");
+        box(x + w - 12, y - 5, 9, 7, "#3a3f44", { light: 0.15 }); px(x + w - 10, y - 4, 5, 2, "#8ab17d");
+        px(x + 4, y - 3, 8, 3, "#c9853e"); px(x + 5, y - 4, 6, 1, "#e6c27a");
+        break;
+      case "produce":
+        shadow(x - 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#8a6440");
+        [["#e63946", "#8ab17d"], ["#ffd166", "#f4a261"], ["#6a994e", "#a98cff"], ["#f4a261", "#e63946"]].forEach(([a, b], row) => {
+          const ry = y + 3 + row * 12;
+          px(x + 1, ry + 8, w - 2, 1, "#5b3a24");
+          for (let i = x + 2; i < x + w - 3; i += 3) px(i, ry + 5 + (i % 2), 2, 2, i % 6 ? a : b);
+        });
+        break;
+      case "groceries": {
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#e6dfd2");
+        const colors = ["#e63946", "#2a9d8f", "#ffd166", "#64b5f6", "#f4a261", "#8ab17d", "#a98cff"];
+        for (let row = 0; row < Math.floor((h - 2) / 6); row++) {
+          const ry = y + 2 + row * 6;
+          px(x + 1, ry + 5, w - 2, 1, "#b8ada0");
+          for (let i = x + 2, k = row; i < x + w - 3; i += 4, k++) px(i, ry + 1, 3, 4, colors[k % colors.length]);
+        }
+        break;
+      }
+      case "flowers":
+        ["#ff6f91", "#ffd166", "#a98cff", "#e63946"].forEach((c, i) => {
+          const fx = x + 1 + i * 5;
+          px(fx, y + 8, 4, 6, "#4a6fa5");
+          px(fx + 1, y + 4, 1, 4, "#4f9d5a"); px(fx + 2, y + 5, 1, 3, "#4f9d5a");
+          px(fx, y + 2 + (i % 2), 3, 3, c); px(fx + 2, y + 3, 2, 2, shade(c, 0.15));
+        });
+        break;
+      case "sweets":
+        box(x, y + 7, w, h - 7, "#8a5a36");
+        ["#ff6f91", "#ffd166", "#8ab17d"].forEach((c, i) => { px(x + 1 + i * 5, y, 4, 7, "#dff3f7"); px(x + 1 + i * 5, y + 3, 4, 4, c); px(x + 1 + i * 5, y, 4, 1, "#9fb8bf"); });
+        break;
+      case "boxes":
+        [[0, 8, 14, 12], [15, 10, 14, 10], [4, 0, 12, 9]].forEach(([a, b, bw, bh]) => { box(x + a, y + b, bw, bh, "#c9a26b", { light: 0.14 }); px(x + a + bw / 2, y + b + 1, 1, bh - 2, "#a47f4d"); });
+        break;
+      case "bread":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#8a5a36");
+        px(x + 1, y + 7, w - 2, 1, "#5b3a24");
+        for (let i = x + 2; i < x + w - 5; i += 6) { px(i, y + 2, 5, 4, "#d9a25b"); px(i + 1, y + 2, 3, 1, "#f2c98a"); px(i + 1, y + 9, 4, 4, "#c9853e"); }
+        break;
       default: drawDecor(g, o);
     }
   }
@@ -380,6 +523,10 @@
       case "binoculars": px(x, y, 2, 3, "#333"); px(x + 3, y, 2, 3, "#333"); px(x + 2, y + 1, 1, 1, "#555"); break;
       case "logs": [[0, 4], [4, 4], [2, 1]].forEach(([a, b]) => { px(x + a, y + b, 4, 3, "#8a5a36"); px(x + a + 1, y + b + 1, 2, 1, "#d9b38c"); }); break;
       case "console": px(x, y, w, h, "#b8b8c0"); px(x + 1, y + 1, 2, 1, "#e63946"); break;
+      case "sacks": [[0, 2], [7, 0]].forEach(([a, b]) => { box(x + a, y + b, 7, 10, "#e6dcc2", { outline: "#9c8b6a", light: 0.05 }); px(x + a + 2, y + b + 4, 3, 1, "#9c8b6a"); }); break;
+      case "crates": [[0, 0], [10, 3]].forEach(([a, b]) => { box(x + a, y + b, 10, 10, "#b08d57", { light: 0.12 }); px(x + a + 1, y + b + 4, 8, 1, "#8a6a3a"); }); break;
+      case "sawhorse": px(x, y + 2, w, 3, "#b08d57"); px(x + 2, y + 5, 1, h - 5, "#6b4226"); px(x + w - 3, y + 5, 1, h - 5, "#6b4226"); px(x + 5, y, 10, 2, "#d9b38c"); break;
+      case "baskets": box(x, y, w, h, "#c9853e", { outline: "#8a5a36", light: 0.1 }); for (let i = x + 2; i < x + w - 1; i += 3) px(i, y + 2, 1, h - 3, "#a86a2c"); break;
     }
   }
 

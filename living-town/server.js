@@ -264,7 +264,7 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
 
   // Furniture a player chose inside their house adds its own boosts.
   if (r.using) {
-    if (r.using.until <= date.getTime() || r.place !== "homes") r.using = null;
+    if (r.using.until <= date.getTime() || r.place !== (r.using.place || "homes")) r.using = null;
     else for (const [need, rate] of Object.entries(interiors.furniture[r.using.kind].needs)) r.needs[need] = clamp(r.needs[need] + rate * dtHours, 0, 100);
   }
 
@@ -733,24 +733,31 @@ function detailPayload(resident) {
   return json;
 }
 
-// Inside your own house: walk around, use furniture, or go out the front door.
+// The building a resident is in, decided exactly as the phones decide it,
+// so nobody is ever in two places at once.
+function buildingAt(r) {
+  if (!r || r.path?.length) return null;
+  return interiors.locate(r, world);
+}
+
+// Inside a building: walk around, use furniture, or go out the front door.
 function handleIndoor(ws, msg) {
   const reject = reason => send(ws, { type: "control-rejected", residentId: msg.residentId, reason });
   const profile = auth.profileForToken(ws.token);
   if (!profile) return reject("Sign in to play.");
   if (profile.residentId !== msg.residentId) return reject("You can only move your own resident.");
   const r = state.residents.find(item => item.id === msg.residentId);
-  const home = r && world.homeOf(r.id);
-  const plan = home && interiors.planFor(home.id);
-  if (!plan) return reject("That resident doesn't have a house.");
-  if (r.place !== "homes" || r.path.length) return reject("Walk home first, then you can move around inside.");
+  if (!r) return reject("That resident isn't in town.");
+  const building = buildingAt(r);
+  const plan = building && interiors.planFor(building.id);
+  if (!plan) return reject("Walk home first, then you can move around inside.");
   controllers.set(ws, r.id);
   r.asleep = false;
   if (msg.type === "leave-home") {
-    // Step out of the front door onto the path, heading away from the house.
-    const [doorX, doorY] = world.walkNodes[home.node];
-    const edge = world.walkEdges.find(e => e.includes(home.node));
-    const [awayX, awayY] = edge ? world.walkNodes[edge[0] === home.node ? edge[1] : edge[0]] : [doorX, doorY + 30];
+    // Step out of the front door onto the path, heading away from the building.
+    const [doorX, doorY] = world.walkNodes[building.node];
+    const edge = world.walkEdges.find(e => e.includes(building.node));
+    const [awayX, awayY] = edge ? world.walkNodes[edge[0] === building.node ? edge[1] : edge[0]] : [doorX, doorY + 30];
     const len = Math.hypot(awayX - doorX, awayY - doorY) || 1;
     const step = Math.min(34, len * 0.8);
     const out = snapToWalkable(doorX + (awayX - doorX) / len * step, doorY + (awayY - doorY) / len * step);
@@ -763,7 +770,7 @@ function handleIndoor(ws, msg) {
     const object = plan.objects.find(o => o.id === msg.objectId);
     if (!object) return reject("There's nothing like that in this room.");
     r.indoor = { x: object.spot[0], y: object.spot[1], objectId: object.id };
-    r.using = { kind: object.kind, until: Date.now() + 30 * 60_000 };
+    r.using = { kind: object.kind, until: Date.now() + 30 * 60_000, place: r.place };
     r.activity = interiors.furniture[object.kind].activity;
   } else {
     const spot = interiors.snapInside(plan, msg.x, msg.y);

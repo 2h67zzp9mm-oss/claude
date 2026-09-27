@@ -125,22 +125,23 @@ test("walkway routes stay on the paths and every family has its own door", () =>
   assert.ok(Math.hypot(onRoof.x - 560, onRoof.y - 440) > 5, "roof taps are pulled onto a path");
 });
 
-test("every home has a floor plan whose rooms, furniture and spots fit together", () => {
+test("every home, the cafe, the workshop and the market have floor plans that fit together", () => {
   const world = require("../shared/world");
   const interiors = require("../shared/interiors");
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  for (const b of world.homeBuildings) {
+  for (const id of ["cafe", "workshop", "market"]) assert.ok(interiors.planFor(id) && world.buildings.find(b => b.id === id), `${id} has an inside`);
+  for (const b of world.buildings.filter(item => interiors.planFor(item.id))) {
     const plan = interiors.planFor(b.id);
-    assert.ok(plan, b.id);
     assert.ok(plan.rooms.length >= 3, `${b.id} has several rooms`);
-    assert.ok(plan.objects.filter(o => o.kind === "bed").length >= 2, `${b.id} has beds`);
+    if (b.residents) assert.ok(plan.objects.filter(o => o.kind === "bed").length >= 2, `${b.id} has beds`);
+    for (const [, objectId] of plan.activities || []) assert.ok(plan.objects.some(o => o.id === objectId), `${b.id} activity goes to ${objectId}`);
     const ids = new Set();
     for (const o of plan.objects) {
       assert.ok(!ids.has(o.id) && o.id.length <= 20, `${b.id} ${o.id} has a short, unique id`);
       ids.add(o.id);
       assert.ok(o.x >= 0 && o.y >= 0 && o.x + o.w <= plan.width && o.y + o.h <= plan.height, `${b.id} ${o.id} inside the house`);
       assert.ok(interiors.furniture[o.kind], `${o.kind} has an effect`);
-      for (const [x, y] of [o.spot, ...(o.seats || [])]) assert.ok(interiors.isWalkable(plan, x, y), `${b.id} ${o.id} can be reached at ${x},${y}`);
+      for (const [x, y] of [o.spot, ...(o.seats || []), ...(o.staff ? [o.staff] : [])]) assert.ok(interiors.isWalkable(plan, x, y), `${b.id} ${o.id} can be reached at ${x},${y}`);
     }
     // Nothing blocks a doorway or the front door.
     for (const d of [...plan.doors, interiors.frontDoorRect(plan)]) {
@@ -191,6 +192,51 @@ test("at home, everyone sleeps in their own bed and goes to the right furniture"
   // Same inputs, same scene, on every phone.
   const again = interiors.placeHousehold(sean, [{ id: "hazel", asleep: false, activity: "having family time" }], household);
   assert.deepStrictEqual(again.get("hazel"), interiors.placeHousehold(sean, [{ id: "hazel", asleep: false, activity: "having family time" }], household).get("hazel"));
+});
+
+test("at work, staff stand behind the counter, and only indoor activities happen inside", () => {
+  const interiors = require("../shared/interiors");
+  const cafe = interiors.planFor("cafe");
+  const placed = interiors.placeHousehold(cafe, [
+    { id: "milo", activity: "running the cafe counter" },
+    { id: "zara", activity: "sketching in a corner booth" },
+    { id: "olive", activity: "trying today's special" }
+  ], []);
+  assert.deepStrictEqual([placed.get("milo").x, placed.get("milo").y], cafe.objects.find(o => o.id === "counter").staff);
+  assert.strictEqual(placed.get("zara").objectId, "booth");
+  assert.strictEqual(placed.get("olive").objectId, "cakes");
+  assert.ok(interiors.indoorActivity(cafe, "running the cafe counter"));
+  assert.ok(!interiors.indoorActivity(cafe, "trading news over coffee"), "some people stay out on the terrace");
+  assert.ok(interiors.indoorActivity(interiors.planFor("workshop"), "wiring up a client's control panel"));
+  assert.ok(!interiors.indoorActivity(interiors.planFor("market"), "browsing the stalls"), "the stalls are outside");
+  assert.ok(interiors.indoorActivity(interiors.planFor("seanHouse"), "anything at all"), "at home, everyone is inside");
+});
+
+test("nobody is ever in two places at once", () => {
+  const world = require("../shared/world");
+  const interiors = require("../shared/interiors");
+  const ids = ["dad", "olive", "hazel", "milo", "zara", "finn", "nova"];
+  const placeKeys = [...Object.keys(world.places), null];
+  const acts = ["running the cafe counter", "trading news over coffee", "browsing the stalls", "working the market floor", "wiring up a client's control panel", "working on a small project", "resting at home", "walking to the park"];
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pickOne = list => list[Math.floor(rand() * list.length)];
+  for (let round = 0; round < 3000; round++) {
+    const r = { id: pickOne(ids), place: pickOne(placeKeys), activity: pickOne(acts), x: 0, y: 0, indoor: rand() < 0.2 ? { x: 40, y: 40 } : null };
+    // Somewhere on the map, sometimes exactly at a door, sometimes still walking.
+    const node = world.walkNodes[pickOne(Object.keys(world.walkNodes))];
+    r.x = rand() < 0.5 ? node[0] : 20 + rand() * 900;
+    r.y = rand() < 0.5 ? node[1] : 20 + rand() * 600;
+    const walking = rand() < 0.3;
+    r.targetX = walking ? r.x + 50 : r.x;
+    r.targetY = r.y;
+    const where = interiors.locate(r, world);
+    const insideOf = world.buildings.filter(b => interiors.planFor(b.id) && where?.id === b.id);
+    assert.ok(insideOf.length <= 1, "inside at most one building");
+    if (walking) assert.strictEqual(where, null, "anyone walking is out on the map");
+    if (where?.residents) assert.strictEqual(world.homeOf(r.id).id, where.id, "only ever inside your own home");
+    if (where && !where.residents) assert.strictEqual(where.place, r.place, "inside the building for the place you're at");
+  }
 });
 
 test("small things around the house can be used too", () => {

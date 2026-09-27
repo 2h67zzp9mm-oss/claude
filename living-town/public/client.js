@@ -543,7 +543,7 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const b of buildings) {
-      const home = b.residents ? occupantsOf(b) : [];
+      const home = planFor(b.id) ? occupantsOf(b) : [];
       const label = home.length ? `${b.name} · ${home.length}${home.some(r => r.asleep) ? " z" : ""}` : b.name;
       const w = ctx.measureText(label).width + fs * 1.3, h = fs * 1.7;
       const x0 = b.x - w / 2, y0 = b.y - h / 2;
@@ -670,7 +670,7 @@
   // (rooms.js). Residents who are home walk between rooms: to the kitchen to
   // eat, to their own bed to sleep. Players walk in through their own front
   // door and can use almost anything in the house.
-  const { planFor, placeHousehold, routeInside, frontDoorRect, furniture } = window.LivingTownInteriors;
+  const { planFor, placeHousehold, routeInside, frontDoorRect, furniture, locate } = window.LivingTownInteriors;
   const Rooms = window.LivingTownRooms;
   const interior = { id: null, base: null, baseKey: "", lighting: null, lightKey: "", placed: [], walkers: new Map(), fresh: false, closing: false };
   const interiorEl = $("#interior");
@@ -679,8 +679,10 @@
   const RS = 3; // backing pixels per plan pixel
   const INDOOR_SPEED = 34; // plan pixels per second
 
-  // A resident is "inside" once they've arrived at their own front door.
-  function isInside(r) { return r.place === "homes" && Boolean(homeOf(r.id)) && Math.hypot(r.targetX - r.x, r.targetY - r.y) < 3; }
+  // Where someone is: inside exactly one building, or out on the map
+  // (shared/interiors.js decides, so nobody is ever in two places).
+  function buildingOf(r) { return locate(r, window.LivingTownWorld); }
+  function isInside(r) { return Boolean(buildingOf(r)); }
 
   function householdOrder(b) {
     const order = r => { const i = (b.residents || []).indexOf(r.id); return i < 0 ? 100 : i; };
@@ -688,11 +690,12 @@
   }
 
   function occupantsOf(b) {
-    return [...residents.values()].filter(r => isInside(r) && homeOf(r.id)?.id === b.id).sort(householdOrder(b));
+    return [...residents.values()].filter(r => isInside(r) && buildingOf(r)?.id === b.id).sort(householdOrder(b));
   }
 
   // Everyone who lives here, home or not, so beds don't swap around.
   function householdOf(b) {
+    if (!b.residents) return [];
     return [...residents.values()].filter(r => homeOf(r.id)?.id === b.id).sort(householdOrder(b)).map(r => r.id);
   }
 
@@ -703,8 +706,11 @@
 
   function canActInside(b) {
     const mine = me && residents.get(me.residentId);
-    return mode === "play" && mine && homeOf(mine.id)?.id === b.id && isInside(mine);
+    return mode === "play" && mine && buildingOf(mine)?.id === b.id && isInside(mine);
   }
+
+  // Players can walk into their own home and any public building.
+  function canEnter(b) { return Boolean(me) && (!b.residents || homeOf(me.residentId)?.id === b.id); }
 
   function drawSleeper(r, bed, slot) {
     const look = lookFor(r);
@@ -834,8 +840,8 @@
     $("#interiorCount").textContent = count ? `${count} inside${people.some(r => r.asleep) ? " · shh, someone's sleeping" : ""}` : "Nobody's home";
     $("#interiorHint").textContent = canActInside(b)
       ? "Tap anything to use it: beds, chairs, the sink, the fridge, windows… Tap the floor to walk, or the front door to go outside."
-      : mode === "play" && me && homeOf(me.residentId)?.id === b.id
-        ? "Tap anywhere to walk home and come inside."
+      : mode === "play" && canEnter(b)
+        ? `Tap anywhere to walk to ${b.residents ? "your front door" : `the ${b.name} door`} and come inside.`
         : "Tap someone to check on them, or tap things to see what they're for.";
   }
 
@@ -880,15 +886,14 @@
     }, 380);
   }
 
-  // Walking up to your own front door takes you inside; leaving takes you out.
-  let wasInside = false;
+  // Walking up to a front door takes you inside; leaving takes you out.
+  let wasInside = null;
   function followMyDoor() {
     const mine = me && residents.get(me.residentId);
-    const home = mine && homeOf(mine.id);
-    const inside = Boolean(mode === "play" && home && isInside(mine));
-    if (inside && !wasInside && interior.id !== home.id) openInterior(home);
-    if (!inside && wasInside && interior.id === home?.id) closeInterior();
-    wasInside = inside;
+    const here = mine && mode === "play" && isInside(mine) ? buildingOf(mine) : null;
+    if (here && here.id !== wasInside && interior.id !== here.id) openInterior(here);
+    if (!here && wasInside && interior.id === wasInside) closeInterior();
+    wasInside = here?.id || null;
   }
 
   // The front-most thing under a tap; rugs only if nothing else is there.
@@ -928,10 +933,10 @@
       } else send({ type: "indoor-move", residentId: me.residentId, x, y });
       return;
     }
-    if (mode === "play" && me && homeOf(me.residentId)?.id === b.id) {
+    if (mode === "play" && canEnter(b)) {
       const [doorX, doorY] = walkNodes[b.node];
       send({ type: "control", residentId: me.residentId, x: doorX, y: doorY });
-      return showToast("Heading home…");
+      return showToast(b.residents ? "Heading home…" : `Heading to ${b.name}…`);
     }
     if (onDoor) return showToast(`The front door of ${b.name}.`);
     if (object) showToast(`${furniture[object.kind].label}: good for ${furniture[object.kind].activity}. Play at home to use it.`);
@@ -978,7 +983,7 @@
     const pad = screenPx(6);
     const sign = signBoxes.find(s => p.x >= s.x0 - pad && p.x <= s.x1 + pad && p.y >= s.y0 - pad && p.y <= s.y1 + pad);
     if (!playing) {
-      if (sign) { if (sign.b.residents) openInterior(sign.b); else showBuilding(sign.b); }
+      if (sign) { if (planFor(sign.b.id)) openInterior(sign.b); else showBuilding(sign.b); }
       return;
     }
     // Tap a sign to walk to that building's door; tap anywhere else to walk
@@ -987,8 +992,8 @@
     const target = door ? { x: door[0], y: door[1] } : snapToWalkable(p.x, p.y);
     send({ type: "control", residentId: me.residentId, x: target.x, y: target.y });
     if (sign) showToast(`Walking to ${sign.b.name}`);
-    // Your own house opens when you reach the door; others you can peek into.
-    if (sign?.b.residents && homeOf(me.residentId)?.id !== sign.b.id) openInterior(sign.b);
+    // Places you can enter open when you reach the door; others' homes you can peek into.
+    if (sign && planFor(sign.b.id) && !canEnter(sign.b)) openInterior(sign.b);
     tapMarker = { x: target.x, y: target.y, at: performance.now() };
     select(me.residentId, false);
   }

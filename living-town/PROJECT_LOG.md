@@ -269,3 +269,14 @@ This is the first thing published to the internet, so it was designed to expose 
 - **Tests** (`test/viewer.test.js`): wrong or partial tokens, main-app paths and `/api` all get 404s; the page is marked read-only; foreign-origin and wrong-token sockets are refused; no private field reaches a visitor; roster changes still arrive; sending a message closes the socket and moves no one; the main server still requires sign-in; and the window stays off without a token. The normal test servers run with the window off.
 - **Checked in a headless phone-sized browser:** the visitor page loads live, makes no `/api` requests, shows no errors, and hides the profile menu, Play and editing.
 
+# Version 0.11.0: the cafe, workshop and market inside
+
+- **Three new floor plans** in `shared/interiors.js`, drawn in `public/rooms.js`:
+  - Moonbeam Cafe: the kitchen, Milo's office, and the cafe with its counter, cake case, hot chocolate machine, radio, three tables, a booth and a piano.
+  - Workshop: the shop floor with two workbenches, a tool wall, a control panel, a bike stand and a wood rack; Zara's studio with paints, easels and a craft table; and the order office with a kettle.
+  - Corner Market: the shop with fruit racks, shelves, sweet jars, flowers and the counter; the storeroom; and the bread corner.
+- **Who is inside.** Each building lists which activities happen indoors. Staff on shift stand behind the counter or at the bench: Milo running the cafe, Sean on a job or wiring a control panel, Zara teaching, Nova on the market floor. Other activities go to the right spot (cake for today's special, the booth for sketching). Outdoor ones, like news over coffee on the terrace, browsing the stalls or the Saturday stall, stay on the map.
+- **Players** walk in through the door of the cafe, workshop or market like at home, use about 25 new things (each with a gentle boost), and walk out through the front door. The server applies the same rule the phones use, and furniture boosts now end when you leave that place.
+- **Nobody in two places at once.** One function, `locate`, decides whether each person is out on the map or inside exactly one building. The map, every inside view, the building signs and the server all use it. A test throws 3,000 random situations at it: nobody is ever inside two buildings, anyone walking is on the map, homes only hold their own family, and a public building only holds people at that place.
+- **Tests:** all seven plans are checked (every spot and staff spot can be reached, no blocked doors, activity targets exist); staff placement and the indoor/outdoor split are covered; and the server test walks Sean into the cafe for cake, checks there are no beds there, and walks him out.
+
