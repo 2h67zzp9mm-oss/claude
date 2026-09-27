@@ -37,8 +37,9 @@ Open `index.html` in any browser (phone, tablet, or PC). No install, no server.
 - `art.js`: painted scenes and animation (moving lamp light, waves, fog, rain, embers, the rocking cabin)
 - `chars.js`: walking characters. Tap the floor to walk; tap an object and Sean walks over before acting.
 
-## Adding the family's artwork
+## Characters
 
-Sean is a stand-in silhouette until real art is added. A character sprite sheet is a PNG with a transparent
-background: one row per direction (right, left), walk frames left to right, feet at the bottom center.
-Register it in `SPRITES` at the top of `chars.js`. Backgrounds can replace any scene's painted `bg`.
+Characters are jointed rigs drawn in code (`chars.js`): hips, knees, ankles, shoulders and elbows follow a
+walk cycle that advances with distance walked, so the feet plant. Each character's look (`LOOKS`) follows the
+family's paintings: Sean is bald with glasses and a beard, in a long black coat with brass trim, a purple sash,
+boots, and a plain gray Nightforge. The paintings themselves are used for portraits and the title screen.

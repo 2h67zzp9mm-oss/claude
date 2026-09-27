@@ -446,7 +446,11 @@
         e.stopPropagation();
         closeVerbs();
         if (isItem) itemVerb(id, v);
-        else run(async () => { if (v !== "Look") await goTo(id); return act(id, v); });
+        else run(async () => {
+          if (v === "Look") { const p = STAND[id]; if (p) ACTORS.sean.faceTo(p[0] + p[2] * 40); }
+          else { await goTo(id); await ACTORS.sean.gesture(); }
+          return act(id, v);
+        });
       });
       verbsEl.appendChild(b);
     });
@@ -477,7 +481,7 @@
       const item = S.sel;
       S.sel = null;
       renderInv();
-      run(async () => { await goTo(id); return useOn(item, id); });
+      run(async () => { await goTo(id); await ACTORS.sean.gesture(); return useOn(item, id); });
       return;
     }
     openVerbs(id, HS[id][0], HS[id][1], null, false, { x: e.clientX, y: e.clientY });
