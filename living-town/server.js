@@ -32,6 +32,7 @@ const { startViewer, readToken } = require("./lib/viewer");
 const troupe = require("./lib/troupe");
 const crowd = require("./lib/crowd");
 const will = require("./lib/will");
+const social = require("./lib/social");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
@@ -81,6 +82,7 @@ function finiteOr(value, fallback) { return Number.isFinite(Number(value)) ? Num
 
 function normalizeResident(resident) {
   will.ensure(resident);
+  if (!(resident.follow && typeof resident.follow.id === "string" && Number.isFinite(resident.follow.until))) resident.follow = null;
   resident.needs = resident.needs && typeof resident.needs === "object" ? resident.needs : {};
   for (const [key, fallback] of Object.entries(DEFAULT_NEEDS)) resident.needs[key] = clamp(finiteOr(resident.needs[key], fallback), 0, 100);
   resident.relationships = resident.relationships && typeof resident.relationships === "object" ? resident.relationships : {};
@@ -239,13 +241,35 @@ function setDestination(resident, placeKey) {
   walkTo(resident, p.x, p.y);
 }
 
+// "Follow me!": a resident who agreed walks after the player's character
+// for a while, keeping a step behind (and waiting outside other people's homes).
+function followingSomeone(r, now) {
+  if (!r.follow) return false;
+  const leader = state.residents.find(o => o.id === r.follow.id);
+  if (r.follow.until > now && leader && !leader.asleep && !r.asleep) return true;
+  r.follow = null;
+  r.mind.commitUntil = 0;
+  r.intent = "back to their own plans";
+  return false;
+}
+
+function followLeader(r) {
+  const leader = state.residents.find(o => o.id === r.follow.id);
+  r.intent = `following ${leader.name}`;
+  const goal = snapToWalkable(leader.x - 12, leader.y + 4);
+  if (Math.hypot(goal.x - r.targetX, goal.y - r.targetY) < 20) return;
+  const intoOthersHome = leader.place === "homes" && world.homeOf(leader.id)?.id !== world.homeOf(r.id)?.id;
+  walkTo(r, goal.x, goal.y);
+  r.place = intoOthersHome ? null : leader.place;
+}
+
 // People standing around outdoors shift to a new free spot now and then,
 // and step aside if someone ends up on top of them. Performers move about
 // the square more often during a show. Not saved: it's only who moves when.
 const nextMill = new Map();
 function millAbout(now) {
   for (const r of state.residents) {
-    if (r.asleep || isControlled(r.id) || r.path.length || !r.place || r.place === "homes" || interiors.locate(r, world)) continue;
+    if (r.asleep || r.follow || isControlled(r.id) || r.path.length || !r.place || r.place === "homes" || interiors.locate(r, world)) continue;
     const performing = /circus show/.test(r.activity || "") && troupe.memberFor(r);
     const due = nextMill.get(r.id) ?? now + (performing ? 8_000 : 30_000) * Math.random();
     const squashed = crowd.crowded(r, othersOutside(r));
@@ -285,6 +309,8 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
   if (controlled) {
     r.asleep = false;
     r.intent = "following a player's lead";
+  } else if (followingSomeone(r, date.getTime())) {
+    followLeader(r);
   } else {
     const destination = mind.decide(state, r, date);
     if (destination) setDestination(r, destination);
@@ -542,7 +568,7 @@ function townPayload() {
 
 function fullStatePayload() {
   return JSON.stringify({
-    type: "state", now: Date.now(), homes: cast.homeMap(state), town: townPayload(), mreBrain: mre.brain,
+    type: "state", now: Date.now(), homes: cast.homeMap(state), town: townPayload(), mreBrain: mre.brain, social: social.menu(),
     state: { events: state.events.slice(0, 50), residents: state.residents.map(residentSummary) }
   });
 }
@@ -843,6 +869,12 @@ function validateClientMessage(raw) {
     return { type: "control", residentId: msg.residentId, x: msg.x, y: msg.y };
   }
   if (msg.type === "release") return { type: "release" };
+  if (msg.type === "social") {
+    if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId) || typeof msg.targetId !== "string" || msg.targetId.length > 64) return null;
+    if (typeof msg.action !== "string" || !social.ACTIONS[msg.action]) return null;
+    if (msg.place !== undefined && (typeof msg.place !== "string" || !places[msg.place])) return null;
+    return { type: "social", residentId: msg.residentId, targetId: msg.targetId, action: msg.action, place: msg.place || null };
+  }
   if (msg.type === "leave-home") {
     if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId)) return null;
     return { type: "leave-home", residentId: msg.residentId };
@@ -872,6 +904,36 @@ function detailPayload(resident) {
   const json = JSON.stringify({ type: "resident-detail", resident: residentDetail(resident) });
   detailCache.set(resident.id, { revision: resident.lifeRevision, json });
   return json;
+}
+
+// A player's character starts a social interaction with someone nearby.
+const SOCIAL_RANGE = 48;
+function handleSocial(ws, msg) {
+  const reply = payload => send(ws, { type: "social-result", targetId: msg.targetId, action: msg.action, ...payload });
+  const profile = auth.profileForToken(ws.token);
+  if (!profile) return reply({ error: "Sign in to play." });
+  if (profile.residentId !== msg.residentId) return reply({ error: "You can only act as your own character." });
+  const now = Date.now();
+  if (now - (ws.lastSocial || 0) < 1500) return reply({ error: "One thing at a time!" });
+  const actor = state.residents.find(r => r.id === msg.residentId);
+  const target = state.residents.find(r => r.id === msg.targetId);
+  if (!actor || !target || actor === target) return reply({ error: "There's nobody like that here." });
+  if (target.asleep) return reply({ error: `Shh, ${target.name} is asleep.` });
+  if (Math.hypot(actor.x - target.x, actor.y - target.y) > SOCIAL_RANGE || !willContext.sameSpot(actor, target)) return reply({ error: `Get a bit closer to ${target.name} first.` });
+  ws.lastSocial = now;
+  controllers.set(ws, actor.id);
+  const result = social.perform(state, actor, target, msg.action, now, {
+    mindFor: mind.mindFor, random: Math.random, addEvent,
+    obligation: (r, date) => mind.activeObligation(r.id, date),
+    isFamily: (a, b) => (a.profile?.family || []).some(link => link.id === b.id),
+    startFollow: (who, leader) => {
+      if (isControlled(who.id)) return;
+      who.follow = { id: leader.id, until: now + 10 * 60_000 };
+      who.intent = `following ${leader.name}`;
+    },
+    goTo: (who, placeKey, why) => willContext.go(who, placeKey, why)
+  }, { place: msg.place });
+  reply(result);
 }
 
 // The building a resident is in, decided exactly as the phones decide it,
@@ -957,6 +1019,7 @@ wss.on("connection", (ws, req) => {
     if (msg.type === "control") handleControl(ws, msg);
     else if (msg.type === "release") releaseController(ws);
     else if (msg.type === "use" || msg.type === "indoor-move" || msg.type === "leave-home") handleIndoor(ws, msg);
+    else if (msg.type === "social") handleSocial(ws, msg);
     else if (msg.type === "inspect") {
       // Rate-limited: a burst of requests collapses into the latest one.
       ws.pendingInspect = msg.residentId;

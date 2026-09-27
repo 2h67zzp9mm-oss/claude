@@ -35,6 +35,11 @@
           <canvas id="roomCanvas" width="576" height="432" aria-label="Inside the house"></canvas>
           <p id="interiorHint" class="interior-hint"></p>
         </div>
+        <div id="socialMenu" class="social-menu hidden" role="dialog" aria-label="What to do">
+          <div class="social-head"><strong id="socialName"></strong><span id="socialRel"></span><button id="socialClose" aria-label="Close">✕</button></div>
+          <div id="socialActions" class="social-actions"></div>
+          <div id="socialPlaces" class="social-actions hidden"></div>
+        </div>
       </section>
 
       <section id="residentSheet" class="bottom-sheet" aria-live="polite">

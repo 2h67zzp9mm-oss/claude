@@ -127,6 +127,7 @@
       if (!msg.me && me) { me = null; updatePlayerUi(); }
     } else if (msg.type === "state") {
       setClock(msg.now);
+      if (Array.isArray(msg.social)) socialActions = msg.social;
       setHomeAssignments(msg.homes || {});
       town = msg.town || town;
       mreBrain = msg.mreBrain || mreBrain;
@@ -148,6 +149,8 @@
         renderFeed();
       }
       renderSelected();
+    } else if (msg.type === "social-result") {
+      showSocialResult(msg);
     } else if (msg.type === "resident-detail") {
       const r = msg.resident;
       details.set(r.id, { revision: r.lifeRevision, lifeHistory: r.lifeHistory, knowledge: r.knowledge, experiences: r.experiences, memories: r.memories });
@@ -363,6 +366,7 @@
     followPlayer(dt);
     moveMrE(dt);
     followMyDoor();
+    followSocial();
     if (interior.id) drawInterior(dt);
     else if (backing) drawTown(dt);
     updateClock();
@@ -1029,6 +1033,7 @@
       if (p.lying) { const bed = p.spot.bed; return x >= bed.x && x <= bed.x + bed.w && y >= bed.y && y <= bed.y + bed.h; }
       return Math.abs(p.w.x - x) < 7 && y > p.w.y - FEET_ROW - 2 && y < p.w.y + 3;
     });
+    if (hit && acting) { select(hit.r.id, false); return openSocial(hit.r); }
     if (hit) return select(hit.r.id);
     const fd = frontDoorRect(plan);
     const onDoor = Boolean(fd) && x >= fd.x - 3 && x <= fd.x + fd.w + 3 && y >= fd.y - 4;
@@ -1064,6 +1069,94 @@
     if (object) showToast(`${furniture[object.kind].label}: good for ${furniture[object.kind].activity}. Play at home to use it.`);
   });
 
+  // --- Social interactions (Sims-style) ---
+  // Tap someone while playing: chat, joke, compliment, high five, hug, beg
+  // for a treat, games, "follow me", invitations, teasing, saying sorry.
+  // The server decides how they respond (lib/social.js).
+  let socialActions = [];
+  const socialEl = $("#socialMenu");
+  const social = { target: null, pending: null };
+
+  function relationTo(r) {
+    const value = Number(r.relationships?.[me?.residentId]) || 0;
+    const family = (residents.get(me?.residentId)?.profile?.family || []).some(link => link.id === r.id);
+    const [emoji, label] = family && value >= 40 ? ["🏡", "Family"] : value < 0 ? ["😕", "Not getting along"] : value < 20 ? ["🙂", "Acquaintances"]
+      : value < 40 ? ["😊", "Friendly"] : value < 65 ? ["😄", "Friends"] : value < 85 ? ["💛", "Good friends"] : ["💖", "Best friends"];
+    return { value, family, emoji, label };
+  }
+
+  function openSocial(r) {
+    if (!me || !socialActions.length) return;
+    social.target = r.id;
+    const rel = relationTo(r);
+    $("#socialName").textContent = r.name;
+    $("#socialRel").textContent = `${rel.emoji} ${rel.label}`;
+    $("#socialActions").innerHTML = socialActions
+      .filter(a => a.minRel === null || rel.value >= a.minRel || rel.family)
+      .map(a => `<button data-action="${a.id}"><b>${a.emoji}</b><span>${escapeHtml(a.label)}</span></button>`).join("");
+    $("#socialPlaces").classList.add("hidden");
+    $("#socialActions").classList.remove("hidden");
+    socialEl.classList.remove("hidden");
+  }
+
+  function closeSocial() { socialEl.classList.add("hidden"); social.target = null; }
+
+  $("#socialClose").addEventListener("click", closeSocial);
+  $("#socialActions").addEventListener("click", event => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const action = socialActions.find(a => a.id === button.dataset.action);
+    if (action?.needsPlace) {
+      $("#socialPlaces").innerHTML = Object.entries(places).filter(([key]) => key !== "homes")
+        .map(([key, place]) => `<button data-place="${key}"><b>📍</b><span>${escapeHtml(place.name)}</span></button>`).join("");
+      $("#socialPlaces").dataset.action = action.id;
+      $("#socialActions").classList.add("hidden");
+      $("#socialPlaces").classList.remove("hidden");
+      return;
+    }
+    doSocial(button.dataset.action);
+  });
+  $("#socialPlaces").addEventListener("click", event => {
+    const button = event.target.closest("button[data-place]");
+    if (button) doSocial($("#socialPlaces").dataset.action, button.dataset.place);
+  });
+
+  const SOCIAL_NEAR = 40;
+  function doSocial(action, place) {
+    const target = residents.get(social.target);
+    closeSocial();
+    if (!target || !me) return;
+    const request = { type: "social", residentId: me.residentId, targetId: target.id, action, ...(place ? { place } : {}) };
+    const mine = residents.get(me.residentId);
+    if (mine && Math.hypot(mine.x - target.x, mine.y - target.y) <= SOCIAL_NEAR && buildingOf(mine)?.id === buildingOf(target)?.id) return send(request);
+    // Too far: walk over first, then do it.
+    social.pending = { request, since: performance.now(), aimed: 0 };
+    showToast(`Walking over to ${target.name}…`);
+  }
+
+  // Walk toward whoever we're going to see, and act once close enough.
+  function followSocial() {
+    const pending = social.pending;
+    if (!pending || !me) return;
+    const mine = residents.get(me.residentId), target = residents.get(pending.request.targetId);
+    if (!mine || !target || performance.now() - pending.since > 40_000 || mode !== "play") { social.pending = null; return; }
+    const near = Math.hypot(mine.x - target.x, mine.y - target.y) <= SOCIAL_NEAR && buildingOf(mine)?.id === buildingOf(target)?.id;
+    if (near) { send(pending.request); social.pending = null; return; }
+    if (performance.now() - pending.aimed > 2500) {
+      pending.aimed = performance.now();
+      const spot = snapToWalkable(target.x + 10, target.y + 2);
+      send({ type: "control", residentId: me.residentId, x: spot.x, y: spot.y });
+    }
+  }
+
+  function showSocialResult(msg) {
+    if (msg.error) return showToast(msg.error);
+    const target = residents.get(msg.targetId);
+    const action = socialActions.find(a => a.id === msg.action);
+    const name = target?.name || "They";
+    showToast(`${action?.emoji || "💬"} ${msg.accepted ? `${name} liked that!` : `${name} wasn't keen this time.`} · ${msg.relationship}`);
+  }
+
   // --- Input ---
   function viewPoint(event) {
     const rect = view.getBoundingClientRect();
@@ -1090,6 +1183,8 @@
 
   function handleTap(event) {
     if (!residents.size) return;
+    // A tap outside the social menu just closes it.
+    if (!socialEl.classList.contains("hidden")) return closeSocial();
     const p = mapPoint(event);
     const playing = mode === "play" && me;
     // While Mr. E is announcing, his bubble and body come first so residents
@@ -1100,6 +1195,7 @@
       .filter(r => !hiddenInside(r) && r.id !== (playing ? me.residentId : null))
       .sort((a, b) => b.drawY - a.drawY)
       .find(r => Math.abs(r.drawX - p.x) < screenPx(playing ? 12 : 18) + 6 && p.y > r.drawY - FEET_ROW * PX - 4 && p.y < r.drawY + screenPx(14));
+    if (hit && playing) { select(hit.id, false); return openSocial(hit); }
     if (hit) return select(hit.id);
     if (!speaking && tappedMrE(p)) return showToast(mreTapText(nowMs()));
     if (scenery.catAt(p)) return showToast(`🐈 Marmalade, the town cat, is ${scenery.catStatus()}.`);

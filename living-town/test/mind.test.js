@@ -50,16 +50,20 @@ test("sleep schedules differ", () => {
 
 test("free time follows personality and interests", () => {
   const date = new Date("2026-10-10T15:00:00"); // Saturday afternoon
-  const tally = {};
-  for (let run = 0; run < 60; run++) {
-    const picks = choices(town(date.getTime()), date);
-    for (const [id, { dest }] of Object.entries(picks)) {
-      tally[id] = tally[id] || {};
-      tally[id][dest] = (tally[id][dest] || 0) + 1;
+  // What their personality prefers (the top score), and what they actually
+  // choose with free will (which spreads over the good options).
+  const tally = {}, chose = {};
+  for (let run = 0; run < 80; run++) {
+    const state = town(date.getTime());
+    for (const r of state.residents) {
+      const best = mind.scorePlaces(state, r, date).best.key;
+      (tally[r.id] = tally[r.id] || {})[best] = (tally[r.id][best] || 0) + 1;
     }
+    for (const [id, { dest }] of Object.entries(choices(state, date))) (chose[id] = chose[id] || {})[dest] = (chose[id][dest] || 0) + 1;
   }
   const favourite = id => Object.entries(tally[id]).sort((a, b) => b[1] - a[1])[0][0];
   assert.strictEqual(favourite("hazel"), "park", `Hazel: ${JSON.stringify(tally.hazel)}`);
+  assert.ok((chose.hazel.park || 0) >= 20, `with free will Hazel still often picks the park: ${JSON.stringify(chose.hazel)}`);
   assert.ok(["park", "workshop"].includes(favourite("finn")), `Finn (birds, craft): ${JSON.stringify(tally.finn)}`);
   assert.ok(["square", "cafe", "market"].includes(favourite("milo")), `Milo (people, food): ${JSON.stringify(tally.milo)}`);
 });

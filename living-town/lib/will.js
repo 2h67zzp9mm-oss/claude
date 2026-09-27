@@ -172,7 +172,7 @@ function fulfilled(state, r, wish, now, ctx) {
   }
   const other = state.residents.find(o => o.id === wish.with);
   if (!other) return false;
-  if (wish.type === "makeup") return (r.memories || []).some(m => m.about === other.id && m.at > wish.createdAt && m.type === "conversation" && m.tone !== "friction");
+  if (wish.type === "makeup") return (r.memories || []).some(m => m.about === other.id && m.at > wish.createdAt && m.type === "conversation" && !["friction", "declined"].includes(m.tone));
   // Friends: a chat, or a while in the same place.
   if ((Number(r.mind?.talkedWith?.[other.id]) || 0) > wish.createdAt) return true;
   return settled && other.place === r.place && !other.asleep && ctx.sameSpot(r, other);

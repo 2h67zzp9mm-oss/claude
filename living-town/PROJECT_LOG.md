@@ -374,3 +374,19 @@ Residents now want things of their own and act on them (`lib/will.js`, hooked in
 - **Tests** (`test/scenery.test.js`): the sky phases at 13:00, 18:40, 20:20, 23:00 and dawn; traced lights stay on the map and belong to real buildings; ducks drift to a watcher; birds hop by day, fly off when approached and are away at night; chimney smoke only from a building with someone awake inside.
 - **Checked in a headless browser:** the whole map at 13:00, 18:40, 20:20 and 23:00, with the lamp glows landing on the painted lamp posts, and the full app loading with no errors.
 
+# Version 0.17.0: talking to people, Sims-style
+
+- **A social menu** (`lib/social.js`, `public/client.js`). In Play mode, tapping another resident, on the map or inside a building, opens a menu with their name and how well you get along. The labels run from "Acquaintances" through "Friendly", "Friends" and "Good friends" to "Best friends", or "Family". The actions:
+  - 💬 Chat, 😂 Tell a joke, 🌟 Compliment, ✋ High five, 🤗 Hug (needs a friendship of 30+, or family).
+  - 🥺 Beg for a treat (puppy eyes; a friendship of 10+), ✂️ Rock-paper-scissors, 🙋 Ask what they wish for (they tell you their wish).
+  - 🚶 Follow me! (they walk after your character for ten minutes, waiting outside other people's homes), 📍 Invite somewhere (they head there if they agree).
+  - 😜 Tease (can backfire), 🙏 Say sorry.
+  - If they're too far away, your character walks over first.
+- **They respond as people.** The chance of a yes comes from their traits (agreeableness, extraversion, openness, and for teasing, how sensitive they are), their mood, how they feel about you, whether they're busy at school or work, and a little chance. Hugs from near-strangers get "how about a high five instead?". Jokes can fall flat. Teasing a sensitive person upsets them, lowers the friendship and counts as a squabble. A sorry clears it and counts toward their "make up" wish.
+- **Consequences:** friendship changes both ways, needs are met (jokes and games are fun, chats are social, a treat fills you up), and feelings with reasons appear on both sheets ("😂 Hazel told a great joke", "🍪 Milo gave me a treat"). Both remember what was said. Speech bubbles show it, and the notable moments (hugs, apologies, accepted invitations, teasing gone wrong) reach the feed.
+- **Server checks:** only your own character; only someone awake, within reach, and in the same place (both outside, or in the same building); one action every 1.5 seconds. Other players' characters can be spoken to but are never moved.
+- **Child safety:** every line passes Mr. E's word filter, and a test checks it. There is no flirting or romance action of any kind, in keeping with the town's rule that romance never touches a child's character. Begging is a playful "puppy eyes" for a treat, and teasing is mild.
+- **Tests** (`test/social.test.js`): gentle lines and no romance; jokes landing and falling flat change friendship, feelings and memories; hugs need a friendship except with family; treats feed you; teasing gone wrong, then a sorry that makes up and fulfils the wish; asking about wishes, "follow me", invitations (which need a place) and busy people; and on a real server, only your own character, only close by, never someone asleep, and not too fast.
+- **Test fixes found while releasing:** the "free time follows personality" test now checks what each personality prefers (the top score) separately from what free will then chooses. With free will, Hazel's picks spread enough that park against home could flip by one. The social server test now walks Sean well away from everyone before checking an out-of-reach chat, instead of assuming someone was already far away. The restart gate held back a restart until both were fixed.
+- **Checked on a headless phone:** tapping a resident while playing opens the menu with the right friendship label (hug hidden until you're closer), and choosing an action walks your character over.
+
