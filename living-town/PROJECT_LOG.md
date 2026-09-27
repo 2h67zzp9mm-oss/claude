@@ -356,3 +356,21 @@ Residents now want things of their own and act on them (`lib/will.js`, hooked in
 - **Tests** (`test/will.test.js`): wishes fit each resident, are gentle and never exceed three; a wish coming true (moment, feeling, feed, fondness); making up after a squabble; choice stays close to the best, gets more spontaneous when low, and duties and emergencies win; invitations are accepted, declined when busy, and never move or come from players; wished-for activities happen on arrival; and a real server sends wishes and feelings.
 - **Checked:** a throwaway town ran for 90 seconds with sensible wishes and no errors, and the resident sheet shows wishes and feelings.
 
+# Version 0.16.0: a living map
+
+- **Time of day** (`public/scenery.js`), following the server's clock:
+  - Night before 5:30 and after 21:00.
+  - A pink dawn to 7:30, then plain day.
+  - A golden evening from 17:30, and a dusky blue from 19:30.
+  - Darkness is a pre-rendered overlay with holes for the lights, redrawn only when something changes, so it's cheap on phones.
+- **Lights, traced from the painted map:** 31 lamp posts come on at dusk. Each building's windows glow while someone is inside and awake, and go dark when everyone's asleep: the three homes, Finn's Cottage, the cafe, the workshop's forge and the Big Top.
+- **Moving scenery:** droplets arc from the fountain's top tier into its basin, sparkles on the pond and rivers, foam at the four falls, and chimney smoke from buildings where someone's awake (greyer at night).
+- **Animals**, gentle and ambient (each phone runs its own):
+  - Three ducks on the park pond, which drift over to anyone "watching the ducks".
+  - Six little birds that hop about the plazas by day, fly off when someone comes within a few steps, return later, and are away at night.
+  - Marmalade the town cat, who naps in sunny spots, strolls between them, sometimes follows someone around, and sleeps by the homes at night. Tap her to see what she's doing.
+  - Butterflies by the flower beds by day, and fireflies over the park and river at night.
+- **Layering:** scenery sits under the residents, the lighting over them but under the name signs and speech bubbles (so text stays readable), and fireflies on top.
+- **Tests** (`test/scenery.test.js`): the sky phases at 13:00, 18:40, 20:20, 23:00 and dawn; traced lights stay on the map and belong to real buildings; ducks drift to a watcher; birds hop by day, fly off when approached and are away at night; chimney smoke only from a building with someone awake inside.
+- **Checked in a headless browser:** the whole map at 13:00, 18:40, 20:20 and 23:00, with the lamp glows landing on the painted lamp posts, and the full app loading with no errors.
+

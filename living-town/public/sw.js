@@ -2,7 +2,7 @@
 // The server replaces __ASSET_VERSION__ with a hash of the client files, so
 // any change to the app automatically retires old caches.
 const CACHE = "living-town-__ASSET_VERSION__";
-const PRECACHE = ["/", "/styles.css", "/map.css", "/accounts.css", "/client.js", "/shared/world.js", "/shared/interiors.js", "/rooms.js", "/manifest.webmanifest", "/assets/town-map.webp", "/icon.svg"];
+const PRECACHE = ["/", "/styles.css", "/map.css", "/accounts.css", "/client.js", "/shared/world.js", "/shared/interiors.js", "/rooms.js", "/scenery.js", "/manifest.webmanifest", "/assets/town-map.webp", "/icon.svg"];
 const CACHE_FIRST = /\.(webp|png|svg)$/;
 
 self.addEventListener("install", event => {

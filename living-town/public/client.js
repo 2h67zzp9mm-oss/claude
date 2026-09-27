@@ -364,7 +364,7 @@
     moveMrE(dt);
     followMyDoor();
     if (interior.id) drawInterior(dt);
-    else if (backing) drawTown();
+    else if (backing) drawTown(dt);
     updateClock();
     requestAnimationFrame(frame);
   }
@@ -374,13 +374,25 @@
 
   function hiddenInside(r) { return isInside(r); }
 
-  function drawTown() {
+  // The living map (scenery.js): time of day, lamplight, water, smoke, animals.
+  const scenery = window.LivingTownScenery.create({ MAP });
+
+  function drawTown(dt = 0) {
     ctx.setTransform(backing, 0, 0, backing, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.clearRect(0, 0, MAP.width, MAP.height);
     if (townMap.complete && townMap.naturalWidth) ctx.drawImage(townMap, 0, 0, MAP.width, MAP.height);
     else { ctx.fillStyle = "#7baa68"; ctx.fillRect(0, 0, MAP.width, MAP.height); }
     drawTents();
+    // Who's up and about indoors, per building, for lit windows and chimney smoke.
+    const awake = new Map();
+    for (const r of residents.values()) {
+      const b = !r.asleep && buildingOf(r);
+      if (b) awake.set(b.id, (awake.get(b.id) || 0) + 1);
+    }
+    const people = [...residents.values()].map(r => ({ name: r.name, x: r.drawX, y: r.drawY, activity: r.activity, visible: !hiddenInside(r) }));
+    const sky = scenery.update(dt, nowMs(), { residents: people, awakeInside: id => awake.has(id) });
+    scenery.drawBelow(ctx, sky);
 
     if (tapMarker) {
       const age = (performance.now() - tapMarker.at) / 700;
@@ -394,11 +406,13 @@
 
     const visible = [...residents.values()].filter(r => !hiddenInside(r)).sort((a, b) => a.drawY - b.drawY);
     visible.forEach(drawResident);
+    scenery.drawLighting(ctx, sky, { lit: id => awake.has(id) });
     drawSigns();
     const now = nowMs();
     visible.forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text); });
     drawWeather();
     drawMrE(now);
+    scenery.drawAbove(ctx, sky);
   }
 
   // The Big Top: a striped circus tent drawn onto the painted map, one
@@ -1088,6 +1102,7 @@
       .find(r => Math.abs(r.drawX - p.x) < screenPx(playing ? 12 : 18) + 6 && p.y > r.drawY - FEET_ROW * PX - 4 && p.y < r.drawY + screenPx(14));
     if (hit) return select(hit.id);
     if (!speaking && tappedMrE(p)) return showToast(mreTapText(nowMs()));
+    if (scenery.catAt(p)) return showToast(`🐈 Marmalade, the town cat, is ${scenery.catStatus()}.`);
     const pad = screenPx(6);
     const sign = signBoxes.find(s => p.x >= s.x0 - pad && p.x <= s.x1 + pad && p.y >= s.y0 - pad && p.y <= s.y1 + pad);
     if (!playing) {
