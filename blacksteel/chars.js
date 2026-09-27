@@ -11,12 +11,14 @@
   "use strict";
 
   const SPRITES = {
-    sean: null
+    // Cut out of the family's painting. A single pose: the walk is animated by bobbing and leaning.
+    // In the painting he faces the viewer, turned slightly to his right (our left).
+    sean: { src: "art/sean.png", still: true, faces: -1 }
   };
 
   // Where people can walk in each scene (scene coordinates, 800x480), and how big they are there.
   const FLOORS = {
-    cabin: { x0: 70, x1: 740, y0: 420, y1: 472, hBack: 214, hFront: 246 }
+    cabin: { x0: 70, x1: 740, y0: 420, y1: 472, hBack: 236, hFront: 270 }
   };
 
   const images = {};
@@ -90,11 +92,28 @@
 
   Walker.prototype.drawSheet = function (c, img, h) {
     const sp = SPRITES[this.name];
+    if (sp.still) return this.drawStill(c, img, h, sp);
     const row = this.face > 0 ? sp.rows.right : sp.rows.left;
     const moving = !!this.target;
     const fr = moving ? Math.floor(this.phase * sp.walk / (Math.PI * 2)) % sp.walk : (sp.idleFrame || 0);
     const w = h * sp.fw / sp.fh;
     c.drawImage(img, fr * sp.fw, row * sp.fh, sp.fw, sp.fh, this.x - w / 2, this.y - h, w, h);
+  };
+
+  Walker.prototype.drawStill = function (c, img, h, sp) {
+    const t = performance.now() / 1000;
+    const moving = !!this.target;
+    const s = Math.sin(this.phase);
+    const bob = moving ? Math.abs(s) * h * .018 : Math.sin(t * 1.5) * h * .003;
+    const lean = moving ? s * .035 : 0;
+    const squash = moving ? 1 - Math.abs(Math.cos(this.phase)) * .012 : 1 + Math.sin(t * 1.5) * .004;
+    const w = h * img.naturalWidth / img.naturalHeight;
+    c.save();
+    c.translate(this.x, this.y - bob);
+    c.rotate(lean);
+    c.scale(this.face === sp.faces ? 1 : -1, squash);
+    c.drawImage(img, -w / 2, -h, w, h);
+    c.restore();
   };
 
   // A shadowed figure in a long coat, lit from behind by the lantern. No face on purpose:

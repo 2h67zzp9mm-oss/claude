@@ -1150,8 +1150,8 @@
   // ===================================================================
   const SCENES = {
     title: {
-      bg: titleBG, fx: titleFX,
-      init: r => ({ tw: Array.from({ length: 40 }, () => ({ x: r() * 800, y: r() * 230, f: .5 + r() * 2, p: r() * TAU })) })
+      img: "art/crew.jpg", bg: titleBG, fx: emberFX,
+      init: r => ({ embers: Array.from({ length: 40 }, () => ({ x: r() * 800, y: r() * 480, v: 8 + r() * 20, s: .6 + r() * 1.4, p: r() * TAU, m: .5 + r() * .5 })) })
     },
     frame: {
       bg: frameBG, ov: frameOV, fx: frameFX,
@@ -1240,7 +1240,7 @@
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function mount(stage) {
-    stage.insertAdjacentHTML("afterbegin", `<div id="world"><img class="bg" alt=""><img class="bg" alt=""><canvas id="fxN"></canvas><div id="ov"></div><canvas id="chr"></canvas><canvas id="fxL"></canvas></div>`);
+    stage.insertAdjacentHTML("afterbegin", `<div id="world"><img class="bg" alt=""><img class="bg" alt=""><div id="grade"></div><canvas id="fxN"></canvas><div id="ov"></div><canvas id="chr"></canvas><canvas id="fxL"></canvas></div>`);
     els = {
       stage,
       world: stage.querySelector("#world"),
@@ -1248,7 +1248,8 @@
       N: stage.querySelector("#fxN"),
       L: stage.querySelector("#fxL"),
       C: stage.querySelector("#chr"),
-      ov: stage.querySelector("#ov")
+      ov: stage.querySelector("#ov"),
+      grade: stage.querySelector("#grade")
     };
     const size = () => {
       const w = els.world.clientWidth, h = els.world.clientHeight;
@@ -1303,7 +1304,10 @@
     const inc = els.imgs[which], out = els.imgs[1 - which];
     inc.style.opacity = "0";
     inc.onload = () => { inc.style.opacity = "1"; out.style.opacity = "0"; };
-    inc.src = bgURL(key);
+    inc.src = cur.img || bgURL(key);
+    // Scenes drawn in code get a color grade toward the family's painted style.
+    els.grade.hidden = !!cur.img;
+    inc.classList.toggle("painted", !cur.img);
     if (inc.complete && inc.naturalWidth) inc.onload();
     renderOV(S);
     if (cur.shake) shakeUntil = performance.now() + 900;
@@ -1321,7 +1325,8 @@
       if (i >= keys.length) return;
       const img = new Image();
       img.onload = img.onerror = () => setTimeout(next, 30);
-      img.src = bgURL(keys[i++]);
+      const sc = SCENES[keys[i++]];
+      img.src = sc.img || bgURL(keys[i - 1]);
     };
     next();
   }
