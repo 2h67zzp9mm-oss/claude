@@ -2,12 +2,13 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.11.0
+## Honest status — 0.12.0
 
 Working now:
 
 - **Real house interiors**: every home has its own floor plan (kitchen, living room, and a bedroom each for Olive, Hazel and Sean; a shared room for Milo and Zara; Nova's room; Finn's workroom and fireside), drawn in detailed pixel art with sunlight through the windows by day and lamplight at night. Residents walk from room to room, eat at the table, sit on the sofa and sleep in their own beds. In Play mode, walk up to your front door and the view zooms inside; tap almost anything (beds, chairs, the sink, fridge, stove, windows, plants, the wardrobe, the fruit bowl…) to use it, the floor to walk, and the front door to go back out.
 - **The cafe, workshop and market inside**: Milo behind the Moonbeam Cafe counter with cakes, hot chocolate, a piano and a cozy booth; Sean's workbenches, tool wall and control panel, with Zara's art studio next door; and the Corner Market's fruit racks, sweet jars and bread corner. Staff on shift and indoor activities happen inside; others (the cafe terrace, the market stalls) stay out on the map. Players walk in through any of their front doors. Nobody is ever shown in two places: the map, every inside view and the signs all use one shared rule.
+- **The Big Top troupe**: six original toybox-circus characters live in a striped tent on the plaza below the market. Plum is a purple bunny in orange overalls, Patches a patchwork rag doll, Tumble a little jester, Rook an old chess-castle gentleman, Ribbons a shy ribbon dancer and Bolt a block-built toy robot who goes to school with Hazel. They rehearse in their ring on Tuesday and Thursday afternoons and put on a circus show in the Town Square on weekends from 2 to 4, and everyone else is drawn over to watch. Their bunny ears, yarn hair, jester hats and the rest are now in the character editor for everyone.
 - **Mr. E**, a mysterious town storyteller who is always on the map for players, strolling from place to place to see what everyone is up to (with a lantern at night). Residents never see him. When the town goes quiet, he stirs up a gentle surprise aimed at whoever is on their own: festivals, rain and sunshine, gifts, riddles, meet-ups, free treats, and lost-and-found stories. He runs on a local AI model on Mouse, or on built-in surprises when the AI is off.
 - **Character customization**: skin, hair style and color, clothes, and accessory, with a live pixel preview. The owner can add new residents (name, age, home) and link any of them to a player.
 

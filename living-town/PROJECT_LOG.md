@@ -280,3 +280,20 @@ This is the first thing published to the internet, so it was designed to expose 
 - **Nobody in two places at once.** One function, `locate`, decides whether each person is out on the map or inside exactly one building. The map, every inside view, the building signs and the server all use it. A test throws 3,000 random situations at it: nobody is ever inside two buildings, anyone walking is on the map, homes only hold their own family, and a public building only holds people at that place.
 - **Tests:** all seven plans are checked (every spot and staff spot can be reached, no blocked doors, activity targets exist); staff placement and the indoor/outdoor split are covered; and the server test walks Sean into the cafe for cake, checks there are no beds there, and walks him out.
 
+# Version 0.12.0: the Big Top troupe
+
+- **Six new residents** (`lib/troupe.js`): original characters with a toybox-circus feel, inspired by the style of animated circus shows but not copies of any show's characters. Names, looks, personalities and voices are our own.
+  - **Plum**, a purple bunny in orange overalls: a cheerful clown who makes himself the joke.
+  - **Patches**, a patchwork rag doll with honey-colored yarn hair: she makes the costumes and looks after everyone.
+  - **Tumble**, a green-and-gold jester: nervous but brave, and an acrobat.
+  - **Rook**, an old chess-castle gentleman: forgetful, fond of puzzles and his garden.
+  - **Ribbons**, a shy dancer made of streamers, with a starry party mask.
+  - **Bolt**, a nine-year-old block-built toy robot who goes to school on weekdays like Hazel.
+- **Kid safety:** the troupe is purely cheerful, with none of the darker themes such shows can have. Their summaries, likes, goals and every voice line pass Mr. E's word filter (a test checks this), and there is no romance, fear or danger.
+- **Home:** the Big Top, a striped tent drawn onto the mosaic plaza below the Corner Market, with a new walkway from the market. Inside are two bunk wagons with a bed each, a practice ring with a trampoline, a low trapeze and juggling pins, a sofa, and a kitchen wagon.
+- **Routine:** they rehearse in the ring on Tuesday and Thursday afternoons, and put on a circus show in the Town Square on Saturday and Sunday from 2 to 4. During a show everyone else is drawn to the square ("watching the circus show"), and the feed announces it once per show.
+- **They're custom residents with hand-written presets,** so the owner can restyle them or let them move away. They arrive once (`troupeArrived` in the save), never twice, and don't come back after moving away. Room for custom residents went from 12 to 18. `LIVING_TOWN_TROUPE=off` keeps them away, and the test servers use it.
+- **New looks for everyone** in the character editor: bunny ears, yarn hair, a jester hat, a castle crown, streamers and a robot head; plus overalls, rag-doll stitches, a jester ruff and a party mask.
+- **Tests** (`test/troupe.test.js`): six unique members whose looks pass the look check and whose words pass the filter; everyone is in the show, and Bolt has school; a bed each in the Big Top; the show pulls everyone but the troupe to the square once per show, only on weekend afternoons, and not once they've gone; and on a real server they arrive once, keep their looks, don't duplicate on restart, and stay gone after moving away.
+- **Checked in a headless browser:** the tent on the map, the Big Top's inside, and all six sprites drawn large.
+

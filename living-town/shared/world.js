@@ -56,7 +56,8 @@
     westStairs: [285, 372], workshopPath: [290, 462], workshop: [228, 476], southWest: [293, 575],
     southWalk: [400, 600], homes: [478, 556], homesLow: [487, 600], southWalkE: [600, 600],
     seanHome: [483, 518], miloStairs: [603, 572], miloHome: [608, 520],
-    westRoad: [190, 322], finnGate: [128, 300], finnHome: [129, 268], roseHome: [437, 516]
+    westRoad: [190, 322], finnGate: [128, 300], finnHome: [129, 268], roseHome: [437, 516],
+    bigTop: [852, 432]
   };
   const walkEdges = [
     ["square", "plazaW"], ["square", "plazaE"], ["square", "plazaSW"], ["plazaSW", "plazaW"],
@@ -68,7 +69,7 @@
     ["workshopPath", "southWest"], ["southWest", "southWalk"], ["southWalk", "homes"],
     ["homes", "seanHome"], ["homes", "homesLow"], ["southWalk", "homesLow"], ["homesLow", "southWalkE"],
     ["southWalkE", "miloStairs"], ["miloStairs", "miloHome"],
-    ["plazaSW", "westRoad"], ["westRoad", "finnGate"], ["finnGate", "finnHome"], ["homes", "roseHome"]
+    ["plazaSW", "westRoad"], ["westRoad", "finnGate"], ["finnGate", "finnHome"], ["homes", "roseHome"], ["market", "bigTop"]
   ];
 
   // Named buildings: a sign on the map, the walkway node at the door, and
@@ -82,7 +83,9 @@
     { id: "roseCottage", name: "Rose Cottage", x: 378, y: 424, node: "roseHome", place: "homes", residents: [] },
     { id: "seanHouse", name: "Sean's House", x: 493, y: 396, node: "seanHome", place: "homes", residents: ["dad", "olive", "hazel"] },
     { id: "miloHouse", name: "Milo & Zara's", x: 648, y: 436, node: "miloHome", place: "homes", residents: ["milo", "zara", "nova"] },
-    { id: "finnCottage", name: "Finn's Cottage", x: 130, y: 212, node: "finnHome", place: "homes", residents: ["finn"] }
+    { id: "finnCottage", name: "Finn's Cottage", x: 130, y: 212, node: "finnHome", place: "homes", residents: ["finn"] },
+    // A striped circus tent drawn on the mosaic plaza below the market.
+    { id: "bigTop", name: "Big Top", x: 852, y: 368, node: "bigTop", place: "homes", residents: [], tent: { x: 852, y: 432, w: 66, h: 60 } }
   ];
 
   const homeBuildings = buildings.filter(building => Array.isArray(building.residents));
@@ -126,8 +129,9 @@
     { id: "nova", name: "Nova", color: "#ffd166", x: 500, y: 562 }
   ];
 
-  const HAIR_STYLES = ["short", "long", "pigtails", "buns", "curls", "swoop", "bald"];
-  const ACCESSORIES = ["none", "bow", "headband", "star", "glasses", "beard"];
+  // The last few styles and accessories came with the Big Top troupe.
+  const HAIR_STYLES = ["short", "long", "pigtails", "buns", "curls", "swoop", "bald", "bunny", "yarn", "jester", "rook", "ribbons", "robot"];
+  const ACCESSORIES = ["none", "bow", "headband", "star", "glasses", "beard", "overalls", "stitches", "ruff", "partyMask"];
   const SKIN_TONES = ["#f6d5bd", "#f2c7a5", "#e0ac86", "#d8a47f", "#c68642", "#a8683c", "#8d5524", "#6f4125"];
 
   function nearestPlace(x, y) {

@@ -12,8 +12,10 @@ const crypto = require("crypto");
 const world = require("../shared/world");
 const life = require("./life");
 const mind = require("./mind");
+const troupe = require("./troupe");
 
-const MAX_CUSTOM_RESIDENTS = 12;
+// Room for the Big Top troupe (6) plus a dozen of the family's own.
+const MAX_CUSTOM_RESIDENTS = 18;
 const HEX = /^#[0-9a-f]{6}$/i;
 const NAME = /^[\p{L}][\p{L} '-]{0,19}$/u;
 const WEEKDAYS = [1, 2, 3, 4, 5];
@@ -84,6 +86,8 @@ function bornFromAge(age, now) {
 }
 
 function buildProfile(resident, now) {
+  const member = troupe.memberFor(resident);
+  if (member) return { ...troupe.profileFor(member, resident.custom.born), name: resident.custom.name };
   const { name, born } = resident.custom;
   const age = life.ageAt({ born }, now);
   const stage = stageFor(age);
@@ -102,6 +106,8 @@ function buildProfile(resident, now) {
 }
 
 function buildMind(resident, now) {
+  const member = troupe.memberFor(resident);
+  if (member) return troupe.mindFor(member);
   const age = life.ageAt({ born: resident.custom.born }, now);
   const stage = stageFor(age);
   const s = stages[stage];

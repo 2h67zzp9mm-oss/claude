@@ -78,7 +78,12 @@
     flowers: { label: "Flowers", activity: "smelling the flowers", needs: { fun: 8 } },
     sweets: { label: "Sweet jars", activity: "choosing a sweet treat", needs: { hunger: 10, fun: 6 } },
     boxes: { label: "Boxes", activity: "stacking boxes", needs: { fun: 4 } },
-    bread: { label: "Bread shelves", activity: "choosing warm bread", needs: { hunger: 25 } }
+    bread: { label: "Bread shelves", activity: "choosing warm bread", needs: { hunger: 25 } },
+    // The Big Top.
+    ring: { label: "Circus ring", activity: "rehearsing a circus act", needs: { fun: 16, social: 6 } },
+    trampoline: { label: "Trampoline", activity: "bouncing on the trampoline", needs: { fun: 18 } },
+    trapeze: { label: "Low trapeze", activity: "swinging on the low trapeze", needs: { fun: 16 } },
+    juggling: { label: "Juggling pins", activity: "practicing juggling", needs: { fun: 14 } }
   };
   // Furniture you sit on (the rest you stand at).
   for (const kind of ["sofa", "armchair", "table"]) furniture[kind].sit = true;
@@ -233,6 +238,45 @@
         { kind: "plant", x: 180, y: 126, w: 8, h: 12 }, { kind: "picture", x: 40, y: 67, w: 14, h: 9, art: "bird" }
       ],
       entrance: [92, 134]
+    },
+
+    // The Big Top troupe's striped tent: two bunk wagons, a practice ring
+    // and a kitchen wagon.
+    bigTop: {
+      id: "bigTop", ...PLAN,
+      activities: [[/rehears|circus act/, "ring"], [/juggl/, "juggling"], [/trampoline|bounc/, "trampoline"]],
+      rooms: [
+        room("bunks1", "Bunk wagon", 0, 0, 96, 64, { wall: "#d64545", wallTrim: "#f1e6cc", pattern: "stripes", floor: "wood", floorColor: "#a8794f" }),
+        room("bunks2", "Bunk wagon", 96, 0, 96, 64, { wall: "#3d6fb6", wallTrim: "#f1e6cc", pattern: "stripes", floor: "wood", floorColor: "#a8794f" }),
+        room("ring", "The ring", 0, 64, 128, 80, { wall: "#6c3483", wallTrim: "#f2c14e", pattern: "stars", floor: "carpet", floorColor: "#d9b77a" }),
+        room("kitchen", "Kitchen wagon", 128, 64, 64, 80, { wall: "#f4d58d", wallTrim: "#c9a24f", pattern: "tiles", floor: "tile", floorColor: "#e7dcc6" })
+      ],
+      doors: [hDoor(40, ["bunks1", "ring"]), hDoor(117, ["bunks2", "ring"]), vDoor(100, ["ring", "kitchen"], 128)],
+      frontDoor: { x: 56, w: 16, room: "ring" },
+      objects: [
+        bed("bed1", 6, 16, "t-plum", { blanket: "#f28c28", pattern: "stripes" }),
+        bed("bed2", 36, 16, "t-tumble", { blanket: "#2e7d32", pattern: "stars" }),
+        bed("bed3", 66, 16, "t-bolt", { blanket: "#4a90d9", pattern: "plaid" }),
+        bed("bed4", 102, 16, "t-patches", { blanket: "#7fd1b9", pattern: "dots" }),
+        bed("bed5", 134, 16, "t-rook", { blanket: "#cfc9bb", pattern: "plaid" }),
+        bed("bed6", 164, 16, "t-ribbons", { blanket: "#ff6f91", pattern: "stars", spot: [158, 50] }),
+        { id: "ring", kind: "ring", x: 36, y: 96, w: 72, h: 36, spot: [72, 126], seats: [[50, 116], [94, 116]] },
+        { id: "juggling", kind: "juggling", x: 64, y: 104, w: 16, h: 10, spot: [72, 118] },
+        { id: "trampoline", kind: "trampoline", x: 6, y: 84, w: 22, h: 12, spot: [17, 104] },
+        { id: "trapeze", kind: "trapeze", x: 80, y: 66, w: 20, h: 24, spot: [90, 96] },
+        { id: "sofa", kind: "sofa", x: 4, y: 112, w: 28, h: 14, spot: [18, 132], seats: [[12, 132], [24, 132]] },
+        { id: "stove", kind: "stove", x: 132, y: 72, w: 14, h: 14, spot: [139, 94] },
+        { id: "fridge", kind: "fridge", x: 172, y: 66, w: 14, h: 24, spot: [179, 96] },
+        { id: "table", kind: "table", x: 140, y: 110, w: 28, h: 12, spot: [154, 130], seats: [[136, 118], [174, 118], [154, 130]] }
+      ],
+      decor: [
+        { kind: "window", x: 50, y: 3, w: 12, h: 10 }, { kind: "window", x: 150, y: 3, w: 12, h: 10 },
+        { kind: "poster", x: 20, y: 66, w: 16, h: 11, art: "stars" }, { kind: "picture", x: 102, y: 66, w: 12, h: 10, art: "painting" },
+        { kind: "counter", x: 146, y: 72, w: 24, h: 14 }, { kind: "sink", x: 152, y: 73, w: 10, h: 6 },
+        { kind: "clothesRack", x: 26, y: 40, w: 16, h: 14 }, { kind: "fairyLights", x: 56, y: 65, w: 22, h: 3, light: true },
+        { kind: "nightlight", x: 90, y: 50, w: 4, h: 4, light: true }, { kind: "plant", x: 180, y: 126, w: 8, h: 12 }
+      ],
+      entrance: [64, 134]
     },
 
     // --- Public buildings ---

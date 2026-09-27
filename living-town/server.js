@@ -29,6 +29,7 @@ const { createAuth } = require("./lib/auth");
 const cast = require("./lib/cast");
 const { createMrE, ollamaGenerator } = require("./lib/mre");
 const { startViewer, readToken } = require("./lib/viewer");
+const troupe = require("./lib/troupe");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
@@ -282,6 +283,7 @@ let lastTick = Date.now();
 let lastSocialCheck = 0;
 let lastAutonomyCheck = 0;
 let lastBirthdayCheck = 0;
+let lastShowCheck = 0;
 
 function tick() {
   const now = Date.now();
@@ -304,6 +306,7 @@ function tick() {
     }
   }
   mre.tick(state, now, mreHelpers);
+  if (now - lastShowCheck >= 30_000) { lastShowCheck = now; troupe.tick(state, now, addEvent); }
   if (now - lastBirthdayCheck >= 60_000) {
     lastBirthdayCheck = now;
     for (const text of life.checkBirthdays(state, now)) addEvent(text, now);
@@ -355,6 +358,33 @@ const mreGenerator = process.env.LIVING_TOWN_MRE_AI === "off" ? null : ollamaGen
 const mre = createMrE({ generate: mreGenerator });
 const mreHelpers = { addEvent, placeName, spotFor: (id, key) => spotFor(id, key) };
 mre.ensureState(state);
+
+// The Big Top troupe arrives once. If they're later asked to move away,
+// they stay gone. LIVING_TOWN_TROUPE=off keeps them away (the tests use it).
+function welcomeTroupe(now) {
+  if (state.troupeArrived || process.env.LIVING_TOWN_TROUPE === "off") return;
+  state.troupeArrived = true;
+  const tent = world.buildings.find(b => b.id === "bigTop");
+  const [doorX, doorY] = world.walkNodes[tent.node];
+  const arrived = [];
+  for (const member of troupe.members) {
+    if (state.residents.some(r => r.id === member.id || r.name.toLowerCase() === member.name.toLowerCase())) continue;
+    const look = cast.sanitizeLook(member.look);
+    const resident = makeResident({ id: member.id, name: member.name, color: look.shirt, x: doorX, y: doorY }, state.residents);
+    resident.custom = { name: member.name, born: cast.bornFromAge(member.age, now), homeId: tent.id, troupe: member.id };
+    resident.look = look;
+    for (const other of state.residents) other.relationships[resident.id] = randomBond();
+    cast.registerCustom(resident, now);
+    state.residents.push(normalizeResident(resident));
+    arrived.push(resident);
+  }
+  // They've toured together for years.
+  for (const a of arrived) for (const b of arrived) if (a !== b) a.relationships[b.id] = 60 + Math.floor(Math.random() * 15);
+  cast.syncHomes(state);
+  for (const resident of arrived) { life.ensureResidentLife(resident, now); mind.ensureMind(resident); }
+  if (arrived.length) addEvent(`🎪 A traveling circus troupe has put up the Big Top by the market: ${arrived.map(r => r.name).join(", ")}. Welcome to Living Town!`, now);
+}
+welcomeTroupe(bootTime);
 
 catchUpOnBoot(bootTime);
 

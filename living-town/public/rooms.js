@@ -490,6 +490,34 @@
         px(x + 1, y + 7, w - 2, 1, "#5b3a24");
         for (let i = x + 2; i < x + w - 5; i += 6) { px(i, y + 2, 5, 4, "#d9a25b"); px(i + 1, y + 2, 3, 1, "#f2c98a"); px(i + 1, y + 9, 4, 4, "#c9853e"); }
         break;
+      case "ring": {
+        // A round circus ring: red and white border, sawdust inside.
+        const cx = x + w / 2, cy = y + h / 2;
+        for (let j = 0; j < h; j++) {
+          const dy = (j - h / 2 + 0.5) / (h / 2);
+          const half = Math.round(Math.sqrt(Math.max(0, 1 - dy * dy)) * (w / 2));
+          const inner = Math.round(Math.sqrt(Math.max(0, 1 - Math.min(1, (dy * h / 2) ** 2 / ((h / 2 - 3) ** 2)))) * (w / 2 - 4));
+          if (!half) continue;
+          px(cx - half, y + j, half * 2, 1, OUTLINE);
+          for (let i = -half + 1; i < half - 1; i++) px(cx + i, y + j, 1, 1, Math.floor((Math.atan2(dy, i / (w / 2)) + Math.PI) * 4) % 2 ? "#e63946" : "#f4f1ea");
+          if (inner > 0 && Math.abs(dy) < 1 - 3 / (h / 2)) px(cx - inner, y + j, inner * 2, 1, shade("#e0c48f", (j % 3 ? 0 : -0.04)));
+        }
+        px(cx - 2, cy - 1, 4, 2, shade("#e0c48f", -0.1));
+        break;
+      }
+      case "trampoline":
+        shadow(x + 1, y + h, w, 2);
+        px(x + 2, y + h - 2, 2, 3, "#3a3f44"); px(x + w - 4, y + h - 2, 2, 3, "#3a3f44");
+        px(x + 1, y, w - 2, h - 1, "#4a90d9"); px(x, y + 1, w, h - 3, "#4a90d9");
+        px(x + 3, y + 2, w - 6, h - 5, "#1f2a38"); px(x + 5, y + 3, w - 10, 1, "#3a4a5e");
+        break;
+      case "trapeze":
+        px(x, y, w, 2, "#6b4226"); px(x + 2, y + 2, 1, h - 6, "#d9c7a1"); px(x + w - 3, y + 2, 1, h - 6, "#d9c7a1");
+        px(x + 1, y + h - 4, w - 2, 2, "#f2c14e"); px(x + 1, y + h - 4, w - 2, 1, "#ffe08a");
+        break;
+      case "juggling":
+        [["#e63946", 0], ["#ffd166", 5], ["#4a90d9", 10]].forEach(([c, i]) => { px(x + i + 1, y + 1, 2, 2, c); px(x + i, y + 3, 4, 5, c); px(x + i + 1, y + 3, 1, 4, shade(c, 0.25)); px(x + i + 1, y + 8, 2, 1, OUTLINE); });
+        break;
       default: drawDecor(g, o);
     }
   }
@@ -565,7 +593,8 @@
     // Wall hangings first, then everything standing on the floor, back to front.
     const hangs = new Set(["window", "poster", "picture", "fairyLights"]);
     for (const o of everything(plan).filter(d => hangs.has(d.kind))) o.kind === "window" ? drawWindow(g, o, light) : drawDecor(g, o);
-    const standing = everything(plan).filter(d => !hangs.has(d.kind)).sort((a, b) => (a.kind === "rug" ? -1 : 0) - (b.kind === "rug" ? -1 : 0) || (a.y + a.h) - (b.y + b.h));
+    const onFloor = o => (o.kind === "rug" || o.kind === "ring" ? -1 : 0);
+    const standing = everything(plan).filter(d => !hangs.has(d.kind)).sort((a, b) => onFloor(a) - onFloor(b) || (a.y + a.h) - (b.y + b.h));
     for (const o of standing) drawObject(g, o, plan);
     return c;
   }

@@ -176,6 +176,8 @@
     setTimeout(() => pendingInspections.delete(r.id), 3000);
   }
 
+  const LOOK_LABELS = { bunny: "bunny ears", yarn: "yarn hair", jester: "jester hat", rook: "castle crown", ribbons: "streamers", robot: "robot head", overalls: "overalls", stitches: "rag-doll stitches", ruff: "jester ruff", partyMask: "party mask" };
+
   // --- Pixel-art sprites ---
   // Residents are drawn as small pixel sprites (one sprite pixel = PX map
   // units) with a dark outline, so they sit naturally in the painted town.
@@ -218,7 +220,7 @@
     px(4, 6, skin, 1, 2);
     px(11, 6, skin, 1, 2);
 
-    if (style === "bald") px(6, 3, skin, 4, 1);
+    if (style === "bald" || style === "robot") px(6, 3, skin, 4, 1);
     else px(5, 3, H, 6, 2);
     if (["short", "pigtails", "buns", "long"].includes(style)) { px(5, 5, H); px(10, 5, H); }
     if (style === "long") { px(4, 4, H, 1, 8); px(11, 4, H, 1, 8); }
@@ -226,15 +228,28 @@
     if (style === "buns") { px(5, 1, H, 2, 2); px(9, 1, H, 2, 2); }
     if (style === "curls") { px(4, 2, H, 8, 3); px(4, 5, H, 1, 2); px(11, 5, H, 1, 2); [5, 7, 9].forEach(x => px(x, 1, H, 2, 1)); }
     if (style === "swoop") { px(5, 5, H, 3, 1); px(4, 3, H, 1, 2); px(9, 2, H, 2, 1); }
+    // Big Top styles.
+    if (style === "bunny") { px(5, 0, H, 2, 4); px(9, 0, H, 2, 4); px(6, 1, "#f7b2c4", 1, 3); px(9, 1, "#f7b2c4", 1, 3); }
+    if (style === "yarn") { px(4, 2, H, 8, 3); [5, 7, 9].forEach(x => px(x, 1, H)); px(4, 5, H, 1, 5); px(11, 5, H, 1, 5); px(3, 7, H, 1, 4); px(12, 7, H, 1, 4); px(3, 7, "#e63946"); px(12, 7, "#e63946"); }
+    if (style === "jester") { px(4, 3, H, 4, 2); px(8, 3, pants, 4, 2); px(3, 1, H, 2, 2); px(2, 0, "#ffd166"); px(11, 1, pants, 2, 2); px(13, 0, "#ffd166"); }
+    if (style === "rook") { px(4, 1, H, 8, 3); g.clearRect(6, 1, 1, 1); g.clearRect(9, 1, 1, 1); px(4, 3, shade(H, -0.14), 8, 1); }
+    if (style === "ribbons") { px(4, 4, H, 1, 9); px(11, 4, shade(H, -0.1), 1, 8); px(3, 7, shade(H, 0.12), 1, 7); px(12, 6, H, 1, 7); px(2, 12, H, 1, 3); px(13, 11, shade(H, 0.12), 1, 3); }
+    if (style === "robot") { px(5, 3, shade(skin, -0.15), 6, 1); px(7, 1, "#555a60", 1, 2); px(7, 0, H, 1, 1); px(4, 6, shade(skin, -0.2), 1, 2); px(11, 6, shade(skin, -0.2), 1, 2); }
 
     px(6, 6, OUTLINE);
     px(9, 6, OUTLINE);
     px(7, 8, "#b0645a", 2, 1);
+    if (style === "robot") { px(6, 6, "#6fd6ff"); px(9, 6, "#6fd6ff"); px(6, 8, "#555a60", 4, 1); }
+    if (style === "bunny") px(7, 9, "#ffffff", 2, 1);
     if (acc === "beard") { px(5, 7, H, 1, 4); px(10, 7, H, 1, 4); px(6, 9, H, 4, 2); px(6, 8, H); px(9, 8, H); }
     if (acc === "glasses") { px(5, 5, "#3a3a4a", 3, 1); px(8, 5, "#3a3a4a", 3, 1); ["#cfe3f0"].forEach(c2 => { px(5, 6, c2); px(7, 6, c2); px(8, 6, c2); px(10, 6, c2); }); }
     if (acc === "bow") { px(10, 2, "#f7d56b", 3, 2); px(11, 2, "#d9a93a", 1, 2); }
     if (acc === "headband") px(5, 4, "#e76f8a", 6, 1);
     if (acc === "star") { px(11, 2, "#ffd166"); px(10, 3, "#ffd166", 3, 1); px(11, 4, "#ffd166"); }
+    if (acc === "overalls") { px(6, 11, pants, 4, 4); px(5, 11, pants, 1, 3); px(10, 11, pants, 1, 3); px(6, 12, "#ffd166"); px(9, 12, "#ffd166"); }
+    if (acc === "stitches") { px(7, 8, skin, 2, 1); px(6, 8, "#8a3b3b"); px(9, 8, "#8a3b3b"); px(7, 9, "#8a3b3b", 2, 1); px(5, 7, "#f28482"); px(10, 7, "#f28482"); px(6, 6, "#3a2a20"); px(9, 6, "#3a2a20"); }
+    if (acc === "ruff") { px(4, 10, "#ffd166", 8, 1); for (let i = 4; i < 12; i += 2) px(i, 11, "#ffd166"); }
+    if (acc === "partyMask") { px(5, 5, "#ffd166", 6, 2); px(6, 6, OUTLINE); px(9, 6, OUTLINE); px(4, 4, "#ffd166"); px(11, 4, "#ffd166"); px(8, 5, "#fff6c2"); }
 
     const data = g.getImageData(0, 0, SPRITE_W, SPRITE_H).data;
     const filled = (x, y) => x >= 0 && y >= 0 && x < SPRITE_W && y < SPRITE_H && data[(y * SPRITE_W + x) * 4 + 3] > 0;
@@ -359,6 +374,7 @@
     ctx.clearRect(0, 0, MAP.width, MAP.height);
     if (townMap.complete && townMap.naturalWidth) ctx.drawImage(townMap, 0, 0, MAP.width, MAP.height);
     else { ctx.fillStyle = "#7baa68"; ctx.fillRect(0, 0, MAP.width, MAP.height); }
+    drawTents();
 
     if (tapMarker) {
       const age = (performance.now() - tapMarker.at) / 700;
@@ -377,6 +393,55 @@
     visible.forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text); });
     drawWeather();
     drawMrE(now);
+  }
+
+  // The Big Top: a striped circus tent drawn onto the painted map, one
+  // pixel per map unit so it matches the residents.
+  const tentSprites = new Map();
+  function tentSprite(t) {
+    if (tentSprites.has(t)) return tentSprites.get(t);
+    const c = document.createElement("canvas");
+    c.width = t.w; c.height = t.h;
+    const g = c.getContext("2d");
+    const px = (x, y, color, w = 1, h = 1) => { g.fillStyle = color; g.fillRect(x, y, w, h); };
+    const W = t.w, H = t.h, cx = Math.floor(W / 2), eave = Math.round(H * 0.48), top = 9;
+    for (let y = eave; y < H; y++) {
+      const half = Math.round(W * 0.36 + (y - eave) / (H - eave) * W * 0.11);
+      for (let x = -half; x < half; x++) px(cx + x, y, Math.floor((x + half) / 5) % 2 ? "#f4f1ea" : "#d64545");
+      px(cx - half - 1, y, OUTLINE); px(cx + half, y, OUTLINE);
+    }
+    for (let y = top; y < eave; y++) {
+      const half = Math.max(1, Math.round((y - top) / (eave - top) * W * 0.46));
+      for (let x = -half; x < half; x++) px(cx + x, y, Math.floor((x / half + 1) * 4) % 2 ? "#6c3483" : "#f2c14e");
+      px(cx - half - 1, y, OUTLINE); px(cx + half, y, OUTLINE);
+    }
+    const trim = Math.round(W * 0.46);
+    for (let x = -trim; x < trim; x++) {
+      px(cx + x, eave, "#f2c14e");
+      if ((x + trim) % 6 < 4) px(cx + x, eave + 1, "#f2c14e");
+      if ((x + trim) % 6 === 1 || (x + trim) % 6 === 2) px(cx + x, eave + 2, "#e0a458");
+    }
+    px(cx, 0, "#5b4636", 1, top + 1);
+    px(cx + 1, 0, "#e63946", 6, 2); px(cx + 1, 2, "#e63946", 4, 1); px(cx + 1, 3, "#e63946", 2, 1);
+    for (let y = H - 16; y < H; y++) {
+      const half = Math.round((y - (H - 16)) / 16 * 7) + 1;
+      px(cx - half, y, "#2a1d18", half * 2, 1);
+      px(cx - half - 1, y, "#f2c14e"); px(cx + half, y, "#f2c14e");
+    }
+    tentSprites.set(t, c);
+    return c;
+  }
+
+  function drawTents() {
+    for (const b of buildings) {
+      if (!b.tent) continue;
+      const t = b.tent;
+      ctx.fillStyle = "rgba(20,12,8,.3)";
+      ctx.beginPath(); ctx.ellipse(t.x, t.y, t.w * 0.52, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tentSprite(t), t.x - t.w / 2, t.y - t.h);
+      ctx.imageSmoothingEnabled = true;
+    }
   }
 
   function drawResident(r) {
@@ -899,7 +964,8 @@
   // The front-most thing under a tap; rugs only if nothing else is there.
   function objectAt(plan, x, y) {
     const hits = plan.objects.filter(o => x >= o.x - 2 && x <= o.x + o.w + 2 && y >= o.y - (o.kind === "bed" ? 5 : 2) && y <= o.y + o.h + 2);
-    hits.sort((a, c) => (a.kind === "rug") - (c.kind === "rug") || (c.y + c.h) - (a.y + a.h) || a.w * a.h - c.w * c.h);
+    const floorOnly = o => o.kind === "rug" || o.kind === "ring";
+    hits.sort((a, c) => floorOnly(a) - floorOnly(c) || (c.y + c.h) - (a.y + a.h) || a.w * a.h - c.w * c.h);
     return hits[0] || null;
   }
 
@@ -1235,9 +1301,9 @@
       <form id="characterForm" class="creator-form">${details}
         <input type="hidden" name="skin" value="${escapeHtml(look.skin)}">
         <div class="swatch-row">${swatches}</div>
-        <label>Hair<select name="style">${HAIR_STYLES.map(v => option(v, look.style)).join("")}</select></label>
+        <label>Hair<select name="style">${HAIR_STYLES.map(v => option(v, look.style, LOOK_LABELS[v] || v)).join("")}</select></label>
         <label>Hair color<input name="hair" type="color" value="${escapeHtml(look.hair)}"></label>
-        <label>Accessory<select name="accessory">${ACCESSORIES.map(v => option(v, look.accessory)).join("")}</select></label>
+        <label>Accessory<select name="accessory">${ACCESSORIES.map(v => option(v, look.accessory, LOOK_LABELS[v] || v)).join("")}</select></label>
         <label>Shirt<input name="shirt" type="color" value="${escapeHtml(look.shirt)}"></label>
         <label>Pants<input name="pants" type="color" value="${escapeHtml(look.pants)}"></label>
         <label>Shoes<input name="shoes" type="color" value="${escapeHtml(look.shoes)}"></label>
