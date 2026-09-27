@@ -8,14 +8,28 @@
  * only from a fixed menu of gentle event types. Everything it returns is
  * validated and filtered; anything odd falls back to built-in templates, and
  * the same templates run when no model is available.
+ *
+ * He is always on the map for players, strolling between places to see what
+ * everyone is up to. Residents never see him: he is not a resident, nothing
+ * in their minds reads his position, and their memories of his surprises
+ * never name him. When the town has gone quiet, he makes something happen.
  */
 
 const life = require("./life");
+const world = require("../shared/world");
 
 const DAY_START = 7;
 const DAY_END = 21;
-const GAP_MIN = 25;
-const GAP_SPREAD = 25;
+// Mr. E only stirs things up once the town has been quiet this long, and
+// never more often than MIN_GAP.
+const QUIET_MINUTES = 8;
+const MIN_GAP_MINUTES = 20;
+// Talk this recent means something is going on.
+const RECENT_TALK_MINUTES = 5;
+// Walking speeds in map units per second: strolling, and hurrying to a surprise.
+const STROLL_SPEED = 22;
+const HURRY_SPEED = 70;
+const ANNOUNCE_MS = 60_000;
 
 const PUBLIC_PLACES = ["park", "square", "cafe", "market", "workshop"];
 
@@ -133,7 +147,7 @@ function schemaFor(state) {
   };
 }
 
-function describeTown(state, now, placeName) {
+function describeTown(state, now, placeName, focus = null) {
   const date = new Date(now);
   const weather = activeEffects(state, now).find(e => e.kind === "weather")?.weather || "clear";
   const residents = state.residents.filter(r => !r.asleep).map(r => ({
@@ -146,6 +160,7 @@ function describeTown(state, now, placeName) {
     `Residents who are awake: ${JSON.stringify(residents)}`,
     `Recent town events: ${JSON.stringify(recentEvents)}`,
     `Your recent surprises (don't repeat these): ${JSON.stringify(recentSurprises)}`,
+    ...(focus?.lonely.length ? [`The town has gone quiet. These residents are on their own or bored, so pick something that gives them something to do together: ${JSON.stringify(focus.lonely.map(r => r.name))}`] : []),
     `Event types you may choose: ${JSON.stringify(TYPES)}`,
     "Reply with JSON only."
   ].join("\n");
@@ -153,7 +168,8 @@ function describeTown(state, now, placeName) {
 
 function activeEffects(state, now) { return (state.effects || []).filter(e => e.until > now); }
 
-function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+function random() { return Math.random(); }
+function pick(list) { return list[Math.floor(random() * list.length)]; }
 
 /**
  * Turn a proposal (from the AI or the built-in director) into a complete,
@@ -209,8 +225,33 @@ function templateAnnouncement(plan, placeName) {
   }
 }
 
+/**
+ * How lively is the town? Something is going on when one of Mr. E's events is
+ * running or residents have talked recently. `lonely` lists awake residents
+ * who are on their own or bored, most in need first.
+ */
+function assessTown(state, now) {
+  const awake = state.residents.filter(r => !r.asleep);
+  const happening = activeEffects(state, now).some(e => e.kind === "happening" || e.kind === "meetup");
+  const talking = awake.filter(r => now - (Number(r.lastTalk) || 0) < RECENT_TALK_MINUTES * 60_000).length;
+  // Family at home together count as company; strangers on different doorsteps don't.
+  const sameSpot = (a, b) => a.place === b.place && (a.place !== "homes" || world.homeOf(a.id)?.id === world.homeOf(b.id)?.id);
+  const company = r => awake.some(o => o !== r && sameSpot(o, r));
+  const need = r => Math.min(Number(r.needs?.fun) || 0, Number(r.needs?.social) || 0);
+  const lonely = awake.filter(r => !company(r) || need(r) < 45).sort((a, b) => need(a) - need(b));
+  return { awake, lonely, busy: happening || talking >= 2, quiet: awake.length > 0 && !happening && talking < 2 };
+}
+
 /** Built-in director: favours surprises that haven't happened lately. */
-function builtInProposal(state, now) {
+function builtInProposal(state, now, focus = null) {
+  // A quiet town with people on their own: bring two of them together, or
+  // give one of them something to do.
+  if (focus?.lonely.length >= 2 && random() < 0.6) {
+    return { type: "friends", residentId: focus.lonely[0].id, otherResidentId: focus.lonely[1].id };
+  }
+  if (focus?.lonely.length === 1 && random() < 0.5) {
+    return { type: pick(["note", "gift"]), residentId: focus.lonely[0].id };
+  }
   const recent = state.mre?.recent || [];
   const hour = new Date(now).getHours();
   const weather = activeEffects(state, now).find(e => e.kind === "weather")?.weather;
@@ -236,12 +277,78 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
       nextAt: Number(mre.nextAt) || 0,
       recent: Array.isArray(mre.recent) ? mre.recent.slice(0, 8) : [],
       pending: Array.isArray(mre.pending) ? mre.pending : [],
-      visit: mre.visit && mre.visit.until > Date.now() ? mre.visit : null
+      visit: mre.visit && mre.visit.until > Date.now() && typeof mre.visit.text === "string" ? { text: mre.visit.text, until: mre.visit.until } : null,
+      walker: normalizeWalker(mre.walker)
     };
   }
 
-  function scheduleNext(state, now) {
-    state.mre.nextAt = now + (GAP_MIN + random() * GAP_SPREAD) * 60_000;
+  function normalizeWalker(w) {
+    const ok = w && Number.isFinite(w.x) && Number.isFinite(w.y) && w.x >= 0 && w.y >= 0 && w.x <= world.MAP.width && w.y <= world.MAP.height;
+    if (!ok) {
+      const start = world.spotFor(null, "square");
+      return { x: start.x + 26, y: start.y + 6, path: [], watching: "square", lingerUntil: 0, hurry: false, lastPlaces: [] };
+    }
+    // Keep his walk going between ticks; drop anything malformed from a save.
+    if (!Array.isArray(w.path) || !w.path.every(p => p && Number.isFinite(p.x) && Number.isFinite(p.y))) w.path = [];
+    if (!world.places[w.watching]) w.watching = null;
+    w.lingerUntil = Number(w.lingerUntil) || 0;
+    w.hurry = Boolean(w.hurry);
+    w.lastPlaces = Array.isArray(w.lastPlaces) ? w.lastPlaces.filter(k => world.places[k]).slice(0, 2) : [];
+    return w;
+  }
+
+  function walkTo(walker, x, y, hurry) {
+    const to = world.snapToWalkable(x, y);
+    walker.path = world.route(walker.x, walker.y, to.x, to.y);
+    walker.hurry = hurry;
+    walker.arrived = false;
+  }
+
+  /** Pick the next place to look in on: busy places first, somewhere new. */
+  function surveyNext(state, now) {
+    const walker = state.mre.walker;
+    const night = isNight(now);
+    const keys = Object.keys(world.places).filter(k => k !== "homes");
+    const weights = keys.map(k => {
+      if (walker.lastPlaces.includes(k)) return 0.15;
+      const people = state.residents.filter(r => r.place === k && !r.asleep).length;
+      return night ? (k === "square" || k === "park" ? 2 : 1) : 1 + people * 1.5;
+    });
+    let roll = random() * weights.reduce((a, b) => a + b, 0);
+    let key = keys[keys.length - 1];
+    for (let i = 0; i < keys.length; i++) { roll -= weights[i]; if (roll <= 0) { key = keys[i]; break; } }
+    const spot = world.spotFor(null, key);
+    walker.watching = key;
+    walker.lastPlaces = [key, ...walker.lastPlaces.filter(k => k !== key)].slice(0, 2);
+    walkTo(walker, spot.x + (random() - 0.5) * 60, spot.y + 12 + (random() - 0.5) * 24, false);
+  }
+
+  let lastMove = 0;
+  function patrol(state, now) {
+    const walker = state.mre.walker;
+    const seconds = Math.min(5, Math.max(0, (now - (lastMove || now)) / 1000));
+    lastMove = now;
+    let budget = (walker.hurry ? HURRY_SPEED : STROLL_SPEED) * (isNight(now) && !walker.hurry ? 0.7 : 1) * seconds;
+    while (budget > 0 && walker.path.length) {
+      const next = walker.path[0];
+      const gap = Math.hypot(next.x - walker.x, next.y - walker.y);
+      if (gap <= budget) { walker.x = next.x; walker.y = next.y; budget -= gap; walker.path.shift(); }
+      else { walker.x += (next.x - walker.x) / gap * budget; walker.y += (next.y - walker.y) / gap * budget; budget = 0; }
+    }
+    if (walker.path.length) return;
+    if (!walker.arrived) {
+      walker.arrived = true;
+      walker.hurry = false;
+      // Stay a while to watch; longer beside a surprise he just made.
+      const announcing = state.mre.visit && state.mre.visit.until > now;
+      walker.lingerUntil = now + (announcing ? 45_000 : (25 + random() * 35) * 1000) * (isNight(now) ? 2 : 1);
+    }
+    if (now >= walker.lingerUntil) surveyNext(state, now);
+  }
+
+  function isNight(now) {
+    const hour = new Date(now).getHours();
+    return hour < DAY_START || hour >= DAY_END;
   }
 
   function experience(resident, now, text, type = "mre") {
@@ -299,7 +406,7 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
         const r = plan.resident;
         r.mood.valence = Math.min(100, r.mood.valence + 12);
         r.mood.stress = Math.max(0, r.mood.stress - 5);
-        experience(r, now, `${r.name} found a surprise from Mr. E: ${plan.item}.`);
+        experience(r, now, `${r.name} found a mysterious surprise: ${plan.item}.`);
         where = { x: r.x, y: r.y };
         break;
       }
@@ -307,7 +414,7 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
         const r = plan.resident;
         r.needs.fun = Math.min(100, r.needs.fun + 10);
         r.mood.valence = Math.min(100, r.mood.valence + 5);
-        experience(r, now, `${r.name} found a riddle from Mr. E: "${pick(templates.riddles)}"`);
+        experience(r, now, `${r.name} found a mysterious riddle note: "${pick(templates.riddles)}"`);
         where = { x: r.x, y: r.y };
         break;
       }
@@ -328,7 +435,14 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
     }
 
     state.mre.recent = [plan.type, ...state.mre.recent].slice(0, 8);
-    if (where) state.mre.visit = { x: where.x + 16, y: where.y + 4, until: now + 45_000, text: announcement };
+    state.mre.nextAt = now + MIN_GAP_MINUTES * 60_000;
+    state.mre.visit = { until: now + ANNOUNCE_MS, text: announcement };
+    // He hurries over to stand beside his surprise.
+    const walker = state.mre.walker;
+    if (where) {
+      walker.watching = plan.place || null;
+      walkTo(walker, where.x + 18, where.y + 6, true);
+    }
     helpers.addEvent(`✦ Mr. E: "${announcement}"`, now, "mre");
     return announcement;
   }
@@ -351,11 +465,11 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
     }
   }
 
-  async function propose(state, now, helpers) {
+  async function propose(state, now, helpers, focus, at = () => now) {
     if (generate) {
       try {
-        const raw = await generate(SYSTEM_PROMPT, describeTown(state, now, helpers.placeName), schemaFor(state));
-        const plan = normalizePlan({ ...raw, fromAI: true }, state, Date.now());
+        const raw = await generate(SYSTEM_PROMPT, describeTown(state, now, helpers.placeName, focus), schemaFor(state));
+        const plan = normalizePlan({ ...raw, fromAI: true }, state, at());
         lastBrain = generate.label || "local AI";
         if (plan) return plan;
         log.warn("Mr. E: the AI suggested something unusable; using a built-in surprise instead.");
@@ -367,24 +481,31 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
     // A built-in proposal can still be unusable (e.g. nobody awake for a
     // gift), so try a few before giving up.
     for (let attempt = 0; attempt < 6; attempt++) {
-      const plan = normalizePlan(builtInProposal(state, now), state, now);
+      const plan = normalizePlan(builtInProposal(state, now, attempt < 2 ? focus : null), state, now);
       if (plan) return plan;
     }
     return null;
   }
 
   /** Run one surprise now. Resolves to the announcement, or null. */
-  async function surprise(state, helpers) {
+  async function surprise(state, helpers, focus = null, now = Date.now()) {
     if (busy) return null;
     busy = true;
+    quietSince = 0;
+    // Town time, carried forward by however long the AI took to answer.
+    const started = Date.now();
+    const at = () => now + (Date.now() - started);
     try {
       ensureState(state);
-      const plan = await propose(state, Date.now(), helpers);
-      return plan ? apply(state, plan, Date.now(), helpers) : null;
+      const plan = await propose(state, now, helpers, focus, at);
+      return plan ? apply(state, plan, at(), helpers) : null;
     } finally {
       busy = false;
     }
   }
+
+  // When the town went quiet (0 while something is going on).
+  let quietSince = 0;
 
   /** Called from the simulation tick. Never blocks it. */
   function tick(state, now, helpers) {
@@ -393,15 +514,28 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
     state.effects = activeEffects(state, now);
     if (state.mre.visit && state.mre.visit.until <= now) state.mre.visit = null;
     resolvePending(state, now, helpers);
-    const hour = new Date(now).getHours();
-    if (!state.mre.nextAt) scheduleNext(state, now - GAP_MIN * 60_000 * 0.8);
-    if (now < state.mre.nextAt || busy) return;
-    scheduleNext(state, now);
-    if (hour < DAY_START || hour >= DAY_END) return;
-    surprise(state, helpers).catch(err => log.error("Mr. E error:", err));
+    patrol(state, now);
+
+    const town = assessTown(state, now);
+    if (!town.quiet || isNight(now)) { quietSince = 0; return; }
+    if (!quietSince) quietSince = now;
+    if (busy || now < state.mre.nextAt || now - quietSince < QUIET_MINUTES * 60_000) return;
+    surprise(state, helpers, town, now).catch(err => log.error("Mr. E error:", err));
   }
 
-  return { tick, surprise, ensureState, checkBrain, get brain() { return lastBrain; }, get busy() { return busy; } };
+  /** What phones need to draw him: where he is and what he's saying. */
+  function publicView(state, now) {
+    const walker = state.mre?.walker;
+    if (!walker) return null;
+    const visit = state.mre.visit && state.mre.visit.until > now ? state.mre.visit : null;
+    return {
+      x: Math.round(walker.x * 10) / 10, y: Math.round(walker.y * 10) / 10, walking: walker.path.length > 0,
+      watching: walker.watching ? world.places[walker.watching]?.name || null : null,
+      text: visit?.text || null, until: visit?.until || 0
+    };
+  }
+
+  return { tick, surprise, ensureState, checkBrain, publicView, get brain() { return lastBrain; }, get busy() { return busy; } };
 }
 
-module.exports = { createMrE, ollamaGenerator, normalizePlan, isSafe, clean, TYPES, SYSTEM_PROMPT };
+module.exports = { createMrE, ollamaGenerator, normalizePlan, assessTown, isSafe, clean, TYPES, SYSTEM_PROMPT };

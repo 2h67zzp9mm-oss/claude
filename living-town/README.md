@@ -2,12 +2,12 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.7.0
+## Honest status — 0.9.0
 
 Working now:
 
-- **House interiors**: tap a house sign to look inside. People at home go indoors, sleep in their own beds, and sit at the table, on the sofa or on the rug depending on what they're doing. In Play mode you can walk around your own house and use the bed, sofa, table, fridge, bookshelf or rug, and each one helps your character's needs.
-- **Mr. E**, a mysterious town storyteller who stirs up gentle surprises: festivals, rain and sunshine, gifts, riddles, meet-ups, free treats, and lost-and-found stories. He runs on a local AI model on Mouse, or on built-in surprises when the AI is off.
+- **Real house interiors**: every home has its own floor plan (kitchen, living room, and a bedroom each for Olive, Hazel and Sean; a shared room for Milo and Zara; Nova's room; Finn's workroom and fireside), drawn in detailed pixel art with sunlight through the windows by day and lamplight at night. Residents walk from room to room, eat at the table, sit on the sofa and sleep in their own beds. In Play mode, walk up to your front door and the view zooms inside; tap almost anything (beds, chairs, the sink, fridge, stove, windows, plants, the wardrobe, the fruit bowl…) to use it, the floor to walk, and the front door to go back out.
+- **Mr. E**, a mysterious town storyteller who is always on the map for players, strolling from place to place to see what everyone is up to (with a lantern at night). Residents never see him. When the town goes quiet, he stirs up a gentle surprise aimed at whoever is on their own: festivals, rain and sunshine, gifts, riddles, meet-ups, free treats, and lost-and-found stories. He runs on a local AI model on Mouse, or on built-in surprises when the AI is off.
 - **Character customization**: skin, hair style and color, clothes, and accessory, with a live pixel preview. The owner can add new residents (name, age, home) and link any of them to a player.
 
 - One server-owned world ticking once per real second, on the real wall clock

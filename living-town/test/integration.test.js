@@ -84,8 +84,9 @@ test("shared world: migration, validation, control, persistence and recovery", a
   await until(() => b.residents.get("dad").intent !== "following a player's lead", "disconnect releases control");
 
   await until(() => fs.existsSync(path.join(dataDir, "town-state.json")) && JSON.parse(fs.readFileSync(path.join(dataDir, "town-state.json"))).version === 3, "autosave", 15000);
-  await until(() => fs.readdirSync(path.join(dataDir, "backups")).length > 0, "backup", 15000);
-  await until(() => fs.readdirSync(path.join(dataDir, "snapshots")).length > 0, "snapshot", 15000);
+  // These folders may not exist until their first file is written.
+  await until(() => fs.existsSync(path.join(dataDir, "backups")) && fs.readdirSync(path.join(dataDir, "backups")).length > 0, "backup", 15000);
+  await until(() => fs.existsSync(path.join(dataDir, "snapshots")) && fs.readdirSync(path.join(dataDir, "snapshots")).length > 0, "snapshot", 15000);
   const saved = JSON.parse(fs.readFileSync(path.join(dataDir, "town-state.json"), "utf8"));
   assert.strictEqual(saved.controllers, undefined, "controller claims are never saved");
   assert.ok(saved.residents.every(r => r.initial === undefined && r.trait === undefined), "dead fields removed");

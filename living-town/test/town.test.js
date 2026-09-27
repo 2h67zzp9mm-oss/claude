@@ -85,6 +85,11 @@ test("Mr. E: owner can ask for a surprise, which reaches the feed", async () => 
   await waitForStart(server);
   const owner = (await api(port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
   const client = await connectClient(port);
+  // He is on the map for every phone, even with no surprise running.
+  await until(() => client.messages.some(m => m.type === "tick"), "a tick");
+  const seen = client.messages.find(m => m.type === "tick").town.mre;
+  assert.ok(Number.isFinite(seen.x) && Number.isFinite(seen.y), "Mr. E's position reaches phones");
+  assert.ok(!client.residents.has("mre") && ![...client.residents.values()].some(r => r.name === "Mr. E"), "he is not a resident");
   assert.strictEqual((await api(port, "POST", "/api/mre/surprise")).status, 403);
   const result = await api(port, "POST", "/api/mre/surprise", undefined, owner);
   // Everyone may be asleep at night on the test machine; both outcomes are valid.
@@ -119,13 +124,31 @@ test("inside your own house: use furniture, walk around, leave", async () => {
   await until(() => dad().indoor?.objectId === "bed1" && dad().using === "bed" && dad().activity === "napping in bed", "napping in bed");
   sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "spaceship" }));
   await until(() => sean.messages.some(m => m.type === "control-rejected" && /nothing like that/.test(m.reason)), "unknown furniture rejected");
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "sink1" }));
+  await until(() => dad().using === "sink" && dad().activity === "getting a glass of water", "small things can be used too");
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "chair1" }));
+  await until(() => dad().indoor?.objectId === "chair1" && dad().using === "chair", "sitting on a chair");
+  const interiors = require("../shared/interiors");
+  const plan = interiors.planFor("seanHouse");
   sean.ws.send(JSON.stringify({ type: "indoor-move", residentId: "dad", x: 999, y: -5 }));
-  await until(() => dad().indoor && !dad().indoor.objectId && dad().indoor.x === 114 && dad().indoor.y === 32, "walks inside, clamped to the room");
+  await until(() => dad().indoor && !dad().indoor.objectId && dad().using === null, "walks inside");
+  assert.ok(interiors.isWalkable(plan, dad().indoor.x, dad().indoor.y), "taps outside the walls land on the floor");
   sean.ws.send(JSON.stringify({ type: "use", residentId: "olive", objectId: "bed2" }));
   await until(() => sean.messages.some(m => m.type === "control-rejected" && /own resident/.test(m.reason)), "can't move someone else inside");
 
+  // Out through the front door: onto the path, no longer at home.
+  sean.ws.send(JSON.stringify({ type: "leave-home", residentId: "dad" }));
+  await until(() => dad().indoor === null && dad().using === null && dad().place === null, "leaving through the front door");
+  await until(() => Math.hypot(dad().x - doorX, dad().y - doorY) > 10, "Sean steps out onto the path", 10000);
+  sean.ws.send(JSON.stringify({ type: "leave-home", residentId: "dad" }));
+  await until(() => sean.messages.some(m => m.type === "control-rejected" && /Walk home first/.test(m.reason)), "can't leave a house you're not in");
+
+  sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: doorX, y: doorY }));
+  await until(() => dad().place === "homes" && Math.hypot(dad().x - doorX, dad().y - doorY) < 1, "back home", 15000);
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "fridge" }));
+  await until(() => dad().using === "fridge", "a snack");
   sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: 477, y: 330 }));
-  await until(() => dad().indoor === null && dad().using === null, "leaving the house clears indoor state");
+  await until(() => dad().indoor === null && dad().using === null, "walking off across town clears indoor state");
   sean.ws.close();
   assert.strictEqual(await stop(server), 0);
 });

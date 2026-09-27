@@ -21,6 +21,7 @@ const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 
 const world = require("./shared/world");
+const interiors = require("./shared/interiors");
 const life = require("./lib/life");
 const mind = require("./lib/mind");
 const { createStore } = require("./lib/persistence");
@@ -88,7 +89,7 @@ function normalizeResident(resident) {
   if (!places[resident.place]) resident.place = placeAt(resident, resident.x, resident.y) || "homes";
   resident.path = Array.isArray(resident.path) ? resident.path.filter(p => Number.isFinite(p?.x) && Number.isFinite(p?.y)) : [];
   if (!(resident.indoor && Number.isFinite(resident.indoor.x) && Number.isFinite(resident.indoor.y))) resident.indoor = null;
-  if (!(resident.using && world.furniture[resident.using.kind] && Number.isFinite(resident.using.until))) resident.using = null;
+  if (!(resident.using && interiors.furniture[resident.using.kind] && Number.isFinite(resident.using.until))) resident.using = null;
   if (typeof resident.activity !== "string") resident.activity = "settling in";
   if (typeof resident.color !== "string") resident.color = "#8899aa";
   resident.lastTalk = finiteOr(resident.lastTalk, 0);
@@ -263,7 +264,7 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
   // Furniture a player chose inside their house adds its own boosts.
   if (r.using) {
     if (r.using.until <= date.getTime() || r.place !== "homes") r.using = null;
-    else for (const [need, rate] of Object.entries(world.furniture[r.using.kind].needs)) r.needs[need] = clamp(r.needs[need] + rate * dtHours, 0, 100);
+    else for (const [need, rate] of Object.entries(interiors.furniture[r.using.kind].needs)) r.needs[need] = clamp(r.needs[need] + rate * dtHours, 0, 100);
   }
 
   const place = places[r.place];
@@ -399,7 +400,7 @@ function residentDetail(r) {
 
 function townPayload() {
   const weather = (state.effects || []).find(e => e.kind === "weather" && e.until > Date.now());
-  return { mre: state.mre?.visit || null, weather: weather?.weather || "clear", brain: mre.brain };
+  return { mre: mre.publicView(state, Date.now()), weather: weather?.weather || "clear", brain: mre.brain };
 }
 
 function fullStatePayload() {
@@ -658,6 +659,10 @@ function validateClientMessage(raw) {
     return { type: "control", residentId: msg.residentId, x: msg.x, y: msg.y };
   }
   if (msg.type === "release") return { type: "release" };
+  if (msg.type === "leave-home") {
+    if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId)) return null;
+    return { type: "leave-home", residentId: msg.residentId };
+  }
   if (msg.type === "use") {
     if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId) || typeof msg.objectId !== "string" || msg.objectId.length > 20) return null;
     return { type: "use", residentId: msg.residentId, objectId: msg.objectId };
@@ -683,7 +688,7 @@ function detailPayload(resident) {
   return json;
 }
 
-// Inside your own house: walk around the room or use a piece of furniture.
+// Inside your own house: walk around, use furniture, or go out the front door.
 function handleIndoor(ws, msg) {
   const reject = reason => send(ws, { type: "control-rejected", residentId: msg.residentId, reason });
   const profile = auth.profileForToken(ws.token);
@@ -691,19 +696,33 @@ function handleIndoor(ws, msg) {
   if (profile.residentId !== msg.residentId) return reject("You can only move your own resident.");
   const r = state.residents.find(item => item.id === msg.residentId);
   const home = r && world.homeOf(r.id);
-  const room = home && world.roomFor(home.id);
-  if (!room) return reject("That resident doesn't have a house.");
+  const plan = home && interiors.planFor(home.id);
+  if (!plan) return reject("That resident doesn't have a house.");
   if (r.place !== "homes" || r.path.length) return reject("Walk home first, then you can move around inside.");
   controllers.set(ws, r.id);
   r.asleep = false;
+  if (msg.type === "leave-home") {
+    // Step out of the front door onto the path, heading away from the house.
+    const [doorX, doorY] = world.walkNodes[home.node];
+    const edge = world.walkEdges.find(e => e.includes(home.node));
+    const [awayX, awayY] = edge ? world.walkNodes[edge[0] === home.node ? edge[1] : edge[0]] : [doorX, doorY + 30];
+    const len = Math.hypot(awayX - doorX, awayY - doorY) || 1;
+    const step = Math.min(34, len * 0.8);
+    const out = snapToWalkable(doorX + (awayX - doorX) / len * step, doorY + (awayY - doorY) / len * step);
+    walkTo(r, out.x, out.y);
+    r.place = null;
+    r.activity = "stepping outside";
+    return;
+  }
   if (msg.type === "use") {
-    const object = room.objects.find(o => o.id === msg.objectId);
+    const object = plan.objects.find(o => o.id === msg.objectId);
     if (!object) return reject("There's nothing like that in this room.");
     r.indoor = { x: object.spot[0], y: object.spot[1], objectId: object.id };
     r.using = { kind: object.kind, until: Date.now() + 30 * 60_000 };
-    r.activity = world.furniture[object.kind].activity;
+    r.activity = interiors.furniture[object.kind].activity;
   } else {
-    r.indoor = { x: clamp(msg.x, room.minX, room.maxX), y: clamp(msg.y, room.minY, room.maxY) };
+    const spot = interiors.snapInside(plan, msg.x, msg.y);
+    r.indoor = { x: Math.round(spot.x), y: Math.round(spot.y) };
     r.using = null;
     r.activity = "pottering around the house";
   }
@@ -742,7 +761,7 @@ wss.on("connection", (ws, req) => {
     if (!msg) return;
     if (msg.type === "control") handleControl(ws, msg);
     else if (msg.type === "release") releaseController(ws);
-    else if (msg.type === "use" || msg.type === "indoor-move") handleIndoor(ws, msg);
+    else if (msg.type === "use" || msg.type === "indoor-move" || msg.type === "leave-home") handleIndoor(ws, msg);
     else if (msg.type === "inspect") {
       // Rate-limited: a burst of requests collapses into the latest one.
       ws.pendingInspect = msg.residentId;

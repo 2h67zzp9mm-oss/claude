@@ -30,11 +30,20 @@
   gap: 10px;
   padding: 78px 12px 0;
   background: radial-gradient(circle at 50% 35%, #3a2a1f, #140e0a 75%);
+  transform-origin: var(--ox, 50%) var(--oy, 50%);
 }
 .interior.hidden { display: none; }
+/* Walking in through the door zooms in from the house on the map; leaving zooms back out. */
+.interior.entering { animation: enter-house 0.45s cubic-bezier(0.2, 0.8, 0.3, 1); }
+.interior.leaving { animation: leave-house 0.36s ease-in forwards; }
+@keyframes enter-house { from { transform: scale(0.06); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes leave-house { to { transform: scale(0.06); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .interior.entering, .interior.leaving { animation-duration: 0.01s; }
+}
 .interior-bar {
   width: 100%;
-  max-width: 520px;
+  max-width: 720px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -52,7 +61,7 @@
 }
 #roomCanvas {
   width: 100%;
-  max-width: 520px;
+  max-width: 720px;
   aspect-ratio: 4 / 3;
   image-rendering: pixelated;
   border: 3px solid #5b3a24;
@@ -60,4 +69,4 @@
   box-shadow: 0 12px 40px #000a;
   touch-action: manipulation;
 }
-.interior-hint { margin: 0; max-width: 520px; color: #d9c6a5; font-size: 0.78rem; text-align: center; }
+.interior-hint { margin: 0; max-width: 720px; color: #d9c6a5; font-size: 0.78rem; text-align: center; }

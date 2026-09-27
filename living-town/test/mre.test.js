@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 const life = require("../lib/life");
 const mind = require("../lib/mind");
-const { createMrE, normalizePlan, isSafe, clean } = require("../lib/mre");
+const { createMrE, normalizePlan, assessTown, isSafe, clean } = require("../lib/mre");
 const world = require("../shared/world");
 
 function town(now) {
@@ -96,7 +96,7 @@ test("if the AI's resident or place has to be swapped, its announcement is not u
   state.residents.find(r => r.id === "olive").asleep = true;
   const gen = async () => ({ type: "gift", residentId: "olive", item: "a marble", announcement: "Psst, Olive... a gift for you!" });
   const said = await createMrE({ generate: gen, log: { warn() {}, error() {} } }).surprise(state, helpers(state));
-  const receiver = state.residents.find(r => (r.experiences || []).some(e => /surprise from Mr. E/.test(e.text)));
+  const receiver = state.residents.find(r => (r.experiences || []).some(e => /mysterious surprise/.test(e.text)));
   assert.notStrictEqual(receiver.id, "olive");
   assert.ok(said.includes(receiver.name) && !said.includes("Olive"), said);
 });
@@ -127,4 +127,98 @@ test("the brain label reflects whether the local AI is really available", async 
   assert.match(mrE.brain, /checking/);
   await mrE.checkBrain();
   assert.strictEqual(mrE.brain, "built-in storyteller (AI offline)");
+});
+
+const quiet = { warn() {}, error() {} };
+const settle = () => new Promise(resolve => setImmediate(resolve));
+
+test("Mr. E is always out strolling the walkways, day and night", () => {
+  for (const time of ["2026-10-10T11:00:00", "2026-10-10T23:30:00"]) {
+    const start = new Date(time).getTime();
+    const state = town(start);
+    state.residents.forEach(r => { r.lastTalk = start; });
+    const mrE = createMrE({ log: quiet });
+    mrE.tick(state, start, helpers(state));
+    const first = mrE.publicView(state, start);
+    assert.ok(Number.isFinite(first.x) && Number.isFinite(first.y), "visible from the first tick");
+    const seen = new Set();
+    for (let s = 1; s <= 600; s++) {
+      state.residents.forEach(r => { r.lastTalk = start + s * 1000; });
+      mrE.tick(state, start + s * 1000, helpers(state));
+      const view = mrE.publicView(state, start + s * 1000);
+      assert.ok(view.x >= 0 && view.y >= 0 && view.x <= world.MAP.width && view.y <= world.MAP.height);
+      if (view.watching) seen.add(view.watching);
+    }
+    const last = mrE.publicView(state, start + 600_000);
+    assert.ok(Math.hypot(last.x - first.x, last.y - first.y) > 5 || seen.size > 1, `he moves around (${time})`);
+    assert.ok(!state.events.some(e => e.by === "mre"), "a busy town gets no surprise");
+  }
+});
+
+test("residents never see Mr. E: he is not one of them and their memories never name him", async () => {
+  const state = town(Date.now());
+  for (const type of ["gift", "note", "lost_item", "friends"]) {
+    const gen = async () => ({ type, residentId: "hazel", otherResidentId: "finn", place: "park", item: "a shiny marble", announcement: "Something curious for you..." });
+    await createMrE({ generate: gen, log: quiet }).surprise(state, helpers(state));
+  }
+  assert.ok(!state.residents.some(r => /mr\.? ?e/i.test(r.id) || /Mr\. E/.test(r.name)));
+  for (const r of state.residents) {
+    for (const list of [r.experiences, r.memories, r.knowledge]) assert.ok(!/Mr\. E/.test(JSON.stringify(list || [])), `${r.name} never names him`);
+  }
+  assert.ok(state.residents.find(r => r.id === "hazel").experiences.some(e => /mysterious/.test(e.text)));
+  // His walk is not an effect, so it can't pull or push anyone.
+  assert.ok(!(state.effects || []).some(e => e.kind === "walker" || e.x !== undefined));
+});
+
+test("when the town goes quiet, Mr. E makes something happen", async () => {
+  const start = new Date("2026-10-10T11:00:00").getTime();
+  const state = town(start);
+  const mrE = createMrE({ log: quiet });
+  mrE.tick(state, start, helpers(state));
+  mrE.tick(state, start + 7 * 60_000, helpers(state));
+  await settle();
+  assert.ok(!state.events.some(e => e.by === "mre"), "he waits a little first");
+  mrE.tick(state, start + 8 * 60_000 + 1000, helpers(state));
+  await settle();
+  assert.ok(state.events.some(e => e.by === "mre"), "then he steps in");
+  assert.ok(mrE.publicView(state, start + 8 * 60_000 + 2000).text, "and he's shown saying it");
+
+  // No more than one surprise per 20 minutes, even if it stays quiet.
+  const count = () => state.events.filter(e => e.by === "mre").length;
+  state.effects = [];
+  for (let m = 9; m < 28; m++) { mrE.tick(state, start + m * 60_000, helpers(state)); await settle(); }
+  assert.strictEqual(count(), 1);
+});
+
+test("Mr. E leaves a lively town alone, and never stirs things up at night", async () => {
+  const day = new Date("2026-10-10T11:00:00").getTime();
+  const busyTown = town(day);
+  const mrE = createMrE({ log: quiet });
+  for (let m = 0; m <= 30; m++) {
+    busyTown.residents.slice(0, 2).forEach(r => { r.lastTalk = day + m * 60_000; });
+    mrE.tick(busyTown, day + m * 60_000, helpers(busyTown));
+    await settle();
+  }
+  assert.ok(!busyTown.events.some(e => e.by === "mre"));
+
+  const night = new Date("2026-10-10T22:30:00").getTime();
+  const sleepy = town(night);
+  const mrE2 = createMrE({ log: quiet });
+  for (let m = 0; m <= 30; m++) { mrE2.tick(sleepy, night + m * 60_000, helpers(sleepy)); await settle(); }
+  assert.ok(!sleepy.events.some(e => e.by === "mre"));
+});
+
+test("a quiet-town check spots who is on their own", () => {
+  const now = new Date("2026-10-10T11:00:00").getTime();
+  const state = town(now);
+  const olive = state.residents.find(r => r.id === "olive");
+  olive.place = "park";
+  const report = assessTown(state, now);
+  assert.ok(report.quiet);
+  assert.strictEqual(report.lonely[0].id, "olive");
+
+  // Sisters at home together aren't lonely; Finn alone in his cottage is.
+  for (const r of state.residents) { r.place = "homes"; r.needs.fun = 80; r.needs.social = 80; }
+  const lonely = assessTown(state, now).lonely.map(r => r.id);
+  assert.ok(!lonely.includes("olive") && !lonely.includes("hazel") && lonely.includes("finn"), JSON.stringify(lonely));
 });

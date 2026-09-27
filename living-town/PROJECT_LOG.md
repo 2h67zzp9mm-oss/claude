@@ -227,3 +227,28 @@ Save schema 3 migrates 0.2 through 0.4 saves in place.
   - Tap furniture to use it: nap, snack, read, relax or play. Each gives a 30-minute need boost.
   - The server checks ownership, that you're home, and that the furniture exists, and it keeps movement inside the room.
 - Leaving the house clears indoor state.
+
+# Version 0.8.0: Mr. E watches over the town
+
+- **Always visible to players.** Mr. E has a permanent, server-owned position, so every phone sees him in the same place. He strolls the walkways between public places, lingering where people are, and walks more slowly with a lantern at night. Tap him to see what he's doing ("quietly watching Juniper Park…"). While he's announcing a surprise, taps on him come first; otherwise residents beside him get the tap.
+- **Invisible to residents.** He is not a resident, and nothing in the residents' minds reads his position. Their memories of his surprises say "a mysterious surprise" or "a mysterious riddle note" and never name him. The feed still credits him for players. Older memories saved before 0.8 may still say "from Mr. E".
+- **He makes something happen when nothing is going on.** The town counts as quiet when no Mr. E event is running and fewer than two awake residents have talked in the last 5 minutes. After 8 quiet minutes he hurries to the spot and creates a surprise, preferring ones that bring together residents who are on their own or bored. The AI is told who they are.
+- **Change to the checkpoint 2 limits:** surprises used to come on a fixed 25–50 minute timer. Now they come only from a quiet town, and never more than one every 20 minutes. Everything else is unchanged: one AI call at a time, only between 7:00 and 21:00, local only, the same nine event types, and the same filtering. Because this changes what Olive sees, it falls under checkpoint 3.
+- **Tests:** he strolls day and night and stays on the map, residents never name him, a quiet town gets a surprise after 8 minutes but no more than one per 20 minutes, a lively town and a night-time town get none, and phones receive his position. A timing race in the integration test (reading the snapshots folder before it existed, about 1 run in 6) is fixed.
+
+# Version 0.9.0: real house interiors
+
+- **Floor plans** (`shared/interiors.js`, shared by the server and phones): each home is a 192×144 top-down plan with rooms, doorways and a front door.
+  - Sean's House: Olive's room, Hazel's room, Sean's room, the kitchen and the living room.
+  - Milo & Zara's: their room, Nova's room, the kitchen and the living room.
+  - Finn's Cottage: his room, a workroom with a spare bed, and the kitchen and sitting room.
+  - Rose Cottage: three bedrooms for new residents.
+- **Art** (`public/rooms.js`): drawn in code as pixel art. Plank, tile and carpet floors, patterned wallpaper with trim, doorways, and windows whose sky follows the time of day. Sunlight falls on the floor by day. In the evening and at night the rooms darken, and lamps, fairy lights, Hazel's night-light and Finn's fire glow; the lamps go out once everyone is asleep. The fire flickers, pots steam while someone cooks, and the TV comes on while someone plays.
+- **Residents at home** go to the furniture that fits what they're doing (the table for family time, the TV for an old game, the sofa for reading) and walk between rooms through the doorways. Everyone sleeps in their own bed; Milo and Zara share theirs. Anyone who comes home walks in through the front door. Placement is deterministic, so every phone shows the same scene.
+- **Walk in and out.** In Play mode, reaching your own front door zooms the view inside; tapping the front door walks you out onto the path (the new `leave-home` message) and zooms back to the map. The "‹ Town" button only closes the view. Other houses can still be peeked into from their signs.
+- **Use almost anything.** Beyond the bed, sofa, table, fridge, bookshelf and rug, you can use the stove, sink, counter, chairs, fruit bowl, herbs, wardrobe, dresser, clothes rack, bedside and reading lamps, coffee table, beanbag, ball, plants, windows, pictures, TV, easel, record player, fireplace, log pile, workbench, birdhouses and binoculars. Each gives a gentle 30-minute boost to hunger, energy, social or fun. Chairs, sofas and beanbags seat you, and beds tuck you in.
+- **Server checks:** you can only act in your own house, only once you're home, and only with furniture that exists. Taps outside the walls snap onto the floor.
+- **Tests:** every home's rooms can be reached from the front door without leaving the floor; nothing blocks a doorway; every spot can be reached; everyone gets their own bed; activities go to the right furniture; small items are usable and only boost real needs; and the server test uses a sink, a chair, the fridge and the front door.
+- **Checked in a headless iPhone-sized browser** against a throwaway server and a temporary town: walking home zooms inside, the sofa, a chair and a bed work from taps, and the front door takes you out, with no errors. `data/` was not touched.
+- **Not yet:** the cafe, workshop and market interiors (0.10) and upstairs floors (0.11).
+
