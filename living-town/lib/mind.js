@@ -12,6 +12,7 @@
 const { places } = require("../shared/world");
 const { shareKnowledge } = require("./life");
 const will = require("./will");
+const speech = require("./speech");
 
 let random = Math.random;
 function setRandom(fn) { random = typeof fn === "function" ? fn : Math.random; }
@@ -168,6 +169,16 @@ const frictionSubjects = [
   "the rules of a board game",
   "the right way to load a dishwasher"
 ];
+
+const CLOSERS = ["See you later!", "Bye for now!", "Catch you later!", "Have a lovely day!", "Talk soon!"];
+
+function howAreYou(r) {
+  const label = r.mood?.label;
+  if (label === "delighted" || label === "happy") return "Really good, thanks for asking!";
+  if (label === "low" || label === "discouraged") return "A bit tired today, honestly. But okay!";
+  if (label === "tense" || label === "overwhelmed") return "It's been a busy day, but I'm alright.";
+  return "Pretty good, thanks!";
+}
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function pick(list) { return list[Math.floor(random() * list.length)]; }
@@ -469,8 +480,21 @@ function converse(a, b, now, placeName) {
   }
   a.mind.talkedWith[b.id] = now;
   b.mind.talkedWith[a.id] = now;
-  a.speech = { text: line, from: now, until: now + 9000 };
-  b.speech = { text: reply, from: now + 2500, until: now + 11000 };
+  // Take turns: each line waits for the last to finish, with a follow-up and a goodbye.
+  const turns = [[a, line], [b, reply]];
+  if (kind === "interest") {
+    const more = (topicLines[topic] || []).filter(text => !line.includes(text));
+    if (more.length) turns.push([a, voiceLine(a.id, "share", pick(more))], [b, voiceLine(b.id, "reply")]);
+  } else if (kind === "news") {
+    turns.push([a, "Anyway, how are you doing?"], [b, howAreYou(b)]);
+  } else if (kind === "smalltalk") {
+    const theirs = pick(mindFor(b.id).interests);
+    turns.push([b, voiceLine(b.id, "share", pick(topicLines[theirs] || ["it's a nice day"]))], [a, voiceLine(a.id, "reply")]);
+  } else {
+    turns.push([a, tb.agreeableness > 0.6 || ta.agreeableness > 0.6 ? "Okay, okay. Let's agree to disagree." : "Hmph. We'll see."]);
+  }
+  turns.push([random() < 0.5 ? a : b, pick(CLOSERS)]);
+  speech.conversation(turns, now);
 
   const memoryA = kind === "friction" ? `${b.name} and I disagreed about ${topic}.` : kind === "news" ? `I told ${b.name}: ${line}` : `${b.name} and I talked about ${topicLabels[topic] || "the day"}. "${line}"`;
   const memoryB = kind === "friction" ? `${a.name} and I disagreed about ${topic}.` : learned ? `${a.name} told me: ${learned.text}` : `${a.name} said: "${line}"`;

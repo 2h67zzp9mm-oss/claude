@@ -22,6 +22,7 @@
  */
 
 const { places } = require("../shared/world");
+const speech = require("./speech");
 
 const MAX_WISHES = 3;
 const WISH_HOURS = 8;
@@ -182,7 +183,7 @@ function celebrate(state, r, wish, now, ctx) {
   feel(r, "✨", `Wish came true: ${wish.text}`, { valence: 8, stress: -4, hours: 4, now });
   like(r, r.place, 0.15);
   r.memories = [{ at: now, about: r.id, text: `My wish came true: ${wish.text.toLowerCase()}.`, type: "wish" }, ...(r.memories || [])].slice(0, 120);
-  if (!ctx.isControlled(r.id)) r.speech = { text: `✨ ${wish.type === "makeup" ? "So glad we made up!" : "My wish came true!"}`, from: now, until: now + 7000 };
+  if (!ctx.isControlled(r.id)) speech.say(r, `✨ ${wish.type === "makeup" ? "So glad we made up!" : "My wish came true!"}`, now);
   const other = wish.with ? state.residents.find(o => o.id === wish.with) : null;
   if (other && wish.type === "makeup") feel(other, "🤝", `Made up with ${r.name}`, { valence: 4, now });
   ctx.addEvent(`✨ ${r.name}'s wish came true: ${wish.text}.`, now);
@@ -243,18 +244,18 @@ function tryInvite(state, a, now, ctx) {
   if (!friend) return;
   const placeName = places[wish.place].name;
   const pick = list => list[Math.floor(ctx.random() * list.length)];
-  a.speech = { text: pick(INVITE_LINES).replace("{place}", placeName), from: now, until: now + 7000 };
+  const asked = speech.say(a, pick(INVITE_LINES).replace("{place}", placeName), now);
   const tb = ctx.mindFor(friend.id).traits;
   const busy = Boolean(ctx.obligation(friend, new Date(now)));
   const keen = (Number(friend.relationships[a.id]) || 0) / 100 * 0.6 + tb.agreeableness * 0.3
     + (100 - (friend.needs?.social ?? 50)) / 100 * 0.3 + placeBonus(friend, wish.place, []).value * 0.3
     + (ctx.mindFor(friend.id).interests.some(tag => places[wish.place].tags.includes(tag)) ? 0.2 : 0) + ctx.random() * 0.3;
   if (busy || keen < 0.65) {
-    friend.speech = { text: pick(busy ? BUSY_LINES : LATER_LINES), from: now + 2500, until: now + 9000 };
+    speech.say(friend, pick(busy ? BUSY_LINES : LATER_LINES), asked, now);
     feel(a, "🙂", `${friend.name} said maybe later`, { valence: -1, hours: 1, now });
     return;
   }
-  friend.speech = { text: pick(YES_LINES), from: now + 2500, until: now + 9000 };
+  speech.say(friend, pick(YES_LINES), asked, now);
   const why = `going to ${placeName} with ${friend.name}`;
   if (!ctx.go(a, wish.place, why)) return;
   ctx.go(friend, wish.place, `going to ${placeName} with ${a.name}`);

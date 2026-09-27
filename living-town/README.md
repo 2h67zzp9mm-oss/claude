@@ -2,7 +2,7 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.18.0
+## Honest status — 0.18.1
 
 Working now:
 

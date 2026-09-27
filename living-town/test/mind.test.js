@@ -103,7 +103,11 @@ test("conversations use each resident's voice and change relationships", () => {
   const finn = state.residents.find(r => r.id === "finn");
   const before = hazel.relationships.finn;
   const result = mind.converse(hazel, finn, now, "Juniper Park");
-  assert.ok(hazel.speech.text && finn.speech.text);
+  // They take turns: one speaks now, the other's answer is queued for when they finish.
+  const first = hazel.speech || finn.speech;
+  const other = hazel.speech ? finn : hazel;
+  assert.ok(first?.text && other.speechQueue?.length, "a line now, an answer queued");
+  assert.ok(other.speechQueue[0].from >= first.until, "no talking over each other");
   assert.ok(result.event.includes("Juniper Park"));
   assert.notStrictEqual(hazel.relationships.finn, before);
   assert.strictEqual(hazel.memories[0].type, "conversation");

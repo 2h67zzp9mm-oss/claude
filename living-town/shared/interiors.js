@@ -437,6 +437,15 @@
    */
   function locate(r, world) {
     if (!r || !Number.isFinite(r.x) || !Number.isFinite(r.y)) return null;
+    const settled = Math.hypot((r.targetX ?? r.x) - r.x, (r.targetY ?? r.y) - r.y) < 3;
+    // Visiting someone else's home (the Big Top, a friend's house): inside once
+    // they're standing at its door.
+    if (r.visiting) {
+      const b = world.buildings.find(x => x.id === r.visiting);
+      if (!b || !plans[b.id] || !settled) return null;
+      const [doorX, doorY] = world.walkNodes[b.node];
+      return Math.hypot(r.x - doorX, r.y - doorY) < 3 || r.indoor ? b : null;
+    }
     const b = r.place === "homes" ? world.homeOf(r.id) : world.buildings.find(x => x.place === r.place && !x.residents && plans[x.id]);
     if (!b || !plans[b.id]) return null;
     if (Math.hypot((r.targetX ?? r.x) - r.x, (r.targetY ?? r.y) - r.y) >= 3) return null;

@@ -11,6 +11,7 @@
  */
 
 const { places, snapToWalkable } = require("../shared/world");
+const speech = require("./speech");
 
 const MAX_ACTIVE = 3;
 const MAX_OFFERS = 2;
@@ -118,7 +119,7 @@ function complete(state, player, quest, now, reward, addEvent) {
   if (!requester) return;
   requester.relationships[player.id] = Math.min(100, (Number(requester.relationships[player.id]) || 0) + 8);
   player.relationships[requester.id] = Math.min(100, (Number(player.relationships[requester.id]) || 0) + 5);
-  requester.speech = { text: `Thank you so much, ${player.name}! This is for you.`, from: now + 2500, until: now + 9500 };
+  speech.say(requester, `Thank you so much, ${player.name}! This is for you.`, now);
   reward(player, quest.stars, giftFrom(requester), `helped ${requester.name}`);
   addEvent(`${quest.emoji} ${player.name} helped ${requester.name}: ${quest.text.charAt(0).toLowerCase()}${quest.text.slice(1)}.`, now);
 }
@@ -162,7 +163,6 @@ function giveBack(state, player, target, now, ctx) {
   ensure(player);
   const quest = player.quests.find(q => q.kind === "find" && q.found && q.requesterId === target.id);
   if (!quest) return { error: "You haven't found anything of theirs yet." };
-  target.speech = null;
   complete(state, player, quest, now, ctx.reward, ctx.addEvent);
   return { given: quest.item };
 }

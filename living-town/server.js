@@ -34,6 +34,7 @@ const crowd = require("./lib/crowd");
 const will = require("./lib/will");
 const social = require("./lib/social");
 const events = require("./lib/events");
+const speech = require("./lib/speech");
 const tasks = require("./lib/tasks");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
@@ -86,6 +87,8 @@ function normalizeResident(resident) {
   will.ensure(resident);
   tasks.ensure(resident);
   if (!(resident.follow && typeof resident.follow.id === "string" && Number.isFinite(resident.follow.until))) resident.follow = null;
+  if (!(typeof resident.visiting === "string" && world.buildings.some(b => b.id === resident.visiting))) resident.visiting = null;
+  resident.speechQueue = Array.isArray(resident.speechQueue) ? resident.speechQueue.filter(l => l && typeof l.text === "string" && Number.isFinite(l.from) && Number.isFinite(l.until)).slice(0, 6) : [];
   resident.needs = resident.needs && typeof resident.needs === "object" ? resident.needs : {};
   for (const [key, fallback] of Object.entries(DEFAULT_NEEDS)) resident.needs[key] = clamp(finiteOr(resident.needs[key], fallback), 0, 100);
   resident.relationships = resident.relationships && typeof resident.relationships === "object" ? resident.relationships : {};
@@ -203,6 +206,7 @@ function walkTo(resident, x, y) {
   resident.using = null;
   resident.millStroll = false;
   resident.activityAfter = null;
+  resident.visiting = null;
   resident.targetX = x;
   resident.targetY = y;
   resident.path = route(resident.x, resident.y, x, y);
@@ -342,6 +346,9 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
   if (!r.arrived) {
     r.arrived = true;
     if (r.millStroll) r.millStroll = false;
+    // A player's character only goes inside by walking through a door, so
+    // arriving somewhere else they're just looking around outdoors.
+    else if (controlled) r.activity = r.visiting ? `visiting ${world.buildings.find(b => b.id === r.visiting)?.name || "a friend"}` : r.place ? `looking around ${placeName(r)}` : "exploring the street";
     else if (Number(r.activityUntil || 0) <= date.getTime()) {
       mind.onArrive(r, r.place, date);
       r.activityAfter = null;
@@ -349,7 +356,6 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
       const event = (state.effects || []).find(e => e.programme && e.activity && e.place === r.place && e.until > date.getTime());
       if (event && !controlled && Math.random() < 0.7) r.activity = event.activity;
     }
-    if (controlled && !r.place) r.activity = "exploring the street";
   }
   // A life moment is over: back to what they were doing.
   if (r.activityAfter && Number(r.activityUntil || 0) <= date.getTime()) {
@@ -362,7 +368,9 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
 
   // Furniture a player chose inside their house adds its own boosts.
   if (r.using) {
-    if (r.using.until <= date.getTime() || r.place !== (r.using.place || "homes")) r.using = null;
+    // Stops when time's up or they've left the building (visitors have no place of their own).
+    const stillThere = r.using.building ? interiors.locate(r, world)?.id === r.using.building : r.place === (r.using.place || "homes");
+    if (r.using.until <= date.getTime() || !stillThere) r.using = null;
     else for (const [need, rate] of Object.entries(interiors.furniture[r.using.kind].needs)) r.needs[need] = clamp(r.needs[need] + rate * dtHours, 0, 100);
   }
 
@@ -452,6 +460,7 @@ function tick() {
   const dtHours = elapsedSeconds / 3600;
   for (const resident of state.residents) updateResident(resident, dtHours, elapsedSeconds, date);
   millAbout(now);
+  speech.tick(state, now);
 
   if (now - lastSocialCheck >= 15_000) {
     lastSocialCheck = now;
@@ -594,7 +603,7 @@ function residentSummary(r) {
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs: r.needs,
     relationships: r.relationships, profile: r.profile, career: r.career, goals: r.goals, mood: publicMood(r.mood),
     lifeRevision: r.lifeRevision, speech: r.speech || null, playable: isPlayable(r.id), look: r.look || {}, custom: Boolean(r.custom),
-    indoor: r.indoor || null, using: r.using?.kind || null,
+    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null,
     experiences: (r.experiences || []).slice(0, 5), memories: (r.memories || []).slice(0, 5),
     experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length,
     ...will.publicView(r),
@@ -609,7 +618,7 @@ function residentDynamic(r) {
     id: r.id, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: publicMood(r.mood),
     speech: r.speech && r.speech.until > Date.now() ? r.speech : null, lifeRevision: r.lifeRevision,
-    indoor: r.indoor || null, using: r.using?.kind || null
+    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null
   };
 }
 
@@ -674,7 +683,7 @@ function visitorResident(r) {
     id: r.id, name: r.name, color: r.color, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: r.mood ? { label: r.mood.label } : null,
     speech, look: r.look || {}, custom: Boolean(r.custom),
-    indoor: r.indoor || null, using: r.using?.kind || null, playable: false, lifeRevision: 0
+    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null, playable: false, lifeRevision: 0
   };
 }
 
@@ -1065,8 +1074,9 @@ function handleIndoor(ws, msg) {
   if (msg.type === "use") {
     const object = interiors.allObjects(plan).find(o => o.id === msg.objectId);
     if (!object) return reject("There's nothing like that in this room.");
+    if (object.kind === "bed" && building.residents && world.homeOf(r.id)?.id !== building.id) return reject("That's someone else's bed! Try the sofa instead.");
     r.indoor = { x: object.spot[0], y: object.spot[1], objectId: object.id, floor: object.floor };
-    r.using = { kind: object.kind, until: Date.now() + 30 * 60_000, place: r.place };
+    r.using = { kind: object.kind, until: Date.now() + 30 * 60_000, place: r.place, building: building.id };
     r.activity = interiors.furniture[object.kind].activity;
     tasks.onUse(state, r, object.kind, building.id, Date.now(), rewardContext);
   } else {
@@ -1094,7 +1104,12 @@ function handleControl(ws, msg) {
   // Players can only walk on the painted walkways.
   const target = snapToWalkable(clamp(msg.x, MAP.margin, MAP.width - MAP.margin), clamp(msg.y, MAP.margin, MAP.height - MAP.margin));
   walkTo(r, target.x, target.y);
-  r.place = placeAt(r, target.x, target.y);
+  // Every door leads into its own building: your home, a public building, or
+  // (as a visitor) someone else's home, like the Big Top.
+  const door = world.buildings.find(b => interiors.planFor(b.id) && Math.hypot(world.walkNodes[b.node][0] - target.x, world.walkNodes[b.node][1] - target.y) < 4);
+  if (door?.residents && world.homeOf(r.id)?.id !== door.id) { r.place = null; r.visiting = door.id; }
+  else if (door) r.place = door.residents ? "homes" : door.place;
+  else r.place = placeAt(r, target.x, target.y);
   r.asleep = false;
 }
 

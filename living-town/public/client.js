@@ -425,7 +425,9 @@
     scenery.drawLighting(ctx, sky, { lit: id => awake.has(id) });
     drawSigns();
     const now = nowMs();
-    visible.forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text); });
+    // Lower (nearer) people's bubbles first; others make room above them.
+    const bubbles = [];
+    [...visible].reverse().forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text, false, bubbles); });
     drawWeather();
     drawMrE(now);
     scenery.drawAbove(ctx, sky);
@@ -665,26 +667,46 @@
     }
   }
 
-  function drawChatBubble(r, text, magic = false) {
-    const fs = screenPx(11.5);
-    ctx.save();
-    ctx.font = `700 ${fs}px system-ui`;
-    // Wrap into up to three lines that fit a phone-friendly width.
-    const maxWidth = screenPx(210);
+  /** Wrap text into lines no wider than `maxWidth` (using the current font). */
+  function wrapText(g, text, maxWidth) {
     const lines = [];
     let line = "";
     for (const word of String(text).split(/\s+/)) {
       const next = line ? `${line} ${word}` : word;
-      if (ctx.measureText(next).width > maxWidth && line) { lines.push(line); line = word; } else line = next;
+      if (g.measureText(next).width > maxWidth && line) { lines.push(line); line = word; } else line = next;
     }
     if (line) lines.push(line);
-    if (lines.length > 3) { lines.length = 3; lines[2] = `${lines[2].replace(/\s*\S*$/, "")}…`; }
+    return lines;
+  }
+
+  // The whole sentence, never chopped: long lines get a slightly smaller font
+  // before anything is cut. `taken` lists bubbles already drawn this frame;
+  // a bubble that would cover one moves up above it instead.
+  function drawChatBubble(r, text, magic = false, taken = null) {
+    let fs = screenPx(11.5);
+    ctx.save();
+    const maxWidth = screenPx(220);
+    let lines;
+    for (let step = 0; step < 3; step++) {
+      ctx.font = `700 ${fs}px system-ui`;
+      lines = wrapText(ctx, text, maxWidth);
+      if (lines.length <= 4) break;
+      fs *= 0.88;
+    }
+    if (lines.length > 6) { lines.length = 6; lines[5] = `${lines[5].replace(/\s*\S*$/, "")}…`; }
     const width = Math.max(...lines.map(l => ctx.measureText(l).width)) + fs * 1.8;
     const lineH = fs * 1.25;
     const height = lines.length * lineH + fs * 1.1;
     const headY = r.drawY - FEET_ROW * PX;
     const x = Math.max(4, Math.min(MAP.width - width - 4, r.drawX - width / 2));
-    const y = Math.max(4, headY - height - fs * 0.9);
+    let y = headY - height - fs * 0.9;
+    const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+    for (let tries = 0; taken && tries < 6; tries++) {
+      const blocker = taken.find(b => overlaps({ x0: x, y0: y, x1: x + width, y1: y + height }, b));
+      if (!blocker) break;
+      y = blocker.y0 - height - fs * 0.5;
+    }
+    y = Math.max(4, y);
     ctx.fillStyle = magic ? "rgba(245,236,255,.97)" : "rgba(255,255,248,.96)";
     ctx.shadowColor = magic ? "rgba(120,80,220,.55)" : "rgba(0,0,0,.25)";
     ctx.shadowBlur = magic ? 14 : 8;
@@ -694,7 +716,9 @@
     ctx.fillStyle = magic ? "#3b1f73" : "#1a2940"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     lines.forEach((l, i) => ctx.fillText(l, x + width / 2, y + fs * 0.55 + lineH * (i + 0.5)));
     ctx.restore();
-    return { x0: x, y0: y, x1: x + width, y1: y + height + fs * 0.6 };
+    const rect = { x0: x, y0: y, x1: x + width, y1: y + height + fs * 0.6 };
+    if (taken) taken.push(rect);
+    return rect;
   }
 
   // --- Resident sheet ---
@@ -823,8 +847,9 @@
     return mode === "play" && mine && buildingOf(mine)?.id === b.id && isInside(mine);
   }
 
-  // Players can walk into their own home and any public building.
-  function canEnter(b) { return Boolean(me) && (!b.residents || homeOf(me.residentId)?.id === b.id); }
+  // Players can walk into any building: their own home, public buildings, and
+  // other people's homes as a visitor (the Big Top, a friend's house).
+  function canEnter(b) { return Boolean(me) && Boolean(planFor(b.id)); }
 
   function drawSleeper(r, bed, slot) {
     const look = lookFor(r);
@@ -948,14 +973,15 @@
       roomCtx.fillText(p.r.name, x, y);
       if (p.r.speech && nowMs() >= p.r.speech.from && nowMs() < p.r.speech.until) {
         roomCtx.font = "700 14px system-ui";
-        const text = p.r.speech.text.length > 42 ? `${p.r.speech.text.slice(0, 40)}…` : p.r.speech.text;
-        const bw = Math.min(roomCanvas.width - 8, roomCtx.measureText(text).width + 20);
+        const lines = wrapText(roomCtx, p.r.speech.text, 250).slice(0, 5);
+        const bw = Math.min(roomCanvas.width - 8, Math.max(...lines.map(l => roomCtx.measureText(l).width)) + 20);
+        const bh = lines.length * 17 + 8;
         const bx = Math.max(4, Math.min(roomCanvas.width - bw - 4, x - bw / 2));
-        const by = Math.max(4, (p.w.y - FEET_ROW - 12) * RS);
+        const by = Math.max(4, (p.w.y - FEET_ROW - 6) * RS - bh);
         roomCtx.fillStyle = "rgba(255,255,248,.96)";
-        roomCtx.beginPath(); roomCtx.roundRect(bx, by, bw, 24, 11); roomCtx.fill();
+        roomCtx.beginPath(); roomCtx.roundRect(bx, by, bw, bh, 11); roomCtx.fill();
         roomCtx.fillStyle = "#1a2940";
-        roomCtx.fillText(text, bx + bw / 2, by + 12);
+        lines.forEach((l, i) => roomCtx.fillText(l, bx + bw / 2, by + 12 + i * 17));
       }
     }
 
@@ -971,7 +997,7 @@
     $("#interiorHint").textContent = canActInside(b)
       ? `Tap anything to use it: beds, chairs, the sink, the fridge, windows… Tap the floor to walk${plan.stairs ? ", the stairs to go " + (plan.stairs.to ? "up" : "down") : ""}${plan.frontDoor ? ", or the front door to go outside" : ""}.`
       : mode === "play" && canEnter(b)
-        ? `Tap anywhere to walk to ${b.residents ? "your front door" : `the ${b.name} door`} and come inside.`
+        ? `Tap anywhere to walk to ${homeOf(me.residentId)?.id === b.id ? "your front door" : `the ${b.name} door`} and come inside.`
         : "Tap someone to check on them, or tap things to see what they're for.";
   }
 
@@ -1082,7 +1108,7 @@
     if (mode === "play" && canEnter(b)) {
       const [doorX, doorY] = walkNodes[b.node];
       send({ type: "control", residentId: me.residentId, x: doorX, y: doorY });
-      return showToast(b.residents ? "Heading home…" : `Heading to ${b.name}…`);
+      return showToast(homeOf(me.residentId)?.id === b.id ? "Heading home…" : `Heading to ${b.name}…`);
     }
     if (onDoor) return showToast(`The front door of ${b.name}.`);
     if (object) showToast(`${furniture[object.kind].label}: good for ${furniture[object.kind].activity}. Play at home to use it.`);

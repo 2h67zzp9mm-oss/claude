@@ -12,6 +12,7 @@
  */
 
 const will = require("./will");
+const speech = require("./speech");
 const { places } = require("../shared/world");
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -218,8 +219,7 @@ function perform(state, actor, target, actionId, now, ctx, { place = null } = {}
     if (r.mind?.talkedWith) r.mind.talkedWith[r === actor ? target.id : actor.id] = now;
     r.lifeRevision = (r.lifeRevision || 0) + 1;
   }
-  actor.speech = { text: actorLine, from: now, until: now + 7000 };
-  target.speech = { text: targetLine, from: now + 2200, until: now + 10000 };
+  speech.conversation([[actor, actorLine], [target, targetLine]], now);
   if (!event && effect.friction) event = `${target.name} didn't like ${actor.name}'s teasing.`;
   if (!event && accepted && ["hug", "sorry"].includes(actionId)) event = actionId === "hug" ? `${actor.name} and ${target.name} shared a hug.` : `${actor.name} said sorry to ${target.name}, and they made up.`;
   if (event) ctx.addEvent(event, now);

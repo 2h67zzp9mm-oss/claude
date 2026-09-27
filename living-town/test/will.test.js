@@ -126,7 +126,7 @@ test("invitations: friends decide for themselves, busy people say so, players ar
   const state = town();
   const hazel = byId(state, "hazel"), olive = byId(state, "olive");
   const setup = () => {
-    state.residents.forEach(r => { r.wishes = []; r.will.nextInviteAt = Infinity; r.will.nextWishAt = Infinity; r.place = "square"; r.x = 477; r.y = 330; r.speech = null; });
+    state.residents.forEach(r => { r.wishes = []; r.will.nextInviteAt = Infinity; r.will.nextWishAt = Infinity; r.place = "square"; r.x = 477; r.y = 330; r.speech = null; r.speechQueue = []; });
     hazel.x = 470; olive.x = 480;
     hazel.will.nextInviteAt = 0;
     hazel.wishes = [{ type: "do", key: "do:park", place: "park", activity: "watching the ducks", emoji: "🦆", text: "Watch the ducks at Juniper Park", reason: "wants to watch the ducks", createdAt: NOW, until: NOW + 3_600_000 }];
@@ -145,7 +145,7 @@ test("invitations: friends decide for themselves, busy people say so, players ar
   const busy = context(state, { random: () => 0.01, obligation: r => (r.id === "olive" ? { place: "square", strict: true } : null) });
   will.tick(state, NOW, busy);
   assert.deepStrictEqual(busy.moves, [], "Olive has class");
-  assert.match(olive.speech.text, /busy|things to do/);
+  assert.match(olive.speechQueue[0].text, /busy|things to do/, "she answers once Hazel has asked");
 
   setup();
   const player = context(state, { random: () => 0.01, isControlled: id => id === "olive" });

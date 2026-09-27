@@ -52,7 +52,7 @@ test("they're people about it: a warm joke lands, a flop doesn't, and friendship
   const yes = social.perform(state, hazel, finn, "joke", NOW, ctx(state, 0.01));
   assert.ok(yes.accepted);
   assert.ok(finn.relationships.hazel > 50 && finn.feelings.some(f => f.emoji === "😂"));
-  assert.ok(hazel.speech.text && finn.speech.text && finn.speech.from > hazel.speech.from, "she says it, then he answers");
+  assert.ok(hazel.speech.text && finn.speechQueue[0].from >= hazel.speech.until, "she says it, then he answers once she's finished");
   assert.ok(finn.memories[0].text.includes(hazel.speech.text), "he remembers it");
   const before = finn.relationships.hazel;
   const no = social.perform(state, hazel, finn, "joke", NOW + 5000, ctx(state, 0.99));
@@ -143,12 +143,13 @@ test("on a real server: only your own character, only close by, never someone as
   // Walk over to someone awake and say hi.
   const awake = others().find(r => !r.asleep);
   if (awake) {
+    // They may wander a little (people mill about), so keep heading their way until close.
+    let aimed = 0;
     await until(() => {
-      const t = sean.residents.get(awake.id);
-      sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: t.x + 6, y: t.y }));
-      const d = sean.residents.get("dad");
-      return Math.hypot(d.x - t.x, d.y - t.y) < 30 && Math.hypot(d.targetX - d.x, d.targetY - d.y) < 1;
-    }, "Sean walks over", 40000);
+      const t = sean.residents.get(awake.id), d = sean.residents.get("dad");
+      if (Date.now() - aimed > 1500) { aimed = Date.now(); sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: t.x + 6, y: t.y })); }
+      return Math.hypot(d.x - t.x, d.y - t.y) < 30;
+    }, "Sean walks over", 60000);
     await new Promise(resolve => setTimeout(resolve, 1600));
     sean.ws.send(JSON.stringify({ type: "social", residentId: "dad", targetId: awake.id, action: "compliment" }));
     await until(() => count() === 3, "reply");
@@ -159,8 +160,11 @@ test("on a real server: only your own character, only close by, never someone as
       assert.ok(r.actorLine && r.targetLine && r.relationship);
       await until(() => sean.residents.get(awake.id).speech?.text === r.targetLine, "their reply shows as a bubble");
     }
+    // Two in a row: the second is too soon.
+    await new Promise(resolve => setTimeout(resolve, 1600));
     sean.ws.send(JSON.stringify({ type: "social", residentId: "dad", targetId: awake.id, action: "chat" }));
-    await until(() => count() === 4, "reply");
+    sean.ws.send(JSON.stringify({ type: "social", residentId: "dad", targetId: awake.id, action: "joke" }));
+    await until(() => count() === 5, "replies");
     assert.match(result().error || "", /One thing at a time|asleep|closer/, "not too fast");
   }
   sean.ws.close();

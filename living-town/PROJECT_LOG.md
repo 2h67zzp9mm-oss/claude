@@ -409,3 +409,19 @@ Residents now want things of their own and act on them (`lib/will.js`, hooked in
 - **Bandwidth:** the programme is only sent to phones when it changes.
 - **Tests** (`test/events.test.js`): the hourly programme (no repeats, evening rules, the show's hours, the same for everyone, every event turning up within a fortnight); gentle text; hunts (on the walkways, reach, everyone can find everything, a keepsake for all of them, then it ends); gatherings (join once after two minutes); riddles (one try, answer hidden); every kind of favour done properly, including a joke that falls flat not counting and a lost thing found and given back; and on a real server, the line-up reaching phones and a favour being accepted only by its own player.
 
+# Version 0.18.1: conversations that flow, and every door to its own building
+
+- **Conversations take turns** (`lib/speech.js`). Before, both people's bubbles appeared at once, covered each other, and long lines were chopped at three lines with "…".
+  - Now each line waits for the one before, and stays up long enough to read (about 1.8 s plus 0.38 s a word, 2.8–11 s).
+  - A resident's new lines queue behind what they're already saying instead of cutting it off.
+  - Residents' chats run three to five turns: an opener, an answer, a follow-up ("Anyway, how are you doing?", sharing their own news back, or agreeing to disagree), and a goodbye.
+  - Social actions, invitations, wishes coming true and thank-yous all use the same turn-taking.
+  - On the phone, bubbles show the whole sentence (a slightly smaller font for long ones before anything is cut), and a bubble that would cover another moves up above it. Inside views wrap text too, instead of cutting at 42 characters.
+- **Every door leads into its own building.** The Big Top's door is only 62 map units from the Corner Market's centre, so walking to the Big Top used to count as being "at the market", and you ended up inside the Corner Market.
+  - Walking to a door now puts you in exactly that building: your home, a public building, or someone else's home as a visitor (the Big Top, a friend's house).
+  - Visitors can sit, eat and play, but not nap in other people's beds ("That's someone else's bed! Try the sofa instead.").
+  - Players only go inside the cafe, workshop or market by walking through the door, not just by being nearby.
+  - Phones are now told who's visiting, and furniture use is tied to the building you're in (a visitor has no "place" of their own, which used to cancel it straight away).
+- **People at home are in their own home:** a test places each resident at their front door and checks they're inside their own home (the troupe in the Big Top), and that a visitor at the Big Top door is in the Big Top, not the market.
+- **Tests** (`test/speech.test.js` and updates): reading times; turns that never overlap and never get cut off; residents' chats with a follow-up and goodbye; homes; and on a real server, walking into the Big Top (not the market), no napping in its beds, its sofa being fine, leaving, then Finn's Cottage, the market and home. The social server test now keeps heading toward a resident who wanders (people mill about), and checks the rate limit with two actions back to back. The invitation test checks the friend's answer is queued after the question.
+
