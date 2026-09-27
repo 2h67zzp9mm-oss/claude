@@ -85,3 +85,27 @@ test("lost items get found and returned later", async () => {
   mrE.tick(state, state.mre.pending[0].at + 1, helpers(state));
   assert.ok(state.events.some(e => /found Olive's missing red mitten/.test(e.text)));
 });
+
+test("filter allows harmless look-alikes and blocks real matches with endings", () => {
+  for (const ok of ["hello friends", "a warm breeze", "a robin sings", "a healthy diet", "a cozy campfire", "a scarecrow parade", "lovely"]) assert.ok(isSafe(ok), ok);
+  for (const bad of ["the fish died", "monsters!", "burning bright", "she loved it", "crying", "http://x"]) assert.ok(!isSafe(bad), bad);
+});
+
+test("if the AI's resident or place has to be swapped, its announcement is not used", async () => {
+  const state = town(Date.now());
+  state.residents.find(r => r.id === "olive").asleep = true;
+  const gen = async () => ({ type: "gift", residentId: "olive", item: "a marble", announcement: "Psst, Olive... a gift for you!" });
+  const said = await createMrE({ generate: gen, log: { warn() {}, error() {} } }).surprise(state, helpers(state));
+  const receiver = state.residents.find(r => (r.experiences || []).some(e => /surprise from Mr. E/.test(e.text)));
+  assert.notStrictEqual(receiver.id, "olive");
+  assert.ok(said.includes(receiver.name) && !said.includes("Olive"), said);
+});
+
+test("surprises never fail just because it's already raining", async () => {
+  for (let i = 0; i < 25; i++) {
+    const state = town(Date.now());
+    state.effects = [{ kind: "weather", weather: "rain", until: Date.now() + 3_600_000, pulls: {} }];
+    state.mre = { recent: ["gift", "note", "festival"] };
+    assert.ok(await createMrE({ log: { warn() {}, error() {} } }).surprise(state, helpers(state)), `attempt ${i}`);
+  }
+});

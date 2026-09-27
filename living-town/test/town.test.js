@@ -47,6 +47,15 @@ test("custom residents: create, play, customize, persist, move away", async () =
   assert.strictEqual((await api(port, "PUT", `/api/residents/${pipId}/look`, { look: { accessory: "star" } }, pipLogin.cookie)).status, 200);
   await until(() => watcher.residents.get(pipId)?.name === "Pippa" && watcher.residents.get(pipId)?.look?.accessory === "star", "changes broadcast");
 
+  // Re-saving the same age keeps the birthday.
+  const bornBefore = watcher.residents.get(pipId).profile.born;
+  assert.strictEqual((await api(port, "PUT", `/api/residents/${pipId}`, { name: "Pippa", age: 9, homeId: "finnCottage" }, owner)).status, 200);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.strictEqual(watcher.residents.get(pipId).profile.born, bornBefore, "birthday unchanged");
+
+  // A player account for a built-in resident must not overwrite their look on restart.
+  assert.strictEqual((await api(port, "POST", "/api/auth/profiles", { name: "Hazel", residentId: "hazel", pin: "2468" }, owner)).status, 201);
+
   // Survives a restart.
   pipClient.ws.close();
   watcher.ws.close();
@@ -57,6 +66,7 @@ test("custom residents: create, play, customize, persist, move away", async () =
   await until(() => again.residents.get(pipId), "custom resident restored");
   assert.strictEqual(again.residents.get(pipId).name, "Pippa");
   assert.strictEqual(again.residents.get(pipId).profile.age, 9);
+  assert.deepStrictEqual(again.residents.get("hazel").look, {}, "Hazel keeps her own look");
 
   // Moving away needs the player removed first.
   assert.strictEqual((await api(port, "DELETE", `/api/residents/${pipId}`, undefined, owner)).status, 409);

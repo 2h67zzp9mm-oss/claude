@@ -215,7 +215,7 @@ function createAuth({ dataDir, log = console, now = () => Date.now(), playableId
       checkLockout([`setup:${ip}`]);
       if (String(code || "") !== setupCode) { recordFailure([`setup:${ip}`]); throw new AuthError(403, "That setup code is not right. It is printed in the server console."); }
       if (!/^\d{6}$/.test(String(pin || ""))) throw new AuthError(400, "The owner PIN must be 6 digits.");
-      const owner = { id: "sean", name: "Sean", residentId: "dad", role: "owner", ...(await makePinFields(pin)), look: sanitizeLook({ hair: "bald", shirt: "#4fc3a1", accessory: "beard" }) };
+      const owner = { id: "sean", name: "Sean", residentId: "dad", role: "owner", ...(await makePinFields(pin)) };
       if (accounts.profiles.length) throw new AuthError(409, "Town accounts are already configured.");
       accounts.profiles.push(owner);
       persistAccounts();
@@ -249,7 +249,7 @@ function createAuth({ dataDir, log = console, now = () => Date.now(), playableId
       const pin = String(body?.pin || "");
       if (!name || !playableIds().includes(residentId) || !/^\d{4,6}$/.test(pin)) throw new AuthError(400, "Name, a playable resident, and a 4–6 digit PIN are required.");
       if (accounts.profiles.some(profile => profile.residentId === residentId)) throw new AuthError(409, "That resident already has a player.");
-      const profile = { id: `${residentId}-${crypto.randomBytes(3).toString("hex")}`, name, residentId, role: "player", ...(await makePinFields(pin)), look: sanitizeLook(body?.look) };
+      const profile = { id: `${residentId}-${crypto.randomBytes(3).toString("hex")}`, name, residentId, role: "player", ...(await makePinFields(pin)) };
       accounts.profiles.push(profile);
       persistAccounts();
       return safeProfile(profile);

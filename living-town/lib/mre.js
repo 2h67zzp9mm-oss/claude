@@ -46,10 +46,13 @@ const templates = {
 
 // Words Mr. E must never say. Roots match any word starting with them;
 // exact words match whole words only (so "lovely" is fine but "love" is not).
-const BLOCKED_ROOTS = /\b(kill|die|dead|death|blood|injur|weapon|gun|knife|sword|bomb|burn|scar(y|e)|terrif|horror|monster|demon|hell|damn|hate|stupid|idiot|dumb|ugly|kiss|sexy|sex|naked|drunk|beer|wine|alcohol|drug|smok|steal|stole|rob|fight|punch|slap|war|police|arrest|jail|vomit|poop|money|cash|dollar|http|www)/i;
-const BLOCKED_WORDS = /\b(hurt|fire|love|date|dating|crush|fat|sick|pee|cry|lost forever|alone)\b/i;
+// Blocked words match as whole words plus common endings (died, monsters,
+// burning), so harmless words that merely start the same way (hello, warm,
+// robin, diet, lovely, campfire) are still allowed.
+const BLOCKED_WORDS = /\b(kill|die|dead|death|blood|bloody|injury|injuries|injure|weapon|gun|knife|knives|sword|bomb|burn|scary|scare|terrify|terrified|horror|monster|demon|hell|damn|hate|stupid|idiot|dumb|ugly|kiss|sexy|sex|naked|drunk|beer|wine|alcohol|drug|smoke|smoking|steal|stole|stolen|rob|robbed|robber|fight|punch|slap|war|police|arrest|jail|vomit|poop|money|cash|dollar|hurt|fire|love|date|dating|crush|fat|sick|pee|cry|cries|cried|shoot|blame)(s|es|d|ed|ing|er|ers)?\b/i;
+const BLOCKED_PATTERNS = /(https?:|www\.|@\w)/i;
 
-function isSafe(text) { return !BLOCKED_ROOTS.test(text) && !BLOCKED_WORDS.test(text); }
+function isSafe(text) { return !BLOCKED_WORDS.test(text) && !BLOCKED_PATTERNS.test(text); }
 
 function clean(value, max) {
   if (typeof value !== "string") return null;
@@ -145,23 +148,31 @@ function normalizePlan(raw, state, now) {
   const awake = state.residents.filter(r => !r.asleep);
   const byId = id => awake.find(r => r.id === id);
   const plan = { type: raw.type };
+  // If we have to substitute a resident or place, the proposed announcement
+  // may name the wrong person or place, so it is replaced with a template.
+  let substituted = false;
   const needsResident = ["gift", "note", "friends", "lost_item"].includes(plan.type);
   if (needsResident) {
     if (!awake.length) return null;
-    plan.resident = byId(raw.residentId) || pick(awake);
+    plan.resident = byId(raw.residentId);
+    if (!plan.resident) { plan.resident = pick(awake); substituted = true; }
   }
   if (plan.type === "friends") {
     const others = awake.filter(r => r.id !== plan.resident.id);
     if (!others.length) return null;
-    plan.other = (raw.otherResidentId !== plan.resident.id && byId(raw.otherResidentId)) || pick(others);
+    plan.other = raw.otherResidentId !== plan.resident.id ? byId(raw.otherResidentId) : null;
+    if (!plan.other) { plan.other = pick(others); substituted = true; }
   }
-  if (plan.type === "treats") plan.place = ["cafe", "market"].includes(raw.place) ? raw.place : pick(["cafe", "market"]);
-  else if (plan.type === "talent_show") plan.place = "square";
-  else if (["festival", "friends"].includes(plan.type)) plan.place = PUBLIC_PLACES.includes(raw.place) ? raw.place : pick(PUBLIC_PLACES);
-  if (plan.type === "rain" && activeEffects(state, now).some(e => e.weather === "rain")) return null;
+  const allowedPlaces = plan.type === "treats" ? ["cafe", "market"] : plan.type === "talent_show" ? ["square"] : ["festival", "friends"].includes(plan.type) ? PUBLIC_PLACES : null;
+  if (allowedPlaces) {
+    plan.place = allowedPlaces.includes(raw.place) ? raw.place : pick(allowedPlaces);
+    if (plan.place !== raw.place && plan.type !== "talent_show") substituted = true;
+  }
+  const weather = activeEffects(state, now).find(e => e.kind === "weather")?.weather;
+  if ((plan.type === "rain" && weather === "rain") || (plan.type === "sunshine" && weather === "sunny")) return null;
   plan.title = clean(raw.title, 32) || pick(templates.festivalTitles);
   plan.item = clean(raw.item, 28) || pick(plan.type === "lost_item" ? templates.lostItems : templates.gifts);
-  plan.announcement = clean(raw.announcement, 140);
+  plan.announcement = substituted ? null : clean(raw.announcement, 140);
   plan.fromAI = Boolean(raw.fromAI);
   return plan;
 }
@@ -186,8 +197,10 @@ function templateAnnouncement(plan, placeName) {
 function builtInProposal(state, now) {
   const recent = state.mre?.recent || [];
   const hour = new Date(now).getHours();
-  const options = Object.keys(TYPES).filter(type => !recent.slice(0, 3).includes(type) && !(type === "sunshine" && hour >= 18));
-  return { type: pick(options.length ? options : Object.keys(TYPES)) };
+  const weather = activeEffects(state, now).find(e => e.kind === "weather")?.weather;
+  const possible = Object.keys(TYPES).filter(type => !(type === "sunshine" && (hour >= 18 || weather === "sunny")) && !(type === "rain" && weather === "rain"));
+  const fresh = possible.filter(type => !recent.slice(0, 3).includes(type));
+  return { type: pick(fresh.length ? fresh : possible) };
 }
 
 function createMrE({ generate = null, log = console, random = Math.random } = {}) {
@@ -326,7 +339,13 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
         lastBrain = "built-in storyteller (AI offline)";
       }
     }
-    return normalizePlan(builtInProposal(state, now), state, now);
+    // A built-in proposal can still be unusable (e.g. nobody awake for a
+    // gift), so try a few before giving up.
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const plan = normalizePlan(builtInProposal(state, now), state, now);
+      if (plan) return plan;
+    }
+    return null;
   }
 
   /** Run one surprise now. Resolves to the announcement, or null. */

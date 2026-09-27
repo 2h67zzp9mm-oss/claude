@@ -120,12 +120,18 @@ function migrate(parsed, now) {
     resident.look = cast.sanitizeLook(resident.look);
   }
   cast.syncHomes(parsed);
-  // 0.5 kept looks on player accounts; they now live on the resident.
-  for (const [residentId, look] of Object.entries(auth.looks())) {
-    const resident = parsed.residents.find(r => r.id === residentId);
-    if (resident && !Object.keys(resident.look).length && look) {
-      resident.look = cast.sanitizeLook({ style: look.hair, accessory: look.accessory, shirt: look.shirt });
+  // 0.5 kept looks on player accounts; they now live on the resident. Copy
+  // them over once, and only looks a player actually chose (0.5 gave every
+  // new account the same default look, which must not replace a character's own).
+  if (!parsed.accountLooksMigrated) {
+    for (const [residentId, look] of Object.entries(auth.looks())) {
+      const resident = parsed.residents.find(r => r.id === residentId);
+      const isDefault = !look || (look.hair === "short" && look.accessory === "none" && look.shirt === "#64b5f6");
+      if (resident && !Object.keys(resident.look).length && !isDefault) {
+        resident.look = cast.sanitizeLook({ style: look.hair, accessory: look.accessory, shirt: look.shirt });
+      }
     }
+    parsed.accountLooksMigrated = true;
   }
   life.hydrateLifeState(parsed, now);
   for (const resident of parsed.residents) mind.ensureMind(resident);
@@ -537,7 +543,11 @@ app.put("/api/residents/:id", handle((req, res) => {
   const details = cast.validateDetails(req.body || {}, state, { selfId: resident.id });
   const now = Date.now();
   if (details.name) resident.custom.name = resident.name = details.name;
-  if (details.age !== undefined) { resident.custom.born = cast.bornFromAge(details.age, now); resident.lastKnownAge = details.age; }
+  // Only a real age change moves the birthday; re-saving the same age keeps it.
+  if (details.age !== undefined && details.age !== life.ageAt({ born: resident.custom.born }, now)) {
+    resident.custom.born = cast.bornFromAge(details.age, now);
+    resident.lastKnownAge = details.age;
+  }
   if (details.homeId) resident.custom.homeId = details.homeId;
   cast.registerCustom(resident, now);
   cast.syncHomes(state);
@@ -582,7 +592,10 @@ app.post("/api/mre/surprise", handle(async (req, res) => {
   if (Date.now() - lastForcedSurprise < 60_000) throw Object.assign(new Error("Mr. E needs a minute to think up the next surprise."), { status: 429 });
   lastForcedSurprise = Date.now();
   const announcement = await mre.surprise(state, mreHelpers);
-  if (!announcement) throw Object.assign(new Error("Mr. E couldn't find anyone awake to surprise."), { status: 409 });
+  if (!announcement) {
+    lastForcedSurprise = 0; // nothing happened, so don't make the owner wait
+    throw Object.assign(new Error(mre.busy ? "Mr. E is already busy with a surprise." : "Mr. E couldn't think of a surprise right now. Try again in a moment."), { status: 409 });
+  }
   res.json({ announcement, brain: mre.brain });
 }));
 

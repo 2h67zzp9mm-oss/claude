@@ -622,7 +622,7 @@
   }
 
   function showBuilding(b) {
-    const inside = [...residents.values()].filter(r => b.residents ? r.place === "homes" && b.residents.includes(r.id) : r.place === b.place);
+    const inside = [...residents.values()].filter(r => b.residents ? r.place === "homes" && homeOf(r.id)?.id === b.id : r.place === b.place);
     showToast(inside.length ? `${b.name}: ${inside.map(r => r.name + (r.asleep ? " (asleep)" : "")).join(", ")}` : `${b.name}: nobody here right now`);
     if (inside[0]) select(inside[0].id, false);
   }
