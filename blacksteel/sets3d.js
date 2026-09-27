@@ -262,7 +262,8 @@
     const sea = K.makeSea(420, 0x0c1a28, 1.3); sea.position.y = -.2; R.add(sea);
     R.add(new T.HemisphereLight(0x3a4a66, 0x1a0c06, .7));
     const moonL = new T.DirectionalLight(0x9ab4e0, .9); moonL.position.set(-20, 30, 20); R.add(moonL);
-    const glow = new T.PointLight(0xff7a2a, 400, 260, 1.2); glow.position.set(0, 12, -120); R.add(glow);
+    const glow = new T.PointLight(0xff7a2a, 1400, 300, 1.1); glow.position.set(0, 18, -125); R.add(glow);
+    const haze = new T.Mesh(new T.PlaneGeometry(400, 80), new T.MeshBasicMaterial({ color: 0x8a3a14, transparent: true, opacity: .35, depthWrite: false })); haze.position.set(0, 20, -190); R.add(haze);
 
     // the island, burning in the distance
     const island = new T.Group(); island.position.set(0, 0, -150); R.add(island);
@@ -299,7 +300,7 @@
     const sailGeo = new T.PlaneGeometry(3.8, 5, 8, 8), sp = sailGeo.attributes.position;
     for (let i = 0; i < sp.count; i++) { const x = sp.getX(i); sp.setZ(i, -.5 * (1 - (x / 1.9) ** 2)); }
     sailGeo.computeVertexNormals();
-    const sail = new T.Mesh(sailGeo, K.mat(0xc8b894, .95, { side: T.DoubleSide })); sail.position.set(0, 5, -1.35); sail.castShadow = true; ship.add(sail);
+    const sail = new T.Mesh(sailGeo, K.mat(0xc8b894, .95, { side: T.DoubleSide })); sail.position.set(0, 5.6, -1.35); sail.scale.set(.8, .75, 1); sail.castShadow = true; ship.add(sail);
     K.box(.3, .1, .8, K.mat(0x8a7a5a, .9), .6, 5.8, -1.3, sail);
     const wheel = new T.Group(); wheel.position.set(0, 1.3, 3.3); ship.add(wheel);
     const wm = K.mat(0x5a3a20, .6);
@@ -336,9 +337,9 @@
 
     let rocking = 0;
     return {
-      cam: { pos: [0, 4.6, 11.5], look: [0, 2.2, -10], fov: 42 },
-      follow(cp, cl) { cp.set(ship.position.x * .7, 4.6, 11.5); cl.set(ship.position.x * .5, 2.2, -10); },
-      floor: null, sea, bg: 0x04060b, fog: [0x0a0708, .006], exposure: 1.25,
+      cam: { pos: [3.2, 3.4, 9.5], look: [-1, 3, -60], fov: 46 },
+      follow(cp, cl) { cp.set(3.2 + ship.position.x * .8, 3.4, 9.5); cl.set(-1 + ship.position.x * .6, 3, -60); },
+      floor: null, sea, bg: 0x2a130c, fog: [0x2a130c, .0065], exposure: 1.35,
       enter() { ship.position.x = 0; run.on = false; for (const r of rocks) r.visible = false; },
       update(dt, t) {
         rocking = Math.sin(t * .9) * .03;
@@ -437,7 +438,9 @@
     const cols = [0xd1674a, 0xe8c15a, 0x5e8fb8, 0x8ab06a, 0xe39a6b, 0xb07ab0];
     for (let i = 0; i < 16; i++) {
       const a = -1.3 + i / 15 * 2.6, rr = 12 + (i % 3) * 5;
-      house(K, -8 + Math.sin(a) * rr * 1.3, -26 + Math.cos(a) * rr * .4 - (i % 3) * 3, cols[i % 6], { lit: i % 3 === 0, scorched: i % 2 === 0, rot: -a * .6, w: 2.6, h: 2.2 }).position.y = 2 + (i % 3) * 2.2;
+      const hx = -8 + Math.sin(a) * rr * 1.3, hz = -26 + Math.cos(a) * rr * .4 - (i % 3) * 3, hy = 2 + (i % 3) * 2.2;
+      house(K, hx, hz, cols[i % 6], { lit: i % 3 === 0, scorched: i % 2 === 0, rot: -a * .6, w: 2.6, h: 2.2 }).position.y = hy;
+      K.box(3.4, hy, 3.4, K.mat(0x2a2420, .95), hx, hy / 2, hz).rotation.y = -a * .6;
     }
     const fires = [[-12, 3, -20, 2], [-3, 5, -24, 2.4], [4, 3.5, -19, 1.8], [-8, 7, -29, 2.2], [9, 5, -25, 1.6]];
     fires.forEach(([x, y, z, s], i) => K.add(K.fire(x, y, z, s, i < 2)));
@@ -449,7 +452,7 @@
     const boats = [];
     for (const [x, z, r] of [[-1.2, -1.6, .4], [1.8, -2.5, -.3], [-3.4, .2, 1.2], [4, .8, .9]]) {
       const b = new T.Mesh(new T.CylinderGeometry(.8, .8, 3.2, 16, 1, true, 0, Math.PI), boatM);
-      b.rotation.set(0, r, Math.PI / 2); b.rotation.order = "YZX"; b.position.set(x, .02, z); b.scale.set(.55, 1, 1); b.castShadow = b.receiveShadow = true;
+      b.rotation.set(0, r, Math.PI / 2); b.rotation.order = "YZX"; b.position.set(x, .02, z); b.scale.set(.4, .75, .75); b.castShadow = b.receiveShadow = true;
       R.add(b); boats.push(b);
     }
     K.hotspot("boats", boats[0], [.8, 3.2, 1.2], [-.4, -.2], [-1.2, -1.6]);
@@ -491,7 +494,7 @@
     }
 
     // the glass where sand fused, and the missing cliff (after the black arc)
-    const glass = new T.Mesh(new T.CircleGeometry(2.4, 32), K.mat(0x3a5a52, .06, { metalness: .6 }));
+    const glass = new T.Mesh(new T.CircleGeometry(1.4, 32), K.mat(0x9ab0a4, .05, { metalness: .5, transparent: true, opacity: .55 }));
     glass.rotation.x = -Math.PI / 2; glass.position.set(3.4, .015, 1.4); glass.visible = false; R.add(glass);
     K.hotspot("glass", glass, [3.5, .2, 3.5], [2.6, 1.2], [3.4, 1.4]);
     const cliffChunk = K.rock(6, black, 18, 4, -24, R, 1, 1.3, 1, 91);
@@ -534,8 +537,8 @@
     const scarMat = K.mat(0xffffff, .55, { map: scarTex });
 
     return {
-      cam: { pos: [0, 3.4, 11], look: [0, 1.3, -2], fov: 40 },
-      follow(cp, cl, p) { cp.set(p.pos.x * .45, 3.4, 11); cl.set(p.pos.x * .4, 1.3, -2); },
+      cam: { pos: [0, 2.7, 8], look: [0, 1.3, -2], fov: 42 },
+      follow(cp, cl, p) { cp.set(p.pos.x * .6, 2.7, 8); cl.set(p.pos.x * .55, 1.3, -2); },
       floor: { x0: -6, x1: 6.5, z0: -3.5, z1: 2.5 }, floorMesh, sea,
       bg: 0x06050a, fog: [0x0c0808, .012], exposure: 1.2,
       enter(S, opts) {
@@ -870,9 +873,9 @@
     const hand = K.sph(.025, K.mat(0x8a5a3a, .5), -.15, .12, 0, inside);
     K.hotspot("cradle", cradle, [1.4, 1.2, .9, 0, .6, 0], [.9, -1.8], [1.9, -3.1]);
 
-    R.add(new T.HemisphereLight(0x3a4a66, 0x0a0a0a, .5));
+    R.add(new T.HemisphereLight(0x5a6a88, 0x1a1a1a, 1.1));
     const shaft = new T.SpotLight(0x9ab8e8, 30, 16, .5, .6, 1.2); shaft.position.set(-1, 7, 1); shaft.target.position.set(0, 0, -1.4); R.add(shaft); R.add(shaft.target); shaft.castShadow = true;
-    const key = new T.DirectionalLight(0xffd8b0, .6); key.position.set(0, 4, 10); R.add(key);
+    const key = new T.DirectionalLight(0xffd8b0, 1.5); key.position.set(0, 4, 10); R.add(key);
     K.add(K.particles({ count: 80, size: .02, color: 0xcfe0f0, life: [5, 9], at: r => [(r() - .5) * 6, r() * 4, -3 + r() * 5], vel: r => [(r() - .5) * .04, -.03, (r() - .5) * .04], opacity: .6 }));
 
     const sean = K.actor("sean", "sean", -.8, 3.2, Math.PI);
@@ -881,8 +884,8 @@
     K.hotspot("deke", deke.root, [.8, 1.9, .8, 0, .95, 0], null, null);
     let tapT = -1, needleSpin = 0;
     return {
-      cam: { pos: [0, 2.8, 7.6], look: [0, 1.4, -1.6], fov: 44 },
-      follow(cp, cl, p) { cp.set(p.pos.x * .35, 2.8, 7.6); cl.set(p.pos.x * .25, 1.4, -1.6); },
+      cam: { pos: [0, 2.5, 6.2], look: [.3, 1.3, -1.8], fov: 46 },
+      follow(cp, cl, p) { cp.set(p.pos.x * .4, 2.5, 6.2); cl.set(.3 + p.pos.x * .3, 1.3, -1.8); },
       floor: { x0: -3.4, x1: 3.2, z0: -1.9, z1: 3.6 }, floorMesh,
       bg: 0x020203, fog: [0x040506, .05], exposure: 1.3,
       pickPriority: { stone: 1, instruments: 2, cradle: 3 },
@@ -928,7 +931,7 @@
     sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 }); R.add(sun);
     const boat = new T.Group(); R.add(boat);
     const wood = K.mat(0x7a5634, .8, { side: T.DoubleSide });
-    const hull = new T.Mesh(new T.CylinderGeometry(1, 1, 5, 20, 1, true, Math.PI / 2, Math.PI), wood); hull.rotation.z = Math.PI / 2; hull.scale.set(.7, 1, 1); hull.position.y = .3; hull.castShadow = hull.receiveShadow = true; boat.add(hull);
+    const hull = new T.Mesh(new T.CylinderGeometry(1, 1, 5, 20, 1, true, Math.PI, Math.PI), wood); hull.rotation.z = Math.PI / 2; hull.scale.set(.7, 1, 1); hull.position.y = .3; hull.castShadow = hull.receiveShadow = true; boat.add(hull);
     const deck = planks(K, 1.3, 4.6, 61, [110, 80, 52]); deck.rotation.x = -Math.PI / 2; deck.rotation.z = Math.PI / 2; deck.position.y = .02; boat.add(deck);
     K.box(1.3, .08, .35, wood, 0, .5, -1.5, boat);
     K.box(1.3, .08, .35, wood, 0, .5, 1.6, boat);
@@ -961,7 +964,7 @@
     sean.gear({ coat: true, sword: false }); sean.pose("sit", true);
     let gullT = -1;
     return {
-      cam: { pos: [4.8, 2.6, 5.4], look: [0, .8, 0], fov: 40 },
+      cam: { pos: [3.2, 2.1, 3.6], look: [0, .8, .2], fov: 42 },
       floor: null, sea, bg: 0x9ab4c4, fog: [0xa8bccc, .012], exposure: 1.0,
       enter() { paper.visible = false; gull.visible = false; gullT = -1; sean.gear({ coat: true, sword: false }); sean.pose("sit", true); },
       update(dt, t) {
@@ -978,7 +981,8 @@
         }
       },
       events: {
-        gull() { gull.visible = true; gullT = 0; return new Promise(r => setTimeout(r, 2600)); }
+        // Resolves when the gull has landed and the paper is on the boat, however slow the device.
+        gull() { gull.visible = true; gullT = 0; return new Promise(r => { const id = setInterval(() => { if (paper.visible) { clearInterval(id); r(); } }, 100); }); }
       }
     };
   };
