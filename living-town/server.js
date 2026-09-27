@@ -33,6 +33,8 @@ const troupe = require("./lib/troupe");
 const crowd = require("./lib/crowd");
 const will = require("./lib/will");
 const social = require("./lib/social");
+const events = require("./lib/events");
+const tasks = require("./lib/tasks");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
@@ -82,6 +84,7 @@ function finiteOr(value, fallback) { return Number.isFinite(Number(value)) ? Num
 
 function normalizeResident(resident) {
   will.ensure(resident);
+  tasks.ensure(resident);
   if (!(resident.follow && typeof resident.follow.id === "string" && Number.isFinite(resident.follow.until))) resident.follow = null;
   resident.needs = resident.needs && typeof resident.needs === "object" ? resident.needs : {};
   for (const [key, fallback] of Object.entries(DEFAULT_NEEDS)) resident.needs[key] = clamp(finiteOr(resident.needs[key], fallback), 0, 100);
@@ -339,7 +342,13 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
   if (!r.arrived) {
     r.arrived = true;
     if (r.millStroll) r.millStroll = false;
-    else if (Number(r.activityUntil || 0) <= date.getTime()) { mind.onArrive(r, r.place, date); r.activityAfter = null; }
+    else if (Number(r.activityUntil || 0) <= date.getTime()) {
+      mind.onArrive(r, r.place, date);
+      r.activityAfter = null;
+      // Joining in with Mr. E's event here (flying kites, cheering the duck race...).
+      const event = (state.effects || []).find(e => e.programme && e.activity && e.place === r.place && e.until > date.getTime());
+      if (event && !controlled && Math.random() < 0.7) r.activity = event.activity;
+    }
     if (controlled && !r.place) r.activity = "exploring the street";
   }
   // A life moment is over: back to what they were doing.
@@ -372,6 +381,46 @@ let lastAutonomyCheck = 0;
 let lastBirthdayCheck = 0;
 let lastShowCheck = 0;
 let lastWillCheck = 0;
+let lastProgrammeCheck = 0;
+
+// --- Mr. E's programme, favours and rewards (lib/events.js, lib/tasks.js) ---
+
+/** Residents that belong to a player. */
+function playerResidents() {
+  const ids = new Set(auth.profiles().map(p => p.residentId).filter(Boolean));
+  return state.residents.filter(r => ids.has(r.id));
+}
+
+function dayEnd(now) { const d = new Date(now); d.setHours(23, 59, 59, 999); return d.getTime(); }
+
+function socketsOf(residentId) {
+  return [...wss.clients].filter(ws => auth.profileForToken(ws.token)?.residentId === residentId);
+}
+
+/** Town Stars and keepsakes for a player's character, with a little celebration on their phone. */
+function reward(r, stars, keepsake, why, { quiet = false } = {}) {
+  const now = Date.now();
+  tasks.ensure(r);
+  r.stars += stars;
+  if (keepsake) r.keepsakes.push({ emoji: keepsake.emoji, name: keepsake.name, at: now, why });
+  if (!quiet) will.feel(r, keepsake?.emoji || "⭐", `${capitalizeFirst(why)}!`, { valence: 3, now });
+  r.lifeRevision = (r.lifeRevision || 0) + 1;
+  for (const ws of socketsOf(r.id)) send(ws, { type: "reward", residentId: r.id, stars, keepsake: keepsake || null, why, total: r.stars });
+}
+function capitalizeFirst(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
+const rewardContext = { reward, addEvent: (text, at) => addEvent(text, at) };
+
+const programme = events.createProgramme({
+  addEvent: (text, at) => addEvent(text, at),
+  announce(text, placeKey, now) {
+    mre.announce(state, text, placeKey, now);
+    addEvent(`✦ Mr. E: "${text}"`, now, "mre");
+  },
+  showHours: date => ([0, 6].includes(date.getDay()) && state.residents.some(r => troupe.memberFor(r)) ? [troupe.SHOW.from, troupe.SHOW.to - 1] : []),
+  players: playerResidents,
+  reward,
+  random: Math.random
+});
 
 // What free will (lib/will.js) needs from the world. Players' characters are never moved.
 const willContext = {
@@ -422,6 +471,12 @@ function tick() {
   mre.tick(state, now, mreHelpers);
   if (now - lastShowCheck >= 30_000) { lastShowCheck = now; troupe.tick(state, now, addEvent); }
   if (now - lastWillCheck >= 10_000) { lastWillCheck = now; will.tick(state, now, willContext); }
+  if (now - lastProgrammeCheck >= 5000) {
+    lastProgrammeCheck = now;
+    programme.tick(state, now);
+    tasks.tick(state, now, { players: playerResidents, random: Math.random, dayEnd });
+    for (const player of playerResidents()) tasks.onTick(state, player, now, rewardContext);
+  }
   if (now - lastBirthdayCheck >= 60_000) {
     lastBirthdayCheck = now;
     for (const text of life.checkBirthdays(state, now)) addEvent(text, now);
@@ -542,7 +597,8 @@ function residentSummary(r) {
     indoor: r.indoor || null, using: r.using?.kind || null,
     experiences: (r.experiences || []).slice(0, 5), memories: (r.memories || []).slice(0, 5),
     experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length,
-    ...will.publicView(r)
+    ...will.publicView(r),
+    stars: r.stars || 0, keepsakes: (r.keepsakes || []).slice(-60), quests: r.quests || [], questOffers: r.questOffers || []
   };
 }
 
@@ -561,14 +617,20 @@ function residentDetail(r) {
   return { ...residentSummary(r), lifeHistory: r.lifeHistory || [], knowledge: r.knowledge || [], experiences: r.experiences || [], memories: (r.memories || []).slice(0, 30) };
 }
 
-function townPayload() {
+function townPayload({ full = false } = {}) {
   const weather = (state.effects || []).find(e => e.kind === "weather" && e.until > Date.now());
-  return { mre: mre.publicView(state, Date.now()), weather: weather?.weather || "clear", brain: mre.brain };
+  const town = { mre: mre.publicView(state, Date.now()), weather: weather?.weather || "clear", brain: mre.brain };
+  // The programme only goes out when it changes (or with the full state).
+  const view = programme.publicView(state, Date.now());
+  const json = JSON.stringify(view);
+  if (full || json !== lastProgrammeJson) { town.programme = view; if (!full) lastProgrammeJson = json; }
+  return town;
 }
+let lastProgrammeJson = "";
 
 function fullStatePayload() {
   return JSON.stringify({
-    type: "state", now: Date.now(), homes: cast.homeMap(state), town: townPayload(), mreBrain: mre.brain, social: social.menu(),
+    type: "state", now: Date.now(), homes: cast.homeMap(state), town: townPayload({ full: true }), mreBrain: mre.brain, social: social.menu(),
     state: { events: state.events.slice(0, 50), residents: state.residents.map(residentSummary) }
   });
 }
@@ -622,8 +684,7 @@ function visitorEvents(events) {
 }
 
 function visitorTown() {
-  const { mre: mrE, weather } = townPayload();
-  return { mre: mrE, weather };
+  return { mre: mre.publicView(state, Date.now()), weather: townPayload({ full: true }).weather, programme: programme.publicView(state, Date.now()) };
 }
 
 function visitorFullState() {
@@ -869,6 +930,16 @@ function validateClientMessage(raw) {
     return { type: "control", residentId: msg.residentId, x: msg.x, y: msg.y };
   }
   if (msg.type === "release") return { type: "release" };
+  // The programme and favours.
+  if (["collect", "riddle", "quest", "pickup", "give"].includes(msg.type)) {
+    if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId)) return null;
+    const id = value => (typeof value === "string" && value.length <= 80 ? value : null);
+    if (msg.type === "collect") return id(msg.itemId) && { type: "collect", residentId: msg.residentId, itemId: msg.itemId };
+    if (msg.type === "riddle") return Number.isInteger(msg.choice) && msg.choice >= 0 && msg.choice < 3 && { type: "riddle", residentId: msg.residentId, choice: msg.choice };
+    if (msg.type === "quest") return id(msg.offerId) && { type: "quest", residentId: msg.residentId, offerId: msg.offerId, accept: msg.accept === true };
+    if (msg.type === "pickup") return id(msg.questId) && { type: "pickup", residentId: msg.residentId, questId: msg.questId };
+    if (msg.type === "give") return id(msg.targetId) && { type: "give", residentId: msg.residentId, targetId: msg.targetId };
+  }
   if (msg.type === "social") {
     if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId) || typeof msg.targetId !== "string" || msg.targetId.length > 64) return null;
     if (typeof msg.action !== "string" || !social.ACTIONS[msg.action]) return null;
@@ -906,6 +977,27 @@ function detailPayload(resident) {
   return json;
 }
 
+// Collecting hunt items, answering riddles, and favours.
+function handlePlay(ws, msg) {
+  const reply = payload => send(ws, { type: "play-result", kind: msg.type, ...payload });
+  const profile = auth.profileForToken(ws.token);
+  if (!profile) return reply({ error: "Sign in to play." });
+  if (profile.residentId !== msg.residentId) return reply({ error: "You can only play as your own character." });
+  const r = state.residents.find(item => item.id === msg.residentId);
+  if (!r) return reply({ error: "That character isn't in town." });
+  const now = Date.now();
+  if (msg.type === "collect") return reply(programme.collect(state, r, msg.itemId, now));
+  if (msg.type === "riddle") return reply(programme.answer(state, r, msg.choice, now));
+  if (msg.type === "quest") { const result = tasks.accept(r, msg.offerId, msg.accept); if (result.accepted) result.accepted = result.accepted.text; return reply(result); }
+  if (msg.type === "pickup") return reply(tasks.pickUp(r, msg.questId));
+  if (msg.type === "give") {
+    const target = state.residents.find(item => item.id === msg.targetId);
+    if (!target || target === r) return reply({ error: "There's nobody like that here." });
+    if (Math.hypot(r.x - target.x, r.y - target.y) > SOCIAL_RANGE) return reply({ error: `Get a bit closer to ${target.name} first.` });
+    return reply(tasks.giveBack(state, r, target, now, rewardContext));
+  }
+}
+
 // A player's character starts a social interaction with someone nearby.
 const SOCIAL_RANGE = 48;
 function handleSocial(ws, msg) {
@@ -933,6 +1025,7 @@ function handleSocial(ws, msg) {
     },
     goTo: (who, placeKey, why) => willContext.go(who, placeKey, why)
   }, { place: msg.place });
+  if (!result.error) tasks.onSocial(state, actor, target, msg.action, result.accepted, now, { ...rewardContext, place: msg.place });
   reply(result);
 }
 
@@ -975,6 +1068,7 @@ function handleIndoor(ws, msg) {
     r.indoor = { x: object.spot[0], y: object.spot[1], objectId: object.id, floor: object.floor };
     r.using = { kind: object.kind, until: Date.now() + 30 * 60_000, place: r.place };
     r.activity = interiors.furniture[object.kind].activity;
+    tasks.onUse(state, r, object.kind, building.id, Date.now(), rewardContext);
   } else {
     // Upstairs or down (a house without that floor keeps you on the ground).
     const floor = plan.floors[msg.floor] ? msg.floor : 0;
@@ -1020,6 +1114,7 @@ wss.on("connection", (ws, req) => {
     else if (msg.type === "release") releaseController(ws);
     else if (msg.type === "use" || msg.type === "indoor-move" || msg.type === "leave-home") handleIndoor(ws, msg);
     else if (msg.type === "social") handleSocial(ws, msg);
+    else if (["collect", "riddle", "quest", "pickup", "give"].includes(msg.type)) handlePlay(ws, msg);
     else if (msg.type === "inspect") {
       // Rate-limited: a burst of requests collapses into the latest one.
       ws.pendingInspect = msg.residentId;

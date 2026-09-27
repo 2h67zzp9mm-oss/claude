@@ -390,3 +390,22 @@ Residents now want things of their own and act on them (`lib/will.js`, hooked in
 - **Test fixes found while releasing:** the "free time follows personality" test now checks what each personality prefers (the top score) separately from what free will then chooses. With free will, Hazel's picks spread enough that park against home could flip by one. The social server test now walks Sean well away from everyone before checking an out-of-reach chat, instead of assuming someone was already far away. The restart gate held back a restart until both were fixed.
 - **Checked on a headless phone:** tapping a resident while playing opens the menu with the right friendship label (hug hidden until you're closer), and choosing an action walks your character over.
 
+# Version 0.18.0: always something going on, with favours and rewards
+
+- **Mr. E's programme** (`lib/events.js`). Every hour from 7:00 to 20:00 he starts a town event lasting 30–45 minutes, announces it in the feed and his speech bubble, and hurries over. Residents are drawn to it and join in ("flying a kite", "cheering on the duck race").
+  - Hunts: golden acorns, feathers, river shells, fallen stars in the evening. The items sit on the walkways, and every player can find every one, so the sisters never compete for them.
+  - Gatherings: duck race, kite hour, chalk art, bubble parade, band, paper boat race, snack stand, guess the pumpkin, story time, firefly count. Two minutes there counts as joining in.
+  - Riddles: three answers to choose from, one try each; phones never receive the answer.
+  - The line-up is worked out from the date, so everyone sees the same day and it can be shown ahead. It never repeats within a day, keeps evening events for the evening, and leaves the circus show's weekend hours free.
+- **Favours** (`lib/tasks.js`). Each player gets offers through the day (every 20–40 minutes, at most two waiting) from residents who know them, shown as a ❗ over their head. Tap them to hear the favour and say "I'll help!" or "Not now". Up to three at a time, lasting until the end of the day. The kinds:
+  - Find something they lost: it appears somewhere in town; tap it, then give it back.
+  - Make them laugh with a joke, give a hug (only if you're close or family), play rock-paper-scissors, or cheer them up with a compliment. These count only if they go well.
+  - Invite a friend of theirs somewhere.
+  - Make them a hot chocolate at the cafe (use the machine).
+  - Check on the ducks or the market flowers.
+- **Rewards.** ⭐ Town Stars and keepsakes go into a sticker book on each player's character. There's a keepsake for each event, and a personal thank-you gift from each resident (Finn's carved wooden bird, Milo's cinnamon bun sticker, Nova's friendship bracelet, Plum's clown nose...). A little burst of stars appears on your character. Deliberately no money, no streaks and no "you'll lose it".
+- **On the phone:** an event banner (what's on, time left, your progress; tap for today's line-up, or to answer a riddle), a Today card (line-up, your favours, your stars and sticker book), glinting items to tap on the map (walking over if needed), ❗ and 🎁 markers over residents, a favour prompt at the top of the social menu, and a riddle card. The visitor's window shows the programme and hunt items, but not favours or stickers.
+- **Child safety:** all event text, riddles, favour lines, lost things and gifts are hand-written and pass Mr. E's word filter (tested). They work the same whether or not his AI brain is on.
+- **Bandwidth:** the programme is only sent to phones when it changes.
+- **Tests** (`test/events.test.js`): the hourly programme (no repeats, evening rules, the show's hours, the same for everyone, every event turning up within a fortnight); gentle text; hunts (on the walkways, reach, everyone can find everything, a keepsake for all of them, then it ends); gatherings (join once after two minutes); riddles (one try, answer hidden); every kind of favour done properly, including a joke that falls flat not counting and a lost thing found and given back; and on a real server, the line-up reaching phones and a favour being accepted only by its own player.
+

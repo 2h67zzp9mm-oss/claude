@@ -140,7 +140,8 @@
       renderSelected();
     } else if (msg.type === "tick") {
       setClock(msg.now);
-      if (msg.town) { town = msg.town; if (msg.town.brain) mreBrain = msg.town.brain; }
+      // The programme only comes when it changes, so keep the last one.
+      if (msg.town) { town = { ...msg.town, programme: msg.town.programme || town.programme }; if (msg.town.brain) mreBrain = msg.town.brain; }
       msg.changed.forEach(mergeResident);
       msg.residents.forEach(mergeResident);
       if (msg.events.length) {
@@ -149,6 +150,10 @@
         renderFeed();
       }
       renderSelected();
+    } else if (msg.type === "play-result") {
+      showPlayResult(msg);
+    } else if (msg.type === "reward") {
+      celebrate(msg);
     } else if (msg.type === "social-result") {
       showSocialResult(msg);
     } else if (msg.type === "resident-detail") {
@@ -367,6 +372,8 @@
     moveMrE(dt);
     followMyDoor();
     followSocial();
+    followPlay();
+    if (time - lastBanner > 500) { lastBanner = time; updateBanner(); }
     if (interior.id) drawInterior(dt);
     else if (backing) drawTown(dt);
     updateClock();
@@ -408,8 +415,13 @@
       }
     }
 
+    drawFindables();
+    const mineNow = myResident();
+    favourMarks.ask = new Set((mineNow?.questOffers || []).map(q => q.requesterId));
+    favourMarks.give = new Set((mineNow?.quests || []).filter(q => q.kind === "find" && q.found).map(q => q.requesterId));
     const visible = [...residents.values()].filter(r => !hiddenInside(r)).sort((a, b) => a.drawY - b.drawY);
     visible.forEach(drawResident);
+    drawBursts();
     scenery.drawLighting(ctx, sky, { lit: id => awake.has(id) });
     drawSigns();
     const now = nowMs();
@@ -491,6 +503,13 @@
     }
 
     // Names for the selected resident, or for everyone once zoomed in.
+    // A favour to ask you (❗), or their lost thing found (🎁).
+    const mark = favourMarks.give.has(r.id) ? "🎁" : favourMarks.ask.has(r.id) ? "❗" : null;
+    if (mark) {
+      const my = y - FEET_ROW * PX - 7 + Math.sin(performance.now() / 300) * 1.5;
+      ctx.font = `${screenPx(15)}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(mark, x, my - (r.id === selectedId ? 6 : 0));
+    }
     if (r.id !== selectedId && camera.z < 1.1) return;
     const fs = screenPx(10);
     ctx.font = `700 ${fs}px system-ui`;
@@ -1089,6 +1108,12 @@
     if (!me || !socialActions.length) return;
     social.target = r.id;
     const rel = relationTo(r);
+    // A favour they'd like to ask, or their lost thing to give back.
+    const mine = myResident();
+    const offer = (mine?.questOffers || []).find(q => q.requesterId === r.id);
+    const giving = (mine?.quests || []).find(q => q.kind === "find" && q.found && q.requesterId === r.id);
+    $("#socialFavour").innerHTML = (offer ? `<div class="favour"><p><b>❗ ${escapeHtml(r.name)}:</b> “${escapeHtml(offer.ask)}”</p><div><button data-offer="${escapeHtml(offer.id)}" data-yes="1">I'll help! +${offer.stars}⭐</button><button data-offer="${escapeHtml(offer.id)}">Not now</button></div></div>` : "")
+      + (giving ? `<div class="favour"><button data-give="${escapeHtml(r.id)}">🎁 Give back the ${escapeHtml(giving.item.name)}</button></div>` : "");
     $("#socialName").textContent = r.name;
     $("#socialRel").textContent = `${rel.emoji} ${rel.label}`;
     $("#socialActions").innerHTML = socialActions
@@ -1100,6 +1125,14 @@
   }
 
   function closeSocial() { socialEl.classList.add("hidden"); social.target = null; }
+
+  $("#socialFavour").addEventListener("click", event => {
+    const offer = event.target.closest("button[data-offer]");
+    const give = event.target.closest("button[data-give]");
+    const target = residents.get(social.target);
+    if (offer) { send({ type: "quest", residentId: me.residentId, offerId: offer.dataset.offer, accept: Boolean(offer.dataset.yes) }); closeSocial(); }
+    if (give && target) { closeSocial(); sendNear(target, { type: "give", residentId: me.residentId, targetId: target.id }); }
+  });
 
   $("#socialClose").addEventListener("click", closeSocial);
   $("#socialActions").addEventListener("click", event => {
@@ -1126,7 +1159,11 @@
     const target = residents.get(social.target);
     closeSocial();
     if (!target || !me) return;
-    const request = { type: "social", residentId: me.residentId, targetId: target.id, action, ...(place ? { place } : {}) };
+    sendNear(target, { type: "social", residentId: me.residentId, targetId: target.id, action, ...(place ? { place } : {}) });
+  }
+
+  /** Send a request to someone, walking over first if they're too far away. */
+  function sendNear(target, request) {
     const mine = residents.get(me.residentId);
     if (mine && Math.hypot(mine.x - target.x, mine.y - target.y) <= SOCIAL_NEAR && buildingOf(mine)?.id === buildingOf(target)?.id) return send(request);
     // Too far: walk over first, then do it.
@@ -1155,6 +1192,143 @@
     const action = socialActions.find(a => a.id === msg.action);
     const name = target?.name || "They";
     showToast(`${action?.emoji || "💬"} ${msg.accepted ? `${name} liked that!` : `${name} wasn't keen this time.`} · ${msg.relationship}`);
+  }
+
+  // --- Mr. E's programme, favours and rewards ---
+  const banner = $("#eventBanner");
+  const todayEl = $("#todayCard");
+  const favourMarks = { ask: new Set(), give: new Set() };
+  let findables = [];
+  let pendingPlay = null;
+  let lastBanner = 0;
+  const bursts = [];
+
+  function programme() { return town.programme || null; }
+  function myResident() { return me ? residents.get(me.residentId) : null; }
+  function timeLabel(ms) { return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
+  function currentEvent() { const now = programme()?.now; return now && now.end > nowMs() ? now : null; }
+  function riddleForMe() { const e = currentEvent(); const mine = myResident(); return e?.kind === "riddle" && mine && !e.answered.includes(mine.id) ? e : null; }
+
+  function updateBanner() {
+    const pg = programme();
+    if (!pg) return banner.classList.add("hidden");
+    const now = nowMs();
+    const event = currentEvent();
+    const mine = myResident();
+    let text;
+    if (event) {
+      let extra = "";
+      if (event.kind === "hunt" && mine) extra = ` · ${event.items.filter(i => i.takenBy.includes(mine.id)).length}/${event.items.length} found`;
+      if (event.kind === "gather" && mine && event.joined.includes(mine.id)) extra = " · joined ✓";
+      if (event.kind === "riddle" && mine) extra = event.answered.includes(mine.id) ? " · answered ✓" : " · tap to answer";
+      text = `${event.emoji} ${event.name} · ${event.placeName} · ${Math.max(1, Math.round((event.end - now) / 60000))} min left${extra}`;
+    } else {
+      const next = pg.today.find(e => e.start > now);
+      text = next ? `Next: ${next.emoji} ${next.name} at ${timeLabel(next.start)}` : "That's all for today. More tomorrow!";
+    }
+    if (banner.textContent !== text) banner.textContent = text;
+    banner.classList.remove("hidden");
+  }
+
+  function openToday() {
+    const pg = programme();
+    const now = nowMs();
+    const mine = myResident();
+    const rows = (pg?.today || []).map(e => `<li class="${e.end < now ? "past" : e.start <= now ? "now" : ""}"><time>${timeLabel(e.start)}</time><b>${e.emoji}</b><span>${escapeHtml(e.name)} <small>${escapeHtml(e.place)}</small></span></li>`).join("");
+    const quests = (mine?.quests || []).map(q => `<li><b>${q.emoji}</b><span>${escapeHtml(q.text)}${q.kind === "find" && q.found ? " <em>· found! Take it back</em>" : ""} <small>+${q.stars}⭐</small></span></li>`).join("");
+    const offers = (mine?.questOffers || []).map(q => `<li><b>❗</b><span>${escapeHtml(q.requesterName)} has a favour to ask. Find them in town!</span></li>`).join("");
+    const stickers = (mine?.keepsakes || []).slice().reverse().map(k => `<span title="${escapeHtml(k.name)}">${escapeHtml(k.emoji)}</span>`).join("");
+    todayEl.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button>
+      <h2>Today in Living Town</h2><ol class="today-list">${rows}</ol>
+      ${mine ? `<h3>Favours</h3><ul class="today-list">${quests + offers || "<li><b>❗</b><span>Look for a ❗ over someone in town. They might need your help!</span></li>"}</ul>
+      <h3>⭐ ${mine.stars || 0} Town Stars · Sticker book</h3><div class="sticker-book">${stickers || "<em>Earn stickers from events and favours!</em>"}</div>` : ""}</div>`;
+    todayEl.classList.remove("hidden");
+  }
+
+  function openRiddle() {
+    const event = riddleForMe();
+    if (!event) return openToday();
+    todayEl.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><h2>🔮 Mr. E's riddle</h2>
+      <p class="riddle-q">${escapeHtml(event.riddle.q)}</p><div class="riddle-options">${event.riddle.options.map((o, i) => `<button data-choice="${i}">${escapeHtml(o)}</button>`).join("")}</div></div>`;
+    todayEl.classList.remove("hidden");
+  }
+
+  banner.addEventListener("click", () => (mode === "play" && riddleForMe() ? openRiddle() : openToday()));
+  todayEl.addEventListener("click", event => {
+    const choice = event.target.closest("button[data-choice]");
+    if (choice) { send({ type: "riddle", residentId: me.residentId, choice: Number(choice.dataset.choice) }); todayEl.classList.add("hidden"); return; }
+    if (event.target.closest(".today-close") || event.target === todayEl) todayEl.classList.add("hidden");
+  });
+
+  // Hunt items (everyone can find every one) and lost things for your favours.
+  function drawFindables() {
+    const event = currentEvent();
+    const mine = myResident();
+    findables = [];
+    if (event?.kind === "hunt") for (const item of event.items) if (!mine || !item.takenBy.includes(mine.id)) findables.push({ x: item.x, y: item.y, emoji: event.itemEmoji, request: me && { type: "collect", residentId: me.residentId, itemId: item.id } });
+    for (const q of mine?.quests || []) if (q.kind === "find" && !q.found) findables.push({ x: q.x, y: q.y, emoji: q.item.emoji, request: { type: "pickup", residentId: me.residentId, questId: q.id } });
+    const t = performance.now() / 1000;
+    ctx.save();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "10px system-ui";
+    for (const it of findables) {
+      const bob = Math.sin(t * 3 + it.x) * 1.2;
+      ctx.globalAlpha = 0.35; ctx.fillStyle = "#fff6c2";
+      ctx.beginPath(); ctx.arc(it.x, it.y - 4 + bob, 6 + Math.sin(t * 4 + it.y), 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillText(it.emoji, it.x, it.y - 4 + bob);
+    }
+    ctx.restore();
+  }
+
+  function goAndDo(request, x, y) {
+    const mine = myResident();
+    if (!request || !mine) return;
+    if (Math.hypot(mine.x - x, mine.y - y) <= 24) return send(request);
+    pendingPlay = { request, x, y, since: performance.now(), aimed: 0 };
+    showToast("Heading over…");
+  }
+
+  function followPlay() {
+    const mine = myResident();
+    if (!pendingPlay || !mine) return;
+    if (performance.now() - pendingPlay.since > 40_000 || mode !== "play") { pendingPlay = null; return; }
+    if (Math.hypot(mine.x - pendingPlay.x, mine.y - pendingPlay.y) <= 24) { send(pendingPlay.request); pendingPlay = null; return; }
+    if (performance.now() - pendingPlay.aimed > 2500) {
+      pendingPlay.aimed = performance.now();
+      const spot = snapToWalkable(pendingPlay.x, pendingPlay.y);
+      send({ type: "control", residentId: me.residentId, x: spot.x, y: spot.y });
+    }
+  }
+
+  function showPlayResult(msg) {
+    if (msg.error) return showToast(msg.error);
+    if (msg.kind === "collect") return showToast(`${msg.item.emoji} Found ${msg.found} of ${msg.total}!`);
+    if (msg.kind === "riddle") return showToast(msg.right ? "🔮 Correct! Mr. E is impressed." : `🔮 Good guess! The answer was: ${msg.answer}.`);
+    if (msg.kind === "quest") return showToast(msg.accepted ? `✅ You're helping: ${msg.accepted}` : "Maybe later, then!");
+    if (msg.kind === "pickup") return showToast(`${msg.found.emoji} Found the ${msg.found.name}! Take it back to ${msg.forName}.`);
+  }
+
+  // Stars burst from your character when you earn something.
+  function celebrate(msg) {
+    const mine = myResident();
+    if (mine) bursts.push({ x: mine.drawX, y: mine.drawY - 20, at: performance.now(), big: Boolean(msg.keepsake) });
+    if (msg.keepsake || msg.stars > 1) showToast(`⭐ +${msg.stars}${msg.keepsake ? ` · ${msg.keepsake.emoji} ${msg.keepsake.name}` : ""} (${msg.why})`);
+  }
+
+  function drawBursts() {
+    const now = performance.now();
+    while (bursts.length && now - bursts[0].at > 1200) bursts.shift();
+    ctx.save();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (const b of bursts) {
+      const k = (now - b.at) / 1200;
+      ctx.globalAlpha = 1 - k;
+      ctx.font = `${b.big ? 9 : 7}px system-ui`;
+      for (let i = 0; i < (b.big ? 10 : 5); i++) {
+        const a = (i / (b.big ? 10 : 5)) * Math.PI * 2;
+        ctx.fillText("⭐", b.x + Math.cos(a) * k * 22, b.y + Math.sin(a) * k * 16 - k * 6);
+      }
+    }
+    ctx.restore();
   }
 
   // --- Input ---
@@ -1190,7 +1364,11 @@
     // While Mr. E is announcing, his bubble and body come first so residents
     // beside him don't swallow the tap; otherwise residents come first.
     const speaking = mreSpeaking(nowMs());
+    if (playing && tappedMrE(p) && riddleForMe()) return openRiddle();
     if (speaking && tappedMrE(p)) return showToast(mreTapText(nowMs()));
+    // Hunt items and lost things for favours: tap to collect (walking over if needed).
+    const findable = playing && findables.find(it => Math.hypot(it.x - p.x, it.y - (p.y + 4)) < 10);
+    if (findable) return goAndDo(findable.request, findable.x, findable.y);
     const hit = [...residents.values()]
       .filter(r => !hiddenInside(r) && r.id !== (playing ? me.residentId : null))
       .sort((a, b) => b.drawY - a.drawY)

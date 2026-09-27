@@ -23,6 +23,7 @@
       <section class="world-card">
         <canvas id="townCanvas" aria-label="Living Town map"></canvas>
         <div class="place-chip" id="placeChip">Living Town</div>
+        <button id="eventBanner" class="event-banner hidden" aria-label="Today in Living Town"></button>
         <div class="zoom-hint">Drag to explore · Pinch to zoom · Tap to move</div>
         <button id="recenterButton" class="map-button" aria-label="Center map">⌖</button>
         <div id="interior" class="interior hidden" aria-live="polite">
@@ -37,6 +38,7 @@
         </div>
         <div id="socialMenu" class="social-menu hidden" role="dialog" aria-label="What to do">
           <div class="social-head"><strong id="socialName"></strong><span id="socialRel"></span><button id="socialClose" aria-label="Close">✕</button></div>
+          <div id="socialFavour"></div>
           <div id="socialActions" class="social-actions"></div>
           <div id="socialPlaces" class="social-actions hidden"></div>
         </div>
@@ -104,6 +106,7 @@
         <ul id="returnEvents"></ul>
         <button id="dismissReturn" class="wide-button">Back to town</button>
       </section>
+      <section id="todayCard" class="today-card hidden" aria-live="polite"></section>
       <div id="toast" class="toast hidden" role="status"></div>
     </main>
     <script src="shared/world.js"></script>

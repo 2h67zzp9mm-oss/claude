@@ -535,7 +535,15 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
     };
   }
 
-  return { tick, surprise, ensureState, checkBrain, publicView, get brain() { return lastBrain; }, get busy() { return busy; } };
+  /** Announce something (the daily programme) and hurry over to it. */
+  function announce(state, text, placeKey, now) {
+    ensureState(state);
+    state.mre.visit = { until: now + ANNOUNCE_MS, text };
+    const spot = world.spotFor(null, placeKey);
+    if (spot) { state.mre.walker.watching = placeKey; walkTo(state.mre.walker, spot.x + 18, spot.y + 6, true); }
+  }
+
+  return { tick, surprise, announce, ensureState, checkBrain, publicView, get brain() { return lastBrain; }, get busy() { return busy; } };
 }
 
 module.exports = { createMrE, ollamaGenerator, normalizePlan, assessTown, isSafe, clean, TYPES, SYSTEM_PROMPT };
