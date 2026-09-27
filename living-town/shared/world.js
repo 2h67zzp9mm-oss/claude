@@ -23,7 +23,7 @@
       // flower beds and benches), and shows use a little stage in front of
       // the fountain steps. Traced from the painted map.
       area: { x: 474, y: 262, rMin: 84, rMax: 112, yScale: 0.8 },
-      stage: { x: 474, y: 334, w: 70, h: 14 }
+      stage: { x: 474, y: 347, w: 96, h: 10 }
     },
     cafe: {
       name: "Moonbeam Cafe", x: 665, y: 180, color: "#d47f65", quiet: 0.4,
