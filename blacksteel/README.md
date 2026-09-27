@@ -2,7 +2,7 @@
 
 A King's Quest VII–style 3D adventure game of the Blacksteel Pirates prologue. Shannon tells the story. The player plays young Sean.
 
-Open `index.html` in a browser (phone, tablet, or PC). No install, no server. The 3D scenes use three.js from a CDN.
+Serve this folder with `node server.js` (see Run on Mouse) and open it in a browser. It has to be served, not opened as a file, for the voices to load. The 3D scenes use three.js from a CDN, so phones need internet access while playing.
 
 ## The story (all nine chapters of the written prologue)
 
@@ -25,6 +25,35 @@ Open `index.html` in a browser (phone, tablet, or PC). No install, no server. Th
 - Hint button for both players. In Hazel's game the next thing to try glows after a short wait.
 - **Voice**: every line is pre-recorded with ElevenLabs voices, one voice per character (see below). **Auto** turns the page when a line finishes. Both can be switched off.
 
+## Run on Mouse (for phones on Tailscale)
+
+The game runs next to Living Town on Mouse. Each game has its own port, so they never collide:
+
+| Game | Address on a family phone |
+|---|---|
+| Living Town | `http://<mouse-tailscale-ip>:4310` |
+| Blacksteel Pirates | `http://<mouse-tailscale-ip>:4320` |
+
+If MagicDNS is on in Tailscale, `http://mouse:4320` works too. `server.js` needs only Node (already on Mouse for Living Town), with no packages to install. It listens on `127.0.0.1:4320` by default, so it is never exposed to the home network by accident.
+
+Try it once by hand:
+
+```
+cd /path/to/claude/blacksteel
+HOST=$(tailscale ip -4) node server.js
+```
+
+Then install it as a service so it starts at boot and restarts after crashes. `deploy/com.blacksteel.game.plist` is a template: fill in the Node path (`which node`), the full path to this `blacksteel` folder, and Mouse's Tailscale address (`tailscale ip -4`), then:
+
+```
+cp deploy/com.blacksteel.game.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.blacksteel.game.plist
+```
+
+Logs go to `/tmp/blacksteel.log`. To update the game later, `git pull` in the checkout; the server serves the new files straight away (reload the page on the phone). To stop it: `launchctl unload ~/Library/LaunchAgents/com.blacksteel.game.plist`.
+
+The server only serves the game: not `server.js`, `deploy/`, dotfiles, or `voices/cache/`. Like Living Town, it is for family devices on Tailscale only. Do not port-forward it.
+
 ## Voices (ElevenLabs)
 
 Every spoken line is generated ahead of time and packed into one audio file per chapter (`voices/ch0.mp3` … `voices/ch8.mp3`), with `voices/manifest.json` saying where each line starts. The game plays a line only when its text matches exactly, so after changing any dialogue, regenerate.
@@ -42,6 +71,7 @@ python3 blacksteel/voices/generate.py        # generate new or changed lines, th
 
 ## Files
 
+- `server.js` and `deploy/`: the small web server for Mouse and its launchd service template
 - `index.html`: the engine (dialogue, voices, verbs, inventory, hints, saves, title screen)
 - `story.js`: the nine chapters
 - `world3d.js`: the 3D engine (renderer, animated sea, fire, smoke, embers, camera moves, tap picking)
