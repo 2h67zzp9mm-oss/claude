@@ -2,7 +2,7 @@
 
 Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.18.1
+## Honest status — 0.18.2
 
 Working now:
 
@@ -84,6 +84,19 @@ launchctl load ~/Library/LaunchAgents/com.livingtown.server.plist
 ```
 
 `KeepAlive` restarts the server after crashes and retries until Tailscale is up at boot. After installing, gather the review evidence listed in `PROJECT_LOG.md`: the release checksum, the installed plist, `lsof -iTCP:4310 -sTCP:LISTEN`, and `npm test` output from Mouse.
+
+## Automatic updates on Mouse
+
+Mouse deploys new versions by itself. Nobody has to copy files or restart anything.
+
+- `com.livingtown.updater` runs `deploy/auto-update.js` every 5 minutes. It watches the `claude/code-review-4vrxjs` branch on GitHub (set `LIVING_TOWN_BRANCH` in its service file to change that).
+- When there's something new, it tests it first in a temporary copy (the full `npm test` for Living Town, and a code check for Blacksteel). Only if everything passes does it fast-forward the live checkout and restart what changed.
+- After a restart it checks each game answers (Living Town on 4310, Blacksteel on 4320 if it's installed). If one doesn't, it rolls back to the previous version and restarts again.
+- It only fast-forwards (rewritten history is refused), skips a pass while someone has uncommitted changes in the checkout, and never touches `data/` or `node_modules/`.
+- Log: `/tmp/living-town-updater.log`. To test without changing anything: `node deploy/auto-update.js --self-test`.
+- Install: `bash deploy/install-updater.sh`. Remove: `launchctl bootout gui/$(id -u)/com.livingtown.updater && rm ~/Library/LaunchAgents/com.livingtown.updater.plist`.
+
+So to update the town, push (or merge a pull request) to that branch. Within about five minutes, plus the test run, Mouse is running it.
 
 ## Visitor's window (optional)
 

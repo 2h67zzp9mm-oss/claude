@@ -425,3 +425,15 @@ Residents now want things of their own and act on them (`lib/will.js`, hooked in
 - **People at home are in their own home:** a test places each resident at their front door and checks they're inside their own home (the troupe in the Big Top), and that a visitor at the Big Top door is in the Big Top, not the market.
 - **Tests** (`test/speech.test.js` and updates): reading times; turns that never overlap and never get cut off; residents' chats with a follow-up and goodbye; homes; and on a real server, walking into the Big Top (not the market), no napping in its beds, its sofa being fine, leaving, then Finn's Cottage, the market and home. The social server test now keeps heading toward a resident who wanders (people mill about), and checks the rate limit with two actions back to back. The invitation test checks the friend's answer is queued after the question.
 
+# Version 0.18.2: Mouse updates itself
+
+- **Auto-updater** (`deploy/auto-update.js`, launchd `com.livingtown.updater`, every 5 minutes). It watches `claude/code-review-4vrxjs` on GitHub.
+  - New commits are tested first in a temporary git worktree: the full Living Town `npm test` (the restart rule: never restart unless every test passes) and `node --check` on Blacksteel's code.
+  - Only then does it fast-forward the live checkout and restart what changed. Living Town is checked on port 4310, and Blacksteel on 4320 if its service is installed.
+  - If a restart doesn't answer within 30 seconds, it rolls back to the previous commit and restarts again.
+  - It refuses non-fast-forward history, skips a pass while the checkout has uncommitted changes, reinstalls packages only when the lock file changes, and never touches `data/` (ignored by git, so fast-forwards and rollbacks can't reach it).
+- **Why:** so any Claude session (or anyone) can deliver an update by pushing to, or merging a pull request into, that branch, with no one on Mouse copying files or restarting services.
+- **Blacksteel:** other sessions deliver Blacksteel by opening a pull request that adds `blacksteel/` to this branch. Once merged, the updater keeps it current. The first time, `blacksteel/deploy/install.sh` must be run once on Mouse to install its service; until then the updater leaves it alone and says so in the log.
+- **Security note:** anyone who can push to the branch can now change what runs on Mouse without a person in the loop. The branch is on a private GitHub account signed in on Mouse, the tests must pass, and every deploy and rollback is logged in `/tmp/living-town-updater.log`.
+- **Tests** (`test/updater.test.js`) check the safety rules are in place: fast-forward only, test before deploying, a separate worktree, rollback, and not touching a checkout that's being edited. The service file and installer point at the right branch and script. `--self-test` was run on Mouse: all 84 tests passed in a temporary copy, and nothing live changed.
+
