@@ -1,0 +1,16 @@
+{
+  "_about": "Free voices from the open-source Kokoro model (voices/generate_free.py). Swap any voice for another Kokoro voice and run generate_free.py again. British voices start with bf_/bm_, American with af_/am_.",
+  "voices": {
+    "Shannon":    { "voice": "bf_emma",     "speed": 1.0,  "lang": "en-gb" },
+    "Narrator":   { "voice": "bf_isabella", "speed": 0.95, "lang": "en-gb" },
+    "Sean":       { "voice": "am_michael",  "speed": 1.0,  "lang": "en-us" },
+    "Deke":       { "voice": "bm_george",   "speed": 1.0,  "lang": "en-gb" },
+    "Mercer":     { "voice": "am_onyx",     "speed": 0.92, "lang": "en-us" },
+    "Nia":        { "voice": "af_sarah",    "speed": 1.02, "lang": "en-us" },
+    "Harrow":     { "voice": "bm_lewis",    "speed": 0.9,  "lang": "en-gb" },
+    "Lily":       { "voice": "af_sky",      "speed": 1.05, "lang": "en-us" },
+    "LilyMother": { "voice": "af_heart",    "speed": 1.0,  "lang": "en-us" },
+    "Olive":      { "voice": "af_bella",    "speed": 1.0,  "lang": "en-us" },
+    "Hazel":      { "voice": "af_jessica",  "speed": 1.05, "lang": "en-us" }
+  }
+}
