@@ -11,6 +11,7 @@
 
 const { places } = require("../shared/world");
 const { shareKnowledge } = require("./life");
+const will = require("./will");
 
 let random = Math.random;
 function setRandom(fn) { random = typeof fn === "function" ? fn : Math.random; }
@@ -268,6 +269,13 @@ function scorePlaces(state, resident, date) {
       reasons.push([value, `loves ${topicLabels[matches[0]] || matches[0]}`]);
     }
 
+    // Their own wishes, and places where good things happened.
+    const wanted = will.placeBonus(resident, key, peopleAt(state, key, resident.id).map(other => other.id));
+    if (wanted.value) {
+      score += wanted.value;
+      if (wanted.reason && wanted.value > 0.3) reasons.push([wanted.value + 0.2, wanted.reason]);
+    }
+
     // Mr. E's happenings and weather pull people toward (or away from) places.
     for (const effect of state.effects || []) {
       if (effect.until <= now || (effect.residentIds && !effect.residentIds.includes(resident.id))) continue;
@@ -309,11 +317,14 @@ function scorePlaces(state, resident, date) {
     results.push({ key, score, reason: reasons[0]?.[1] || "felt like it" });
   }
   results.sort((a, b) => b.score - a.score);
-  return { best: results[0], obligation };
+  return { best: results[0], results, obligation };
 }
 
 function pickActivity(resident, placeKey, obligation) {
   if (obligation && obligation.place === placeKey) return obligation.activity;
+  // Came here for something they wished for? Do that.
+  const wished = (resident.wishes || []).find(wish => wish.type === "do" && wish.place === placeKey);
+  if (wished && random() < 0.85) return wished.activity;
   const mind = mindFor(resident.id);
   const options = activities[placeKey] || [[null, "looking around"]];
   const liked = options.filter(([tag]) => tag && mind.interests.includes(tag));
@@ -341,7 +352,10 @@ function decide(state, resident, date) {
   const due = now >= resident.mind.commitUntil || obligationKey !== resident.mind.obligationKey || critical;
   if (!due) return null;
 
-  const { best } = scorePlaces(state, resident, date);
+  // Free will: choose among the good options, not always the top one.
+  const { results } = scorePlaces(state, resident, date);
+  const strict = Boolean(obligation?.strict && results[0]?.key === obligation.place);
+  const best = will.choose(results, resident, mind.traits, { strict, critical }, random);
   resident.mind.obligationKey = obligationKey;
   resident.mind.commitUntil = now + (25 + mind.traits.conscientiousness * 50 + random() * 25) * 60_000;
   resident.intent = best.reason;
@@ -507,6 +521,7 @@ module.exports = {
   decide,
   onArrive,
   pickActivity,
+  activities,
   socialTick,
   converse,
   compatibility,

@@ -289,6 +289,37 @@ button {
 .profile-summary {
   margin: 13px 0 0;
 }
+.will-block {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 6px 8px;
+  align-items: start;
+  margin-top: 12px;
+}
+.will-block > span {
+  color: #9fb3c4;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-top: 5px;
+}
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip-list li {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #ffffff12;
+  color: #eaf1f6;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
 .latest-memory {
   padding: 10px;
   border-left: 3px solid var(--gold);

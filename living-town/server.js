@@ -31,6 +31,7 @@ const { createMrE, ollamaGenerator } = require("./lib/mre");
 const { startViewer, readToken } = require("./lib/viewer");
 const troupe = require("./lib/troupe");
 const crowd = require("./lib/crowd");
+const will = require("./lib/will");
 
 const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
 
@@ -79,6 +80,7 @@ function freshState(now) {
 function finiteOr(value, fallback) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 
 function normalizeResident(resident) {
+  will.ensure(resident);
   resident.needs = resident.needs && typeof resident.needs === "object" ? resident.needs : {};
   for (const [key, fallback] of Object.entries(DEFAULT_NEEDS)) resident.needs[key] = clamp(finiteOr(resident.needs[key], fallback), 0, 100);
   resident.relationships = resident.relationships && typeof resident.relationships === "object" ? resident.relationships : {};
@@ -343,6 +345,29 @@ let lastSocialCheck = 0;
 let lastAutonomyCheck = 0;
 let lastBirthdayCheck = 0;
 let lastShowCheck = 0;
+let lastWillCheck = 0;
+
+// What free will (lib/will.js) needs from the world. Players' characters are never moved.
+const willContext = {
+  mindFor: mind.mindFor,
+  activities: mind.activities,
+  random: Math.random,
+  addEvent: (text, at) => addEvent(text, at),
+  isControlled,
+  obligation: (r, date) => mind.activeObligation(r.id, date),
+  sameSpot: (a, b) => (interiors.locate(a, world)?.id || null) === (interiors.locate(b, world)?.id || null),
+  showOn: date => troupe.showOn(date),
+  showToday: date => [0, 6].includes(date.getDay()) && date.getHours() < troupe.SHOW.from && state.residents.some(r => troupe.memberFor(r)),
+  isPerformer: r => Boolean(troupe.memberFor(r)),
+  go(r, placeKey, why) {
+    if (isControlled(r.id) || r.asleep) return false;
+    setDestination(r, placeKey);
+    r.intent = why;
+    // Stick with the plan for a while rather than changing their mind at once.
+    r.mind.commitUntil = Date.now() + 40 * 60_000;
+    return true;
+  }
+};
 
 function tick() {
   const now = Date.now();
@@ -355,7 +380,10 @@ function tick() {
 
   if (now - lastSocialCheck >= 15_000) {
     lastSocialCheck = now;
-    for (const talk of mind.socialTick(state, now, placeName)) addEvent(talk.event, now);
+    for (const talk of mind.socialTick(state, now, placeName)) {
+      addEvent(talk.event, now);
+      will.onConversation(talk.a, talk.b, talk.kind, now);
+    }
   }
   if (now - lastAutonomyCheck >= 10_000) {
     lastAutonomyCheck = now;
@@ -367,6 +395,7 @@ function tick() {
   }
   mre.tick(state, now, mreHelpers);
   if (now - lastShowCheck >= 30_000) { lastShowCheck = now; troupe.tick(state, now, addEvent); }
+  if (now - lastWillCheck >= 10_000) { lastWillCheck = now; will.tick(state, now, willContext); }
   if (now - lastBirthdayCheck >= 60_000) {
     lastBirthdayCheck = now;
     for (const text of life.checkBirthdays(state, now)) addEvent(text, now);
@@ -486,7 +515,8 @@ function residentSummary(r) {
     lifeRevision: r.lifeRevision, speech: r.speech || null, playable: isPlayable(r.id), look: r.look || {}, custom: Boolean(r.custom),
     indoor: r.indoor || null, using: r.using?.kind || null,
     experiences: (r.experiences || []).slice(0, 5), memories: (r.memories || []).slice(0, 5),
-    experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length
+    experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length,
+    ...will.publicView(r)
   };
 }
 

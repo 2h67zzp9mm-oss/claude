@@ -335,3 +335,24 @@ This is the first thing published to the internet, so it was designed to expose 
 - **Live update:** troupe members still wearing their 0.12 looks switch to the new ones on the next start. Anyone the family has restyled keeps their look.
 - **Tests** (`test/crowd.test.js`, `test/troupe.test.js`, `test/life.test.js`): 16 people arriving at the square all get their own spots on the walkways; being crowded is detected, but walking past isn't; on a real server with the troupe, nobody standing still overlaps anybody within a few seconds, and it stays that way; and the look update applies only to unchanged troupe looks.
 
+# Version 0.15.0: free will
+
+Residents now want things of their own and act on them (`lib/will.js`, hooked into `lib/mind.js` and the server tick).
+
+- **Wishes.** Everyone keeps up to three, chosen with weights from who they are:
+  - Hobby activities they love somewhere in town ("Watch the ducks at Juniper Park", "Play chess on the stone table at Town Square"), made from the existing activity list, so nothing new has to pass a word filter.
+  - Friends they haven't talked with for three hours ("Spend time with Olive").
+  - Making up after a squabble in the last day ("Make up with Zara").
+  - Somewhere they haven't been in a day ("Visit Corner Market").
+  - The circus show later today, and a treat at the cafe.
+  - A new wish comes every 20–60 minutes while awake. Wishes last eight hours.
+- **Wishes change behaviour.** A wished-for place scores higher, as does a place where the wished-for friend is, and the reason shows ("wants to watch the ducks", "wants to see Olive"). Arriving somewhere for a wish, they do the thing they wished for.
+- **Wishes come true.** They've been at the place for three minutes, had a chat or spent time with the friend, or had a friendly chat after the squabble. Then they light up ("✨ My wish came true!"), it reaches the feed, they feel happier, they remember it, and they grow fond of the place.
+- **Choice.** Instead of always the single best-scoring place, they choose among options close to the best, weighted by how good each is. Less conscientious or lower-mood residents choose more freely. Strict duties (school) and emergencies (a need under 15) still take the best option, and far worse options are never picked.
+- **Invitations.** Every few minutes, a resident with a place wish may ask a nearby friend along: "Want to come to Juniper Park with me?". The friend decides from the friendship, their own agreeableness, loneliness, liking for that place and a little chance. Anyone busy with school or work says so; otherwise it's "Yes, let's go!" or a friendly "Maybe later!". Accepted invitations reach the feed, and both stick with the plan for a while.
+- **Memories that matter.** Wishes coming true and nice chats make a place a favourite; squabbles make it a little less so. Favourites pull gently ("likes it here").
+- **Feelings.** A short list of recent feelings with reasons (✨ wish came true, 😊 said yes, 🙂 said maybe later, 😕 disagreed, 💬 great chat, 🤝 made up), plus needs (😴 sleepy, 🍽️ hungry, 🫂 lonely, 🥱 bored). Shown with wishes on the resident sheet, but not in the visitor's window.
+- **Players' characters** are never moved by invitations and never invite on their own.
+- **Tests** (`test/will.test.js`): wishes fit each resident, are gentle and never exceed three; a wish coming true (moment, feeling, feed, fondness); making up after a squabble; choice stays close to the best, gets more spontaneous when low, and duties and emergencies win; invitations are accepted, declined when busy, and never move or come from players; wished-for activities happen on arrival; and a real server sends wishes and feelings.
+- **Checked:** a throwaway town ran for 90 seconds with sensible wishes and no errors, and the resident sheet shows wishes and feelings.
+

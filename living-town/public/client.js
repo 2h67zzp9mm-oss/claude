@@ -707,6 +707,10 @@
     ui.goal.textContent = goal ? capitalize(goal.text) : "Finding a new direction";
     ui.goalProgress.style.width = `${Math.round(goal?.progress || 0)}%`;
     ui.summary.textContent = r.profile?.summary || `${r.name} is still writing their story.`;
+    // Their own wishes, and how they feel and why.
+    const chips = (list, empty) => (list?.length ? list : [{ emoji: "", text: empty }]).map(item => `<li>${item.emoji ? `<b>${escapeHtml(item.emoji)}</b> ` : ""}${escapeHtml(item.text)}</li>`).join("");
+    $("#residentWishes").innerHTML = chips(r.wishes, "Thinking about what to do next");
+    $("#residentFeelings").innerHTML = chips(r.feelings, "Just fine");
     const newest = r.experiences?.[0]?.text || r.memories?.[0]?.text;
     ui.latestMemory.textContent = newest || `${r.name} is still making their first memories.`;
     ui.family.textContent = (r.profile?.family || []).map(link => {
