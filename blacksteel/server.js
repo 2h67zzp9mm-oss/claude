@@ -32,7 +32,7 @@ const TYPES = {
 function allowed(rel) {
   const parts = rel.split(path.sep);
   if (parts.some(p => p.startsWith("."))) return false;
-  if (parts[0] === "deploy" || rel === "server.js") return false;
+  if (parts[0] === "deploy" || rel === "server.js" || /\.(command|sh)$/.test(rel)) return false;
   if (parts[0] === "voices" && parts[1] === "cache") return false;
   return true;
 }

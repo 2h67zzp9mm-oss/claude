@@ -36,7 +36,9 @@ The game runs next to Living Town on Mouse. Each game has its own port, so they 
 
 If MagicDNS is on in Tailscale, `http://mouse:4320` works too. `server.js` needs only Node (already on Mouse for Living Town), with no packages to install. It listens on `127.0.0.1:4320` by default, so it is never exposed to the home network by accident.
 
-Try it once by hand:
+The easy way: copy the release zip to Mouse, unzip it, and double-click **Install on Mouse.command** (or run `bash deploy/install.sh` in Terminal). It finds Node and Mouse's Tailscale address, installs the service, starts it, checks it answers, and prints the address. Run it again after unzipping a newer version to update.
+
+Or by hand. Try it once:
 
 ```
 cd /path/to/claude/blacksteel
