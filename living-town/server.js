@@ -185,7 +185,7 @@ function placeAt(resident, x, y) {
   for (const key of Object.keys(places)) {
     const spot = spotFor(resident.id, key);
     const dist = Math.hypot(spot.x - x, spot.y - y);
-    if (dist <= PLACE_RADIUS && (!best || dist < best.dist)) best = { key, dist };
+    if (world.inPlace(key, resident.id, x, y) && (!best || dist < best.dist)) best = { key, dist };
   }
   return best?.key || null;
 }
@@ -213,10 +213,16 @@ const DOORS = world.buildings.map(b => ({ x: world.walkNodes[b.node][0], y: worl
 // have room; the cafe terrace and workshop yard are cosier.
 const SPREAD = { square: 64, park: 52, market: 52, cafe: 34, workshop: 38 };
 
-// A free spot at a place, with room around it (see lib/crowd.js).
-function freeSpotAt(resident, placeKey, spread = SPREAD[placeKey] || 34) {
+// A free spot at a place, with room around it (see lib/crowd.js). Places
+// with a standing area (the square's paved ring) use all of it; performers
+// use the stage.
+function freeSpotAt(resident, placeKey, { spread = SPREAD[placeKey] || 34, stage = false } = {}) {
+  const place = places[placeKey];
+  const others = othersOutside(resident);
+  if (stage && place?.stage) return crowd.freeSpot(others, place.stage, { sample: crowd.stageSampler(place.stage), bubble: crowd.BUBBLE - 2 });
+  if (place?.area) return crowd.freeSpot(others, place.area, { sample: crowd.ringSampler(place.area), avoid: DOORS });
   const spot = spotFor(resident.id, placeKey);
-  return crowd.freeSpot(othersOutside(resident), spot, { spread, placeRadius: PLACE_RADIUS - 8, snap: p => snapToWalkable(p.x, p.y), avoid: DOORS });
+  return crowd.freeSpot(others, spot, { spread, placeRadius: PLACE_RADIUS - 8, snap: p => snapToWalkable(p.x, p.y), avoid: DOORS });
 }
 
 function setDestination(resident, placeKey) {
@@ -227,7 +233,7 @@ function setDestination(resident, placeKey) {
     return walkTo(resident, spot.x, spot.y);
   }
   const performing = placeKey === "square" && troupe.memberFor(resident) && troupe.showOn(new Date());
-  const p = freeSpotAt(resident, placeKey, performing ? 22 : undefined);
+  const p = freeSpotAt(resident, placeKey, { stage: Boolean(performing) });
   walkTo(resident, p.x, p.y);
 }
 
@@ -244,7 +250,7 @@ function millAbout(now) {
     if (now < due && !squashed) { nextMill.set(r.id, due); continue; }
     nextMill.set(r.id, now + (performing ? 15_000 + Math.random() * 10_000 : 45_000 + Math.random() * 75_000));
     // Performers keep to a little stage in front of the fountain.
-    const p = freeSpotAt(r, r.place, performing ? 22 : undefined);
+    const p = freeSpotAt(r, r.place, { stage: Boolean(performing) });
     // Stay put if the new spot is barely a step away.
     if (Math.hypot(p.x - r.x, p.y - r.y) < 4) continue;
     const { activityAfter } = r;
@@ -284,7 +290,7 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
     // positions, a released player) walks there instead of teleporting or
     // sleeping in the street.
     const spot = r.place ? spotFor(r.id, r.place) : null;
-    if (spot && Math.hypot(spot.x - r.targetX, spot.y - r.targetY) > PLACE_RADIUS) setDestination(r, r.place);
+    if (spot && !world.inPlace(r.place, r.id, r.targetX, r.targetY)) setDestination(r, r.place);
   }
 
   if (!Array.isArray(r.path)) r.path = [];
@@ -324,8 +330,7 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
   }
 
   const place = places[r.place];
-  const spot = r.place ? spotFor(r.id, r.place) : null;
-  if (place && Math.hypot(spot.x - r.x, spot.y - r.y) <= PLACE_RADIUS) {
+  if (place && world.inPlace(r.place, r.id, r.x, r.y)) {
     for (const [need, rate] of Object.entries(place.needs)) {
       const boost = r.asleep && need === "energy" ? 1.4 : 1;
       r.needs[need] = clamp(r.needs[need] + rate * boost * dtHours, 0, 100);

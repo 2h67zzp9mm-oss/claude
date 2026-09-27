@@ -18,7 +18,12 @@
     square: {
       name: "Town Square", x: 477, y: 330, color: "#d9caa2", quiet: 0.2,
       needs: { social: 9, fun: 3 },
-      tags: ["community", "people", "games", "gossip", "school"]
+      tags: ["community", "people", "games", "gossip", "school"],
+      // People stand on the paved ring around the fountain (not on its
+      // flower beds and benches), and shows use a little stage in front of
+      // the fountain steps. Traced from the painted map.
+      area: { x: 474, y: 262, rMin: 84, rMax: 112, yScale: 0.8 },
+      stage: { x: 474, y: 334, w: 70, h: 14 }
     },
     cafe: {
       name: "Moonbeam Cafe", x: 665, y: 180, color: "#d47f65", quiet: 0.4,
@@ -113,6 +118,14 @@
   }
 
   const PLACE_RADIUS = 70;
+
+  /** Is (x, y) at this place? Its standing area if it has one, else near its spot. */
+  function inPlace(placeKey, residentId, x, y) {
+    const area = places[placeKey]?.area;
+    if (area) return Math.hypot(x - area.x, (y - area.y) / area.yScale) <= area.rMax + 14;
+    const spot = spotFor(residentId, placeKey);
+    return Boolean(spot) && Math.hypot(spot.x - x, spot.y - y) <= PLACE_RADIUS;
+  }
 
   // Residents a signed-in player may steer. Everyone else is autonomous.
   const PLAYABLE_IDS = ["olive", "hazel", "dad"];
@@ -209,5 +222,5 @@
     return { x: best.x + (x - best.x) * k, y: best.y + (y - best.y) * k };
   }
 
-  return { MAP, places, walkNodes, walkEdges, buildings, homeBuildings, setHomeAssignments, SKIN_TONES, homeOf, spotFor, route, snapToWalkable, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, HAIR_STYLES, ACCESSORIES, nearestPlace };
+  return { MAP, places, walkNodes, walkEdges, buildings, homeBuildings, setHomeAssignments, SKIN_TONES, homeOf, spotFor, route, snapToWalkable, inPlace, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, HAIR_STYLES, ACCESSORIES, nearestPlace };
 });

@@ -25,14 +25,18 @@ function clear(p, others, bubble) {
  * lists points to keep away from (building doors), and the spot stays
  * within `placeRadius` so the person is still "at" the place.
  */
-function freeSpot(others, center, { spread = 34, placeRadius = 62, snap = p => p, avoid = [], random = Math.random, bubble = BUBBLE } = {}) {
+function freeSpot(others, center, { spread = 34, placeRadius = 62, snap = p => p, avoid = [], random = Math.random, bubble = BUBBLE, sample = null } = {}) {
   let fallback = null;
   for (let attempt = 0; attempt < 80; attempt++) {
-    // Evenly across the area (not centre-first), widening further the busier it is.
-    const radius = spread * Math.sqrt(random()) * (1 + Math.max(0, attempt - 20) / 40);
-    const angle = random() * Math.PI * 2;
-    const p = snap({ x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius * 0.6 });
-    if (Math.hypot(p.x - center.x, p.y - center.y) > placeRadius) continue;
+    let p;
+    if (sample) p = sample(random);
+    else {
+      // Evenly across the area (not centre-first), widening further the busier it is.
+      const radius = spread * Math.sqrt(random()) * (1 + Math.max(0, attempt - 20) / 40);
+      const angle = random() * Math.PI * 2;
+      p = snap({ x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius * 0.6 });
+      if (Math.hypot(p.x - center.x, p.y - center.y) > placeRadius) continue;
+    }
     if (avoid.some(a => Math.hypot(a.x - p.x, a.y - p.y) < 8)) continue;
     if (!fallback) fallback = p;
     if (clear(p, others, bubble)) return p;
@@ -40,9 +44,22 @@ function freeSpot(others, center, { spread = 34, placeRadius = 62, snap = p => p
   return fallback || snap({ x: center.x, y: center.y });
 }
 
+/** Points spread evenly over a place's standing ring (by area, so the outside isn't sparse). */
+function ringSampler(a) {
+  return random => {
+    const angle = random() * Math.PI * 2, r = Math.sqrt(a.rMin ** 2 + random() * (a.rMax ** 2 - a.rMin ** 2));
+    return { x: a.x + Math.cos(angle) * r, y: a.y + Math.sin(angle) * r * a.yScale };
+  };
+}
+
+/** Points on a little stage rectangle. */
+function stageSampler(st) {
+  return random => ({ x: st.x + (random() - 0.5) * st.w, y: st.y + (random() - 0.5) * st.h });
+}
+
 /** Is this person standing too close to anyone else who's standing still? */
 function crowded(self, others, bubble = BUBBLE) {
   return others.some(o => Math.hypot(o.x - self.x, o.y - self.y) < bubble * 0.8 && Math.hypot(standing(o).x - o.x, standing(o).y - o.y) < 1);
 }
 
-module.exports = { BUBBLE, freeSpot, crowded };
+module.exports = { BUBBLE, freeSpot, crowded, ringSampler, stageSampler };

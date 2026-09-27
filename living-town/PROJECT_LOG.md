@@ -319,7 +319,8 @@ This is the first thing published to the internet, so it was designed to expose 
   - A stroll keeps what they were doing ("performing in the circus show" stays); a real change of plan still gets a new activity.
   - Startup catch-up uses the same free spots.
   - Spots are spread evenly across a place's area, not packed into the middle. The open square, park and market get a wide area (64, 52 and 52 units); the cafe terrace and workshop yard a cosier one.
-  - During a show the performers keep to a small stage in front of the fountain, and the audience spreads around the plaza. The show is now tempting rather than irresistible (pull 1.1, was 1.8), so some people carry on with their day.
+  - The Town Square has a traced standing area: the paved ring around the fountain (84–112 units from its centre), used evenly all the way round, so nobody stands in the fountain's flower beds or piles up at its steps. Whether someone "is at the square" now uses this ring too.
+  - During a show the performers keep to a stage in front of the fountain steps, and the audience spreads around the ring. The show is now tempting rather than irresistible (pull 1.1, was 1.8), so some people carry on with their day.
 - **Troupe looks** are now much closer to the characters of the animated circus show the family asked for, while keeping our own names:
   - Patches: red yarn hair, a blue dress, one button eye.
   - Tumble: red and blue with a pale face and big eyes.

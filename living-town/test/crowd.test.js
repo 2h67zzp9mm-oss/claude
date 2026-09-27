@@ -43,6 +43,34 @@ test("people use the whole plaza, not just the middle", () => {
   assert.ok(distances.filter(d => d > 40).length >= 3, "some near the edges");
 });
 
+test("at the square, people stand all round the fountain's paved ring, and performers on the stage", () => {
+  const { area, stage } = world.places.square;
+  let seed = 3;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const placed = [];
+  for (let i = 0; i < 13; i++) {
+    const p = crowd.freeSpot(placed, area, { sample: crowd.ringSampler(area), random });
+    placed.push({ x: p.x, y: p.y, targetX: p.x, targetY: p.y });
+  }
+  const sides = new Set();
+  for (const p of placed) {
+    const r = Math.hypot(p.x - area.x, (p.y - area.y) / area.yScale);
+    assert.ok(r >= area.rMin - 0.5 && r <= area.rMax + 0.5, `on the paved ring, not in the fountain (${r.toFixed(0)})`);
+    assert.ok(world.inPlace("square", "olive", p.x, p.y), "still counts as at the square");
+    sides.add(`${p.x < area.x ? "W" : "E"}${p.y < area.y ? "N" : "S"}`);
+  }
+  assert.strictEqual(sides.size, 4, "all the way round, not bunched on one side");
+  for (const [i, a] of placed.entries()) for (const b of placed.slice(i + 1)) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= crowd.BUBBLE);
+
+  const troupe = [];
+  for (let i = 0; i < 6; i++) {
+    const p = crowd.freeSpot(troupe, stage, { sample: crowd.stageSampler(stage), random, bubble: crowd.BUBBLE - 2 });
+    troupe.push({ x: p.x, y: p.y, targetX: p.x, targetY: p.y });
+  }
+  for (const p of troupe) assert.ok(Math.abs(p.x - stage.x) <= stage.w / 2 && Math.abs(p.y - stage.y) <= stage.h / 2, "performers on the stage");
+  assert.ok(!world.inPlace("square", "olive", 474, 600), "far away isn't the square");
+});
+
 test("someone on top of a person standing still is crowded; passing by isn't", () => {
   const me = { x: 100, y: 100, targetX: 100, targetY: 100 };
   assert.ok(crowd.crowded(me, [{ x: 104, y: 101, targetX: 104, targetY: 101 }]));
