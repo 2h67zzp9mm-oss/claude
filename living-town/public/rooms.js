@@ -121,6 +121,31 @@
 
   function roomById(plan, id) { return plan.rooms.find(r => r.id === id); }
 
+  // Stairs seen from above: steps rising away from you (up) or dropping into
+  // shadow (down), with a banister.
+  function drawStairs(g, st) {
+    const { px, box } = painter(g);
+    if (!st) return;
+    const up = st.to > 0;
+    box(st.x, st.y, st.w, st.h, "#6b4226", { light: 0, dark: 0 });
+    const steps = Math.floor((st.h - 2) / 5);
+    for (let i = 0; i < steps; i++) {
+      const y = st.y + 1 + i * 5;
+      const t = up ? 1 - i / steps : i / steps;
+      const tread = shade("#c9a26b", up ? 0.08 - t * 0.14 : -t * 0.3);
+      px(st.x + 1, y, st.w - 5, 4, tread);
+      px(st.x + 1, y + 4, st.w - 5, 1, shade(tread, -0.25));
+    }
+    px(st.x + st.w - 4, st.y + 1, 3, st.h - 2, "#8a5a36");
+    px(st.x + st.w - 3, st.y + 1, 1, st.h - 2, "#b07a4a");
+    for (let y = st.y + 3; y < st.y + st.h - 2; y += 5) px(st.x + st.w - 4, y, 1, 3, "#5b3a24");
+    // A little arrow painted on the landing step.
+    const ax = st.x + Math.floor((st.w - 4) / 2), ay = up ? st.y + st.h - 7 : st.y + 4;
+    const c = "#fff6c2";
+    if (up) { px(ax, ay, 1, 1, c); px(ax - 1, ay + 1, 3, 1, c); px(ax - 2, ay + 2, 5, 1, c); }
+    else { px(ax - 2, ay, 5, 1, c); px(ax - 1, ay + 1, 3, 1, c); px(ax, ay + 2, 1, 1, c); }
+  }
+
   function drawDoorways(g, plan) {
     const { px } = painter(g);
     for (const d of plan.doors) {
@@ -143,8 +168,9 @@
         px(d.x + d.w / 2, d.y, 1, d.h, shade(left.floorColor, -0.18));
       }
     }
-    // Front door: a gap in the outer wall with a doormat inside.
+    // Front door: a gap in the outer wall with a doormat inside (ground floor only).
     const fd = frontDoorRect(plan);
+    if (!fd) return;
     px(fd.x, plan.height - 3, fd.w, 3, "#d9c29a");
     px(fd.x - 2, plan.height - 5, 2, 5, "#5b3a24");
     px(fd.x + fd.w, plan.height - 5, 2, 5, "#5b3a24");
@@ -515,6 +541,14 @@
         px(x, y, w, 2, "#6b4226"); px(x + 2, y + 2, 1, h - 6, "#d9c7a1"); px(x + w - 3, y + 2, 1, h - 6, "#d9c7a1");
         px(x + 1, y + h - 4, w - 2, 2, "#f2c14e"); px(x + 1, y + h - 4, w - 2, 1, "#ffe08a");
         break;
+      case "bath":
+        shadow(x + 1, y + h - 1, w, 2);
+        box(x, y, w, h, "#f4f7f9", { outline: "#9fb3bf", light: 0.02, dark: -0.08 });
+        px(x + 2, y + 3, w - 4, h - 6, "#8fd3f0");
+        [[4, 3], [9, 5], [14, 3], [19, 4], [7, 7], [16, 7]].forEach(([a, b]) => { px(x + a, y + b, 3, 2, "#ffffff"); px(x + a + 1, y + b - 1, 1, 1, "#ffffff"); });
+        px(x + w - 5, y - 2, 2, 3, "#9aa6b0"); px(x + w - 7, y - 2, 4, 1, "#9aa6b0");
+        px(x + 3, y + h - 4, 2, 2, "#ffd166"); px(x + 5, y + h - 5, 1, 1, "#f4a261");
+        break;
       case "juggling":
         [["#e63946", 0], ["#ffd166", 5], ["#4a90d9", 10]].forEach(([c, i]) => { px(x + i + 1, y + 1, 2, 2, c); px(x + i, y + 3, 4, 5, c); px(x + i + 1, y + 3, 1, 4, shade(c, 0.25)); px(x + i + 1, y + 8, 2, 1, OUTLINE); });
         break;
@@ -551,6 +585,11 @@
       case "binoculars": px(x, y, 2, 3, "#333"); px(x + 3, y, 2, 3, "#333"); px(x + 2, y + 1, 1, 1, "#555"); break;
       case "logs": [[0, 4], [4, 4], [2, 1]].forEach(([a, b]) => { px(x + a, y + b, 4, 3, "#8a5a36"); px(x + a + 1, y + b + 1, 2, 1, "#d9b38c"); }); break;
       case "console": px(x, y, w, h, "#b8b8c0"); px(x + 1, y + 1, 2, 1, "#e63946"); break;
+      case "coats":
+        px(x, y + 1, w, 2, "#6b4226");
+        [["#e63946", 1], ["#4a90d9", 7], ["#f2c14e", 13]].forEach(([c, i]) => { px(x + i + 2, y + 2, 1, 1, "#e6c27a"); px(x + i, y + 3, 5, 7, c); px(x + i + 1, y + 3, 1, 6, shade(c, 0.15)); });
+        break;
+      case "towel": px(x, y, w, 2, "#9aa6b0"); px(x + 1, y + 2, w - 2, h - 3, "#ff9ec1"); px(x + 1, y + h - 3, w - 2, 1, "#ffffff"); break;
       case "sacks": [[0, 2], [7, 0]].forEach(([a, b]) => { box(x + a, y + b, 7, 10, "#e6dcc2", { outline: "#9c8b6a", light: 0.05 }); px(x + a + 2, y + b + 4, 3, 1, "#9c8b6a"); }); break;
       case "crates": [[0, 0], [10, 3]].forEach(([a, b]) => { box(x + a, y + b, 10, 10, "#b08d57", { light: 0.12 }); px(x + a + 1, y + b + 4, 8, 1, "#8a6a3a"); }); break;
       case "sawhorse": px(x, y + 2, w, 3, "#b08d57"); px(x + 2, y + 5, 1, h - 5, "#6b4226"); px(x + w - 3, y + 5, 1, h - 5, "#6b4226"); px(x + 5, y, 10, 2, "#d9b38c"); break;
@@ -589,6 +628,7 @@
     for (const r of plan.rooms) drawWallFace(g, r, rand);
     drawWallCaps(g, plan);
     drawDoorways(g, plan);
+    drawStairs(g, plan.stairs);
     drawSunPatches(g, plan, light);
     // Wall hangings first, then everything standing on the floor, back to front.
     const hangs = new Set(["window", "poster", "picture", "fairyLights"]);

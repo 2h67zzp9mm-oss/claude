@@ -737,7 +737,9 @@
   // door and can use almost anything in the house.
   const { planFor, placeHousehold, routeInside, frontDoorRect, furniture, locate } = window.LivingTownInteriors;
   const Rooms = window.LivingTownRooms;
-  const interior = { id: null, base: null, baseKey: "", lighting: null, lightKey: "", placed: [], walkers: new Map(), fresh: false, closing: false };
+  // `floor` is the storey being viewed; two-storey homes switch with the stairs.
+  const interior = { id: null, floor: 0, base: null, baseKey: "", lighting: null, lightKey: "", placed: [], walkers: new Map(), fresh: false, closing: false, myFloor: null };
+  const floorButton = $("#floorToggle");
   const interiorEl = $("#interior");
   const roomCanvas = $("#roomCanvas");
   const roomCtx = roomCanvas.getContext("2d");
@@ -794,6 +796,8 @@
     let budget = INDOOR_SPEED * dt;
     while (budget > 0 && w.path.length) {
       const next = w.path[0];
+      // Arriving on another floor: step off the stairs there.
+      if ((next.floor || 0) !== w.floor) { w.floor = next.floor || 0; w.x = next.x; w.y = next.y; w.path.shift(); continue; }
       const gap = Math.hypot(next.x - w.x, next.y - w.y);
       if (gap <= budget) { w.x = next.x; w.y = next.y; budget -= gap; w.path.shift(); }
       else { w.x += (next.x - w.x) / gap * budget; w.y += (next.y - w.y) / gap * budget; budget = 0; }
@@ -802,33 +806,40 @@
 
   function drawInterior(dt) {
     const b = buildings.find(x => x.id === interior.id);
-    const plan = b && planFor(b.id);
-    if (!plan) return closeInterior(true);
+    const building = b && planFor(b.id);
+    if (!building) return closeInterior(true);
+    if (!building.floors[interior.floor]) interior.floor = 0;
+    const plan = building.floors[interior.floor];
     const light = lightNow();
-    if (interior.baseKey !== `${b.id}|${light}`) { interior.base = Rooms.drawRoom(plan, light); interior.baseKey = `${b.id}|${light}`; }
+    const key = `${b.id}|${interior.floor}|${light}`;
+    if (interior.baseKey !== key) { interior.base = Rooms.drawRoom(plan, light); interior.baseKey = key; }
     const people = occupantsOf(b);
     const lampsOn = people.some(r => !r.asleep);
-    if (interior.lightKey !== `${b.id}|${light}|${lampsOn}`) { interior.lighting = Rooms.drawLighting(plan, light, lampsOn); interior.lightKey = `${b.id}|${light}|${lampsOn}`; }
+    if (interior.lightKey !== `${key}|${lampsOn}`) { interior.lighting = Rooms.drawLighting(plan, light, lampsOn); interior.lightKey = `${key}|${lampsOn}`; }
 
-    const spots = placeHousehold(plan, people.map(r => ({ id: r.id, asleep: r.asleep, activity: r.activity, indoor: r.indoor })), householdOf(b));
+    const spots = placeHousehold(building, people.map(r => ({ id: r.id, asleep: r.asleep, activity: r.activity, indoor: r.indoor })), householdOf(b));
     for (const id of [...interior.walkers.keys()]) if (!spots.has(id)) interior.walkers.delete(id);
-    interior.placed = people.map(r => {
-      const spot = spots.get(r.id);
+    const everyone = people.map(r => {
+      const spot = { floor: 0, ...spots.get(r.id) };
       let w = interior.walkers.get(r.id);
       if (!w) {
         // People already home when you look in are where they belong;
         // anyone arriving later comes in through the front door.
-        const start = interior.fresh ? spot : { x: plan.entrance[0], y: plan.entrance[1] };
-        w = { x: start.x, y: start.y, path: [], tx: null, ty: null };
+        const start = interior.fresh ? spot : { x: building.entrance[0], y: building.entrance[1], floor: 0 };
+        w = { x: start.x, y: start.y, floor: start.floor || 0, path: [], tx: null, ty: null, tf: null };
         interior.walkers.set(r.id, w);
       }
-      if (w.tx !== spot.x || w.ty !== spot.y) { w.path = routeInside(plan, w, spot); w.tx = spot.x; w.ty = spot.y; }
+      if (w.tx !== spot.x || w.ty !== spot.y || w.tf !== spot.floor) { w.path = routeInside(building, w, spot); w.tx = spot.x; w.ty = spot.y; w.tf = spot.floor; }
       walkIndoors(w, dt);
       const walking = w.path.length > 0;
-      const object = spot.objectId ? plan.objects.find(o => o.id === spot.objectId) : null;
+      const object = spot.objectId ? building.floors[spot.floor]?.objects.find(o => o.id === spot.objectId) : null;
       return { r, spot, w, walking, object, lying: Boolean(spot.bed) && !walking, sitting: !walking && Boolean(object && furniture[object.kind]?.sit) };
-    }).sort((a, c) => a.w.y - c.w.y);
+    });
     interior.fresh = false;
+    // Follow your own character up and down the stairs.
+    const mine = me && canActInside(b) ? everyone.find(p => p.r.id === me.residentId) : null;
+    if (mine && mine.w.floor !== interior.myFloor) { interior.myFloor = mine.w.floor; interior.floor = mine.w.floor; return; }
+    interior.placed = everyone.filter(p => p.w.floor === interior.floor).sort((a, c) => a.w.y - c.w.y);
 
     roomCtx.imageSmoothingEnabled = false;
     roomCtx.clearRect(0, 0, roomCanvas.width, roomCanvas.height);
@@ -903,8 +914,15 @@
 
     const count = people.length;
     $("#interiorCount").textContent = count ? `${count} inside${people.some(r => r.asleep) ? " · shh, someone's sleeping" : ""}` : "Nobody's home";
+    // Upstairs / downstairs switch, with how many are on the other floor.
+    if (building.floors.length > 1) {
+      const other = interior.floor ? 0 : 1;
+      const there = everyone.filter(p => p.w.floor === other).length;
+      floorButton.textContent = `${other ? "⬆ Upstairs" : "⬇ Downstairs"}${there ? ` · ${there}` : ""}`;
+      floorButton.classList.remove("hidden");
+    } else floorButton.classList.add("hidden");
     $("#interiorHint").textContent = canActInside(b)
-      ? "Tap anything to use it: beds, chairs, the sink, the fridge, windows… Tap the floor to walk, or the front door to go outside."
+      ? `Tap anything to use it: beds, chairs, the sink, the fridge, windows… Tap the floor to walk${plan.stairs ? ", the stairs to go " + (plan.stairs.to ? "up" : "down") : ""}${plan.frontDoor ? ", or the front door to go outside" : ""}.`
       : mode === "play" && canEnter(b)
         ? `Tap anywhere to walk to ${b.residents ? "your front door" : `the ${b.name} door`} and come inside.`
         : "Tap someone to check on them, or tap things to see what they're for.";
@@ -918,6 +936,8 @@
 
   function openInterior(b) {
     interior.id = b.id;
+    interior.floor = 0;
+    interior.myFloor = null;
     interior.baseKey = "";
     interior.lightKey = "";
     interior.walkers.clear();
@@ -970,10 +990,12 @@
   }
 
   $("#leaveInterior").addEventListener("click", () => closeInterior());
+  floorButton.addEventListener("click", () => { interior.floor = interior.floor ? 0 : 1; });
   roomCanvas.addEventListener("click", event => {
     const b = buildings.find(x => x.id === interior.id);
-    const plan = b && planFor(b.id);
-    if (!plan) return;
+    const building = b && planFor(b.id);
+    if (!building) return;
+    const plan = building.floors[interior.floor] || building;
     const rect = roomCanvas.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width * plan.width;
     const y = (event.clientY - rect.top) / rect.height * plan.height;
@@ -985,20 +1007,30 @@
     });
     if (hit) return select(hit.r.id);
     const fd = frontDoorRect(plan);
-    const onDoor = x >= fd.x - 3 && x <= fd.x + fd.w + 3 && y >= fd.y - 4;
-    const object = onDoor ? null : objectAt(plan, x, y);
+    const onDoor = Boolean(fd) && x >= fd.x - 3 && x <= fd.x + fd.w + 3 && y >= fd.y - 4;
+    const st = plan.stairs;
+    const onStairs = Boolean(st) && x >= st.x - 2 && x <= st.x + st.w + 2 && y >= st.y - 2 && y <= st.y + st.h + 2;
+    const object = onDoor || onStairs ? null : objectAt(plan, x, y);
     if (acting) {
       if (onDoor) {
         send({ type: "leave-home", residentId: me.residentId });
         showToast("Heading outside…");
         return;
       }
+      if (onStairs) {
+        // Climb (or go down) to the other floor, and the view follows.
+        const [sx, sy] = building.floors[st.to].stairs.spot;
+        send({ type: "indoor-move", residentId: me.residentId, x: sx, y: sy, floor: st.to });
+        showToast(st.to ? "Going upstairs…" : "Going downstairs…");
+        return;
+      }
       if (object) {
         send({ type: "use", residentId: me.residentId, objectId: object.id });
         showToast(`${furniture[object.kind].label}: ${furniture[object.kind].activity}`);
-      } else send({ type: "indoor-move", residentId: me.residentId, x, y });
+      } else send({ type: "indoor-move", residentId: me.residentId, x, y, floor: interior.floor });
       return;
     }
+    if (onStairs) { interior.floor = st.to; return; }
     if (mode === "play" && canEnter(b)) {
       const [doorX, doorY] = walkNodes[b.node];
       send({ type: "control", residentId: me.residentId, x: doorX, y: doorY });

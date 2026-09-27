@@ -133,6 +133,15 @@ test("inside your own house: use furniture, walk around, leave", async () => {
   sean.ws.send(JSON.stringify({ type: "indoor-move", residentId: "dad", x: 999, y: -5 }));
   await until(() => dad().indoor && !dad().indoor.objectId && dad().using === null, "walks inside");
   assert.ok(interiors.isWalkable(plan, dad().indoor.x, dad().indoor.y), "taps outside the walls land on the floor");
+  // Upstairs, and a bubble bath.
+  sean.ws.send(JSON.stringify({ type: "indoor-move", residentId: "dad", x: 60, y: 110, floor: 1 }));
+  await until(() => dad().indoor?.floor === 1, "up the stairs");
+  assert.ok(interiors.isWalkable(plan.floors[1], dad().indoor.x, dad().indoor.y));
+  sean.ws.send(JSON.stringify({ type: "use", residentId: "dad", objectId: "bath" }));
+  await until(() => dad().using === "bath" && dad().indoor.floor === 1, "a bubble bath upstairs");
+  sean.ws.send(JSON.stringify({ type: "indoor-move", residentId: "dad", x: 60, y: 110, floor: 7 }));
+  await new Promise(resolve => setTimeout(resolve, 1200));
+  assert.strictEqual(dad().using, "bath", "a floor that doesn't exist is ignored");
   sean.ws.send(JSON.stringify({ type: "use", residentId: "olive", objectId: "bed2" }));
   await until(() => sean.messages.some(m => m.type === "control-rejected" && /own resident/.test(m.reason)), "can't move someone else inside");
 

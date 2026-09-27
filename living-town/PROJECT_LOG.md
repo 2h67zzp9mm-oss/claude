@@ -297,3 +297,17 @@ This is the first thing published to the internet, so it was designed to expose 
 - **Tests** (`test/troupe.test.js`): six unique members whose looks pass the look check and whose words pass the filter; everyone is in the show, and Bolt has school; a bed each in the Big Top; the show pulls everyone but the troupe to the square once per show, only on weekend afternoons, and not once they've gone; and on a real server they arrive once, keep their looks, don't duplicate on restart, and stay gone after moving away.
 - **Checked in a headless browser:** the tent on the map, the Big Top's inside, and all six sprites drawn large.
 
+# Version 0.13.0: upstairs
+
+- **Two-storey homes.** Sean's House, Milo & Zara's and Rose Cottage now have two floors (`floors` in `shared/interiors.js`; single-storey buildings are their own ground floor).
+  - Downstairs: the living room, kitchen, a playroom (a den at Milo & Zara's) and a hall with coat hooks and the stairs.
+  - Upstairs: three bedrooms, a landing with a bookshelf, beanbag and runner rug, and a bathroom with a bubble bath, sink and towel.
+  - Sean's House: Olive's, Hazel's and Sean's rooms upstairs.
+  - Milo & Zara's: Nova's room, Zara's studio (with a spare daybed) and Milo & Zara's room with their double bed.
+  - Finn's Cottage, the Big Top, the cafe, workshop and market stay single-storey.
+- **Getting around.** Routes between floors go by the stairs. Residents walk to the stairs, arrive at the top (or bottom), and carry on to their bed or the kitchen. Every object and spot knows its floor, and object ids are unique across the whole house, so the server and the phones agree which floor anyone is on.
+- **Playing.** Tap the stairs to go up or down, and the view follows your character. The front door is only downstairs. An Upstairs/Downstairs button lets anyone switch floors and shows how many people are on the other one. The server accepts a `floor` on indoor moves (ignoring floors a house doesn't have) and finds furniture on either floor.
+- **Saves:** existing indoor positions still work. Furniture ids that moved upstairs (the beds, Olive's desk, Hazel's toys) kept their names, and positions without a floor are treated as downstairs.
+- **Tests:** every floor of every building is checked (spots can be reached, nothing blocks doors or stairs, the stairs lead somewhere, the front door is downstairs); every room on every floor can be reached from the front door, with routes that stay on the floor except when using the stairs; everyone's bed is upstairs and family time is downstairs; and the server test takes Sean upstairs for a bubble bath and ignores a floor that doesn't exist.
+- **Checked on a headless phone-sized browser:** walk home, tap the stairs, the view follows upstairs, bath, back down, out the front door, with no errors.
+

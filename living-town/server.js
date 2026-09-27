@@ -745,7 +745,9 @@ function validateClientMessage(raw) {
   if (msg.type === "indoor-move") {
     if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId)) return null;
     if (!Number.isFinite(msg.x) || !Number.isFinite(msg.y)) return null;
-    return { type: "indoor-move", residentId: msg.residentId, x: msg.x, y: msg.y };
+    const floor = msg.floor === undefined ? 0 : msg.floor;
+    if (!Number.isInteger(floor) || floor < 0 || floor > 3) return null;
+    return { type: "indoor-move", residentId: msg.residentId, x: msg.x, y: msg.y, floor };
   }
   if (msg.type === "inspect") {
     if (typeof msg.residentId !== "string" || msg.residentId.length > 64) return null;
@@ -797,14 +799,16 @@ function handleIndoor(ws, msg) {
     return;
   }
   if (msg.type === "use") {
-    const object = plan.objects.find(o => o.id === msg.objectId);
+    const object = interiors.allObjects(plan).find(o => o.id === msg.objectId);
     if (!object) return reject("There's nothing like that in this room.");
-    r.indoor = { x: object.spot[0], y: object.spot[1], objectId: object.id };
+    r.indoor = { x: object.spot[0], y: object.spot[1], objectId: object.id, floor: object.floor };
     r.using = { kind: object.kind, until: Date.now() + 30 * 60_000, place: r.place };
     r.activity = interiors.furniture[object.kind].activity;
   } else {
-    const spot = interiors.snapInside(plan, msg.x, msg.y);
-    r.indoor = { x: Math.round(spot.x), y: Math.round(spot.y) };
+    // Upstairs or down (a house without that floor keeps you on the ground).
+    const floor = plan.floors[msg.floor] ? msg.floor : 0;
+    const spot = interiors.snapInside(plan.floors[floor], msg.x, msg.y);
+    r.indoor = { x: Math.round(spot.x), y: Math.round(spot.y), floor };
     r.using = null;
     r.activity = "pottering around the house";
   }

@@ -83,7 +83,8 @@
     ring: { label: "Circus ring", activity: "rehearsing a circus act", needs: { fun: 16, social: 6 } },
     trampoline: { label: "Trampoline", activity: "bouncing on the trampoline", needs: { fun: 18 } },
     trapeze: { label: "Low trapeze", activity: "swinging on the low trapeze", needs: { fun: 16 } },
-    juggling: { label: "Juggling pins", activity: "practicing juggling", needs: { fun: 14 } }
+    juggling: { label: "Juggling pins", activity: "practicing juggling", needs: { fun: 14 } },
+    bath: { label: "Bath", activity: "having a bubble bath", needs: { energy: 10, fun: 10 } }
   };
   // Furniture you sit on (the rest you stand at).
   for (const kind of ["sofa", "armchair", "table"]) furniture[kind].sit = true;
@@ -98,113 +99,149 @@
     return { id, kind: "bed", x, y, w, h, owner, double: Boolean(opts.double), blanket: opts.blanket, pattern: opts.pattern, spot: opts.spot || [x + w + 5, y + 18] };
   };
 
-  // Three bedrooms over a kitchen and a living room. Sean's House and Rose
-  // Cottage share this shape; everything personal is in the options.
-  function familyHouse(id, looks, owners, extras) {
-    return {
-      id, ...PLAN,
+  // Two-storey family homes (Sean's House, Milo & Zara's, Rose Cottage):
+  // downstairs a living room, kitchen, playroom and a hall with the stairs;
+  // upstairs three bedrooms, a landing and a bathroom. Everything personal
+  // comes in through the options.
+  function familyHouse(id, o) {
+    const living = o.living === "music"
+      ? [{ id: "records", kind: "records", x: 88, y: 4, w: 16, h: 16, spot: [96, 28] }]
+      : [{ id: "tv", kind: "tv", x: 92, y: 22, w: 14, h: 24, spot: [84, 40] }];
+    const room2 = o.room2 === "studio"
+      ? [{ id: "easel", kind: "easel", x: 70, y: 16, w: 14, h: 22, spot: [77, 46] }, { id: "paints", kind: "paints", x: 88, y: 4, w: 16, h: 16, spot: [96, 28] }]
+      : [{ id: "toys", kind: "toys", x: 68, y: 18, w: 18, h: 12, spot: [77, 40] }];
+    const [b1, b2, b3] = o.beds;
+    const ground = {
+      id, floor: 0, ...PLAN,
       rooms: [
-        room("room1", looks.names[0], 0, 0, 64, 64, looks.rooms[0]),
-        room("room2", looks.names[1], 64, 0, 64, 64, looks.rooms[1]),
-        room("room3", looks.names[2], 128, 0, 64, 64, looks.rooms[2]),
-        room("kitchen", "Kitchen", 0, 64, 80, 80, looks.kitchen),
-        room("living", "Living room", 80, 64, 112, 80, looks.living)
+        room("living", "Living room", 0, 0, 112, 80, o.looks.living),
+        room("kitchen", "Kitchen", 112, 0, 80, 80, o.looks.kitchen),
+        room("playroom", o.playroomName || "Playroom", 0, 80, 96, 64, o.looks.playroom),
+        room("hall", "Hall", 96, 80, 96, 64, o.looks.hall)
       ],
-      doors: [hDoor(6, ["room1", "kitchen"]), hDoor(96, ["room2", "living"]), hDoor(150, ["room3", "living"]), vDoor(100, ["kitchen", "living"])],
-      frontDoor: { x: 160, w: 16, room: "living" },
+      doors: [vDoor(40, ["living", "kitchen"], 112), hDoor(40, ["living", "playroom"], 80), hDoor(150, ["kitchen", "hall"], 80), vDoor(104, ["playroom", "hall"], 96)],
+      frontDoor: { x: 128, w: 16, room: "hall" },
+      stairs: { x: 164, y: 84, w: 24, h: 40, spot: [156, 112], to: 1 },
       objects: [
-        bed("bed1", 44, 16, owners[0], { ...looks.beds[0], spot: [52, 50] }),
-        { id: "desk1", kind: "desk", x: 22, y: 12, w: 20, h: 16, spot: [32, 34], owner: owners[0] },
-        bed("bed2", 108, 16, owners[1], { ...looks.beds[1], spot: [100, 36] }),
-        { id: "toys", kind: "toys", x: 68, y: 18, w: 18, h: 12, spot: [77, 38] },
-        bed("bed3", 168, 16, owners[2], { ...looks.beds[2], spot: [160, 38] }),
-        { id: "fridge", kind: "fridge", x: 60, y: 66, w: 14, h: 24, spot: [66, 96] },
-        { id: "stove", kind: "stove", x: 42, y: 72, w: 14, h: 14, spot: [49, 94] },
-        { id: "table", kind: "table", x: 20, y: 106, w: 28, h: 14, spot: [34, 128], seats: [[14, 116], [54, 116], [34, 128]] },
-        { id: "sofa", kind: "sofa", x: 114, y: 78, w: 32, h: 14, spot: [130, 98], seats: [[122, 98], [138, 98]] },
-        { id: "bookshelf", kind: "bookshelf", x: 166, y: 66, w: 22, h: 22, spot: [176, 94] },
-        { id: "tv", kind: "tv", x: 176, y: 98, w: 14, h: 24, spot: [166, 112] },
-        { id: "rug", kind: "rug", x: 104, y: 112, w: 52, h: 22, spot: [130, 130], seats: [[118, 124], [142, 124]] }
+        { id: "sofa", kind: "sofa", x: 30, y: 14, w: 32, h: 14, spot: [46, 34], seats: [[38, 34], [54, 34]] },
+        { id: "bookshelf", kind: "bookshelf", x: 4, y: 2, w: 20, h: 24, spot: [14, 32] },
+        { id: "rug", kind: "rug", x: 24, y: 46, w: 60, h: 22, spot: [54, 64], seats: [[40, 56], [68, 56]] },
+        ...living,
+        { id: "stove", kind: "stove", x: 150, y: 8, w: 14, h: 14, spot: [157, 30] },
+        { id: "fridge", kind: "fridge", x: 170, y: 2, w: 14, h: 24, spot: [177, 32] },
+        { id: "table", kind: "table", x: 134, y: 44, w: 28, h: 12, spot: [148, 64], seats: [[128, 52], [168, 52], [148, 64]] },
+        { id: "toybox", kind: "toys", x: 6, y: 86, w: 18, h: 12, spot: [15, 106] },
+        { id: "desk2", kind: "desk", x: 60, y: 86, w: 22, h: 16, spot: [71, 108] }
       ],
       decor: [
-        { kind: "window", x: 6, y: 3, w: 14, h: 10 }, { kind: "window", x: 90, y: 3, w: 14, h: 10 }, { kind: "window", x: 136, y: 3, w: 14, h: 10 },
-        { kind: "window", x: 24, y: 67, w: 16, h: 9, curtains: false }, { kind: "window", x: 124, y: 66, w: 12, h: 10 },
-        { kind: "counter", x: 22, y: 72, w: 20, h: 14 }, { kind: "sink", x: 27, y: 73, w: 10, h: 6 },
-        { kind: "chair", x: 10, y: 110, w: 6, h: 8 }, { kind: "chair", x: 52, y: 110, w: 6, h: 8 }, { kind: "fruit", x: 30, y: 107, w: 7, h: 4 },
-        { kind: "coffeeTable", x: 120, y: 103, w: 20, h: 7 }, { kind: "floorLamp", x: 88, y: 76, w: 6, h: 16, light: true },
-        { kind: "plant", x: 84, y: 124, w: 8, h: 12 }, { kind: "plant", x: 4, y: 128, w: 8, h: 12 },
-        { kind: "nightstand", x: 128 + 2, y: 20, w: 10, h: 8, lamp: true }, { kind: "dresser", x: 130, y: 36, w: 14, h: 12 },
-        ...extras
+        { kind: "window", x: 38, y: 3, w: 14, h: 10 }, { kind: "floorLamp", x: 66, y: 12, w: 6, h: 16, light: true }, { kind: "coffeeTable", x: 70, y: 30, w: 14, h: 7 },
+        { kind: "plant", x: 98, y: 64, w: 8, h: 12 },
+        { kind: "counter", x: 116, y: 8, w: 34, h: 14 }, { kind: "sink", x: 124, y: 9, w: 10, h: 6 }, { kind: "window", x: 136, y: 3, w: 12, h: 8, curtains: false },
+        { kind: "chair", x: 124, y: 46, w: 6, h: 8 }, { kind: "chair", x: 164, y: 46, w: 6, h: 8 }, { kind: "fruit", x: 144, y: 45, w: 7, h: 4 },
+        { kind: "window", x: 62, y: 83, w: 14, h: 10 }, { kind: "ball", x: 40, y: 118, w: 6, h: 6 }, { kind: "beanbag", x: 14, y: 120, w: 14, h: 10 },
+        { kind: "picture", x: 108, y: 83, w: 12, h: 9, art: o.hallArt || "flower" }, { kind: "coats", x: 124, y: 84, w: 20, h: 10 }, { kind: "plant", x: 100, y: 126, w: 8, h: 12 },
+        ...(o.groundExtras || [])
       ],
-      entrance: [168, 134]
+      entrance: [136, 132]
     };
+    const upper = {
+      id, floor: 1, ...PLAN,
+      rooms: [
+        room("room1", o.names[0], 0, 0, 64, 72, o.looks.rooms[0]),
+        room("room2", o.names[1], 64, 0, 64, 72, o.looks.rooms[1]),
+        room("room3", o.names[2], 128, 0, 64, 72, o.looks.rooms[2]),
+        room("landing", "Landing", 0, 72, 144, 72, o.looks.landing),
+        room("bathroom", "Bathroom", 144, 72, 48, 72, o.looks.bathroom)
+      ],
+      doors: [hDoor(40, ["room1", "landing"], 72), hDoor(96, ["room2", "landing"], 72), hDoor(130, ["room3", "landing"], 72), vDoor(104, ["landing", "bathroom"], 144)],
+      stairs: { x: 4, y: 88, w: 24, h: 40, spot: [36, 110], to: 0 },
+      objects: [
+        bed("bed1", 6, 18, b1.owner, { ...b1, spot: [27, 40] }),
+        { id: "desk1", kind: "desk", x: 30, y: 12, w: 22, h: 16, spot: [41, 34], owner: b1.owner },
+        ...room2,
+        b2.double ? bed("bed2", 96, 18, b2.owner, { ...b2, spot: [90, 46] }) : bed("bed2", 108, 18, b2.owner, { ...b2, spot: [100, 40] }),
+        b3.double ? bed("bed3", 158, 18, b3.owner, { ...b3, spot: [150, 46] }) : bed("bed3", 168, 18, b3.owner, { ...b3, spot: [160, 40] }),
+        { id: "bath", kind: "bath", x: 158, y: 90, w: 28, h: 16, spot: [170, 114] },
+        { id: "bookshelf2", kind: "bookshelf", x: 112, y: 74, w: 16, h: 22, spot: [120, 104] },
+        { id: "rug2", kind: "rug", x: 46, y: 100, w: 44, h: 14, spot: [68, 120], seats: [[58, 110], [80, 110]] }
+      ],
+      decor: [
+        { kind: "window", x: 8, y: 3, w: 14, h: 10 }, { kind: "window", x: 86, y: 3, w: 12, h: 10 }, { kind: "window", x: 146, y: 3, w: 12, h: 10 },
+        { kind: "nightstand", x: 130, y: 22, w: 10, h: 8, lamp: true }, { kind: "dresser", x: 132, y: 44, w: 14, h: 12 },
+        { kind: "window", x: 64, y: 75, w: 12, h: 9 }, { kind: "beanbag", x: 88, y: 118, w: 14, h: 10 }, { kind: "plant", x: 126, y: 126, w: 8, h: 12 },
+        { kind: "counter", x: 148, y: 116, w: 12, h: 10 }, { kind: "sink", x: 149, y: 117, w: 10, h: 6 }, { kind: "towel", x: 176, y: 116, w: 8, h: 12 },
+        ...(o.upperExtras || [])
+      ],
+      entrance: [36, 110]
+    };
+    ground.floors = [ground, upper];
+    return ground;
   }
 
   const plans = {
     seanHouse: familyHouse("seanHouse", {
-      names: ["Olive's room", "Hazel's room", "Sean's room"],
-      rooms: [
-        { wall: "#6f93bf", wallTrim: "#4d6f99", pattern: "stars", floor: "carpet", floorColor: "#9c89b8" },
-        { wall: "#ffc98b", wallTrim: "#e39b53", pattern: "dots", floor: "carpet", floorColor: "#f4a7bb" },
-        { wall: "#8fae8b", wallTrim: "#62805f", pattern: "stripes", floor: "wood", floorColor: "#a8794f" }
-      ],
-      kitchen: { wall: "#f1dfae", wallTrim: "#c9ae6f", pattern: "tiles", floor: "tile", floorColor: "#e8e0cc" },
-      living: { wall: "#5d7fa8", wallTrim: "#3f5d82", pattern: "stripes", floor: "wood", floorColor: "#b98a5a" },
-      beds: [{ blanket: "#a98cff", pattern: "stars" }, { blanket: "#f28482", pattern: "dots" }, { blanket: "#4fc3a1", pattern: "plaid" }]
-    }, ["olive", "hazel", "dad"], [
-      { kind: "poster", x: 24, y: 2, w: 12, h: 9, art: "map" }, { kind: "fairyLights", x: 2, y: 1, w: 60, h: 3, light: true },
-      { kind: "poster", x: 68, y: 3, w: 12, h: 9, art: "duck" }, { kind: "ball", x: 90, y: 50, w: 6, h: 6 }, { kind: "nightlight", x: 118, y: 44, w: 4, h: 4, light: true },
-      { kind: "picture", x: 170, y: 3, w: 12, h: 9, art: "kids" }, { kind: "console", x: 176, y: 120, w: 8, h: 4 }
-    ]),
+      names: ["Olive's room", "Hazel's room", "Sean's room"], hallArt: "kids",
+      looks: {
+        rooms: [
+          { wall: "#6f93bf", wallTrim: "#4d6f99", pattern: "stars", floor: "carpet", floorColor: "#9c89b8" },
+          { wall: "#ffc98b", wallTrim: "#e39b53", pattern: "dots", floor: "carpet", floorColor: "#f4a7bb" },
+          { wall: "#8fae8b", wallTrim: "#62805f", pattern: "stripes", floor: "wood", floorColor: "#a8794f" }
+        ],
+        landing: { wall: "#d9c7a1", wallTrim: "#a88f63", pattern: "stripes", floor: "wood", floorColor: "#b98a5a" },
+        bathroom: { wall: "#bfe3ec", wallTrim: "#7fb3c2", pattern: "tiles", floor: "tile", floorColor: "#eef4f6" },
+        living: { wall: "#5d7fa8", wallTrim: "#3f5d82", pattern: "stripes", floor: "wood", floorColor: "#b98a5a" },
+        kitchen: { wall: "#f1dfae", wallTrim: "#c9ae6f", pattern: "tiles", floor: "tile", floorColor: "#e8e0cc" },
+        playroom: { wall: "#9fd6a8", wallTrim: "#62a36f", pattern: "dots", floor: "carpet", floorColor: "#e9c46a" },
+        hall: { wall: "#c9b28a", wallTrim: "#9c845a", pattern: "stripes", floor: "wood", floorColor: "#a8794f" }
+      },
+      beds: [{ owner: "olive", blanket: "#a98cff", pattern: "stars" }, { owner: "hazel", blanket: "#f28482", pattern: "dots" }, { owner: "dad", blanket: "#4fc3a1", pattern: "plaid" }],
+      groundExtras: [{ kind: "console", x: 94, y: 48, w: 8, h: 4 }],
+      upperExtras: [
+        { kind: "poster", x: 34, y: 2, w: 12, h: 9, art: "map" }, { kind: "fairyLights", x: 2, y: 1, w: 60, h: 3, light: true },
+        { kind: "poster", x: 68, y: 3, w: 12, h: 9, art: "duck" }, { kind: "ball", x: 90, y: 54, w: 6, h: 6 }, { kind: "nightlight", x: 118, y: 52, w: 4, h: 4, light: true },
+        { kind: "picture", x: 172, y: 3, w: 12, h: 9, art: "kids" }
+      ]
+    }),
     roseCottage: familyHouse("roseCottage", {
       names: ["Front bedroom", "Middle bedroom", "Back bedroom"],
-      rooms: [
-        { wall: "#e8a0b4", wallTrim: "#c47a90", pattern: "dots", floor: "carpet", floorColor: "#cdb4db" },
-        { wall: "#a8dadc", wallTrim: "#6fa8ab", pattern: "stripes", floor: "carpet", floorColor: "#bde0fe" },
-        { wall: "#f6d6ad", wallTrim: "#d0a878", pattern: "stars", floor: "wood", floorColor: "#c89f7a" }
-      ],
-      kitchen: { wall: "#fbeec1", wallTrim: "#d8c188", pattern: "tiles", floor: "tile", floorColor: "#efe6d2" },
-      living: { wall: "#e8a0b4", wallTrim: "#c47a90", pattern: "stripes", floor: "wood", floorColor: "#c89f7a" },
-      beds: [{ blanket: "#ffafcc", pattern: "dots" }, { blanket: "#bde0fe", pattern: "stripes" }, { blanket: "#cdb4db", pattern: "stars" }]
-    }, [null, null, null], [
-      { kind: "picture", x: 24, y: 2, w: 12, h: 9, art: "flower" }, { kind: "picture", x: 170, y: 3, w: 12, h: 9, art: "flower" }
-    ]),
-
-    miloHouse: {
-      id: "miloHouse", ...PLAN,
-      rooms: [
-        room("bedroom", "Milo & Zara's room", 0, 0, 96, 64, { wall: "#e0a458", wallTrim: "#b97d3a", pattern: "stripes", floor: "wood", floorColor: "#8a5a3b" }),
-        room("nova", "Nova's room", 96, 0, 96, 64, { wall: "#7a6bd1", wallTrim: "#5446a6", pattern: "stars", floor: "carpet", floorColor: "#f2c14e" }),
-        room("kitchen", "Kitchen", 0, 64, 96, 80, { wall: "#f4d58d", wallTrim: "#c9a24f", pattern: "tiles", floor: "tile", floorColor: "#e7dcc6" }),
-        room("living", "Living room", 96, 64, 96, 80, { wall: "#6a994e", wallTrim: "#4a7236", pattern: "stripes", floor: "wood", floorColor: "#9a6a45" })
-      ],
-      doors: [hDoor(78, ["bedroom", "kitchen"]), hDoor(140, ["nova", "living"]), vDoor(100, ["kitchen", "living"], 96)],
-      frontDoor: { x: 156, w: 16, room: "living" },
-      objects: [
-        bed("bed1", 34, 16, ["milo", "zara"], { double: true, blanket: "#ff9966", pattern: "plaid", spot: [48, 50] }),
-        bed("bed2", 172, 16, "nova", { blanket: "#ffd166", pattern: "stars", spot: [164, 38] }),
-        { id: "desk1", kind: "desk", x: 100, y: 12, w: 22, h: 16, spot: [111, 34], owner: "nova" },
-        { id: "stove", kind: "stove", x: 30, y: 72, w: 14, h: 14, spot: [37, 94] },
-        { id: "fridge", kind: "fridge", x: 60, y: 66, w: 14, h: 24, spot: [67, 96] },
-        { id: "table", kind: "table", x: 20, y: 106, w: 36, h: 14, spot: [38, 128], seats: [[14, 116], [62, 116], [38, 128]] },
-        { id: "sofa", kind: "sofa", x: 106, y: 78, w: 32, h: 14, spot: [122, 98], seats: [[114, 98], [130, 98]] },
-        { id: "records", kind: "records", x: 160, y: 70, w: 16, h: 16, spot: [168, 94] },
-        { id: "easel", kind: "easel", x: 176, y: 100, w: 14, h: 22, spot: [168, 118] },
-        { id: "rug", kind: "rug", x: 104, y: 110, w: 44, h: 22, spot: [126, 128], seats: [[114, 122], [138, 122]] }
-      ],
-      decor: [
-        { kind: "window", x: 78, y: 3, w: 14, h: 10 }, { kind: "window", x: 150, y: 3, w: 14, h: 10 },
-        { kind: "window", x: 6, y: 67, w: 14, h: 9, curtains: false }, { kind: "window", x: 114, y: 66, w: 14, h: 10 },
-        { kind: "wardrobe", x: 4, y: 8, w: 18, h: 24 }, { kind: "nightstand", x: 22, y: 22, w: 10, h: 8, lamp: true }, { kind: "nightstand", x: 64, y: 22, w: 10, h: 8, lamp: true },
-        { kind: "picture", x: 40, y: 2, w: 16, h: 10, art: "painting" },
-        { kind: "poster", x: 128, y: 3, w: 12, h: 9, art: "stars" }, { kind: "beanbag", x: 130, y: 36, w: 14, h: 10 }, { kind: "clothesRack", x: 150, y: 24, w: 16, h: 14 },
-        { kind: "counter", x: 2, y: 72, w: 28, h: 14 }, { kind: "sink", x: 10, y: 73, w: 10, h: 6 }, { kind: "counter", x: 44, y: 72, w: 14, h: 14 }, { kind: "herbs", x: 46, y: 70, w: 10, h: 4 },
-        { kind: "chair", x: 10, y: 110, w: 6, h: 8 }, { kind: "chair", x: 58, y: 110, w: 6, h: 8 }, { kind: "fruit", x: 34, y: 107, w: 7, h: 4 },
-        { kind: "coffeeTable", x: 112, y: 103, w: 20, h: 7 }, { kind: "floorLamp", x: 99, y: 76, w: 6, h: 16, light: true },
-        { kind: "plant", x: 98, y: 126, w: 8, h: 12 }, { kind: "plant", x: 82, y: 126, w: 8, h: 12 }, { kind: "picture", x: 176, y: 67, w: 12, h: 9, art: "painting" }
-      ],
-      entrance: [164, 134]
-    },
+      looks: {
+        rooms: [
+          { wall: "#e8a0b4", wallTrim: "#c47a90", pattern: "dots", floor: "carpet", floorColor: "#cdb4db" },
+          { wall: "#a8dadc", wallTrim: "#6fa8ab", pattern: "stripes", floor: "carpet", floorColor: "#bde0fe" },
+          { wall: "#f6d6ad", wallTrim: "#d0a878", pattern: "stars", floor: "wood", floorColor: "#c89f7a" }
+        ],
+        landing: { wall: "#f2dfe6", wallTrim: "#c9a3b2", pattern: "stripes", floor: "wood", floorColor: "#c89f7a" },
+        bathroom: { wall: "#d8f0e8", wallTrim: "#95c9b6", pattern: "tiles", floor: "tile", floorColor: "#f3f7f4" },
+        living: { wall: "#e8a0b4", wallTrim: "#c47a90", pattern: "stripes", floor: "wood", floorColor: "#c89f7a" },
+        kitchen: { wall: "#fbeec1", wallTrim: "#d8c188", pattern: "tiles", floor: "tile", floorColor: "#efe6d2" },
+        playroom: { wall: "#cdb4db", wallTrim: "#9f86b0", pattern: "stars", floor: "carpet", floorColor: "#bde0fe" },
+        hall: { wall: "#f6d6ad", wallTrim: "#d0a878", pattern: "stripes", floor: "wood", floorColor: "#c89f7a" }
+      },
+      beds: [{ owner: null, blanket: "#ffafcc", pattern: "dots" }, { owner: null, blanket: "#bde0fe", pattern: "stripes" }, { owner: null, blanket: "#cdb4db", pattern: "stars" }],
+      upperExtras: [{ kind: "picture", x: 34, y: 2, w: 12, h: 9, art: "flower" }, { kind: "picture", x: 172, y: 3, w: 12, h: 9, art: "flower" }]
+    }),
+    miloHouse: familyHouse("miloHouse", {
+      names: ["Nova's room", "Zara's studio", "Milo & Zara's room"], living: "music", room2: "studio", playroomName: "Den", hallArt: "painting",
+      looks: {
+        rooms: [
+          { wall: "#7a6bd1", wallTrim: "#5446a6", pattern: "stars", floor: "carpet", floorColor: "#f2c14e" },
+          { wall: "#f4f1ea", wallTrim: "#c9c1b3", pattern: "dots", floor: "wood", floorColor: "#c9a877" },
+          { wall: "#e0a458", wallTrim: "#b97d3a", pattern: "stripes", floor: "wood", floorColor: "#8a5a3b" }
+        ],
+        landing: { wall: "#b5523b", wallTrim: "#8a3b2a", pattern: "stripes", floor: "wood", floorColor: "#9a6a45" },
+        bathroom: { wall: "#f7d6a8", wallTrim: "#d0a878", pattern: "tiles", floor: "tile", floorColor: "#f3e9d8" },
+        living: { wall: "#6a994e", wallTrim: "#4a7236", pattern: "stripes", floor: "wood", floorColor: "#9a6a45" },
+        kitchen: { wall: "#f4d58d", wallTrim: "#c9a24f", pattern: "tiles", floor: "tile", floorColor: "#e7dcc6" },
+        playroom: { wall: "#e76f51", wallTrim: "#b4523a", pattern: "dots", floor: "carpet", floorColor: "#8ab17d" },
+        hall: { wall: "#f4d58d", wallTrim: "#c9a24f", pattern: "stripes", floor: "wood", floorColor: "#8a5a3b" }
+      },
+      beds: [{ owner: "nova", blanket: "#ffd166", pattern: "stars" }, { owner: null, blanket: "#c9ada7", pattern: "stripes" }, { owner: ["milo", "zara"], double: true, blanket: "#ff9966", pattern: "plaid" }],
+      groundExtras: [{ kind: "herbs", x: 140, y: 5, w: 10, h: 4 }, { kind: "picture", x: 4, y: 83, w: 12, h: 9, art: "painting" }],
+      upperExtras: [
+        { kind: "poster", x: 34, y: 2, w: 12, h: 9, art: "stars" }, { kind: "clothesRack", x: 38, y: 44, w: 16, h: 14 },
+        { kind: "picture", x: 172, y: 3, w: 12, h: 9, art: "painting" }
+      ]
+    }),
 
     finnCottage: {
       id: "finnCottage", ...PLAN,
@@ -414,11 +451,17 @@
   /** The walkable part of a room: below the back wall, inside the side walls. */
   function floorOf(r) { return { x: r.x + 4, y: r.y + WALL + 4, w: r.w - 8, h: r.h - WALL - 8 }; }
 
-  function frontDoorRect(plan) { return { x: plan.frontDoor.x, y: plan.height - 10, w: plan.frontDoor.w, h: 10 }; }
+  // Floor-level helpers take one floor: a single-storey plan is its own
+  // ground floor, and two-storey homes list both in `floors`.
+  function frontDoorRect(floor) { return floor.frontDoor ? { x: floor.frontDoor.x, y: floor.height - 10, w: floor.frontDoor.w, h: 10 } : null; }
 
-  function isWalkable(plan, x, y) {
-    return plan.rooms.some(r => inRect(x, y, floorOf(r))) || plan.doors.some(d => inRect(x, y, d)) || inRect(x, y, frontDoorRect(plan));
+  function isWalkable(floor, x, y) {
+    const front = frontDoorRect(floor);
+    return floor.rooms.some(r => inRect(x, y, floorOf(r))) || floor.doors.some(d => inRect(x, y, d)) || Boolean(front && inRect(x, y, front));
   }
+
+  /** Every object in the building, each marked with its floor. */
+  function allObjects(plan) { return plan.floors.flatMap(f => f.objects); }
 
   function roomAt(plan, x, y) {
     const inside = plan.rooms.find(r => inRect(x, y, r));
@@ -443,8 +486,24 @@
 
   function doorCenter(d) { return { x: d.x + d.w / 2, y: d.y + d.h / 2 }; }
 
-  /** Waypoints from one point to another, through doorways between rooms. */
+  /**
+   * Waypoints from one point to another, through doorways and, between
+   * floors, up or down the stairs. Points carry their floor; the first point
+   * on a new floor is the top (or bottom) of the stairs.
+   */
   function routeInside(plan, from, to) {
+    const floors = plan.floors || [plan];
+    const a = from.floor || 0, b = to.floor || 0;
+    if (a === b || !floors[a]?.stairs || !floors[b]?.stairs) return routeOnFloor(floors[b] || floors[0], from, to).map(p => ({ ...p, floor: b }));
+    const [upX, upY] = floors[a].stairs.spot, [downX, downY] = floors[b].stairs.spot;
+    return [
+      ...routeOnFloor(floors[a], from, { x: upX, y: upY }).map(p => ({ ...p, floor: a })),
+      { x: downX, y: downY, floor: b },
+      ...routeOnFloor(floors[b], { x: downX, y: downY }, to).map(p => ({ ...p, floor: b }))
+    ];
+  }
+
+  function routeOnFloor(plan, from, to) {
     const start = roomAt(plan, from.x, from.y), goal = roomAt(plan, to.x, to.y);
     if (!start || !goal || start === goal) return [{ x: to.x, y: to.y }];
     const prev = { [start]: null };
@@ -490,7 +549,7 @@
 
   /** Beds for a household: own beds first, then spare beds in order. */
   function assignBeds(plan, householdIds) {
-    const beds = plan.objects.filter(o => o.kind === "bed");
+    const beds = allObjects(plan).filter(o => o.kind === "bed");
     const result = new Map();
     const used = new Map(beds.map(b => [b.id, 0]));
     for (const id of householdIds) {
@@ -509,7 +568,7 @@
   /** The room a resident thinks of as theirs: where their bed is. */
   function ownRoomOf(plan, beds, id) {
     const b = beds.get(id)?.bed;
-    return b ? plan.rooms.find(r => inRect(b.x + b.w / 2, b.y + b.h / 2, r)) : null;
+    return b ? plan.floors[b.floor].rooms.find(r => inRect(b.x + b.w / 2, b.y + b.h / 2, r)) : null;
   }
 
   // Everyday activities at home, mapped to the furniture that fits them.
@@ -524,13 +583,14 @@
   ];
 
   /**
-   * Where everyone at home is, as a Map of id -> { x, y, objectId, bed, slot }.
+   * Where everyone at home is, as a Map of id -> { x, y, floor, objectId, bed, slot }.
    * Deterministic, so every phone draws the same scene. `occupants` are
    * { id, asleep, activity, indoor } in household order.
    */
   function placeHousehold(plan, occupants, householdIds) {
     const beds = assignBeds(plan, householdIds || occupants.map(o => o.id));
-    const byId = id => plan.objects.find(o => o.id === id);
+    const objects = allObjects(plan);
+    const byId = id => objects.find(o => o.id === id);
     const taken = new Map();
     const seatAt = object => {
       const n = taken.get(object.id) || 0;
@@ -538,17 +598,22 @@
       const seats = object.seats || [object.spot];
       const [x, y] = seats[n % seats.length];
       // Past the last seat, stand a little to the side.
-      return { x: x + Math.floor(n / seats.length) * 8, y, objectId: object.id };
+      return { x: x + Math.floor(n / seats.length) * 8, y, floor: object.floor, objectId: object.id };
     };
     const result = new Map();
     for (const o of occupants) {
       const mine = beds.get(o.id);
       if (o.indoor && Number.isFinite(o.indoor.x) && Number.isFinite(o.indoor.y)) {
         const object = o.indoor.objectId ? byId(o.indoor.objectId) : null;
-        if (object?.kind === "bed") { result.set(o.id, { x: object.spot[0], y: object.spot[1], objectId: object.id, bed: object, slot: mine?.bed === object ? mine.slot : 0 }); continue; }
-        if (!o.indoor.objectId || object) { const p = snapInside(plan, o.indoor.x, o.indoor.y); result.set(o.id, { ...p, objectId: object?.id || null }); continue; }
+        if (object?.kind === "bed") { result.set(o.id, { x: object.spot[0], y: object.spot[1], floor: object.floor, objectId: object.id, bed: object, slot: mine?.bed === object ? mine.slot : 0 }); continue; }
+        if (!o.indoor.objectId || object) {
+          const floor = object ? object.floor : plan.floors[o.indoor.floor] ? o.indoor.floor : 0;
+          const p = snapInside(plan.floors[floor], o.indoor.x, o.indoor.y);
+          result.set(o.id, { ...p, floor, objectId: object?.id || null });
+          continue;
+        }
       }
-      if (o.asleep && mine) { result.set(o.id, { x: mine.bed.spot[0], y: mine.bed.spot[1], objectId: mine.bed.id, bed: mine.bed, slot: mine.slot }); continue; }
+      if (o.asleep && mine) { result.set(o.id, { x: mine.bed.spot[0], y: mine.bed.spot[1], floor: mine.bed.floor, objectId: mine.bed.id, bed: mine.bed, slot: mine.slot }); continue; }
       const text = String(o.activity || "");
       // The building's own activities first: staff go behind the counter.
       const own = (plan.activities || []).find(([pattern]) => pattern.test(text));
@@ -556,7 +621,7 @@
       if (target && own[2] === "staff" && target.staff) {
         const n = taken.get(`staff:${target.id}`) || 0;
         taken.set(`staff:${target.id}`, n + 1);
-        result.set(o.id, { x: target.staff[0] + n * 10, y: target.staff[1], objectId: null, staff: true });
+        result.set(o.id, { x: target.staff[0] + n * 10, y: target.staff[1], floor: target.floor, objectId: null, staff: true });
         continue;
       }
       if (target) { result.set(o.id, seatAt(target)); continue; }
@@ -564,7 +629,7 @@
       for (const [pattern, kinds] of activityKinds) {
         if (!pattern.test(text)) continue;
         for (const kind of kinds) {
-          const candidates = plan.objects.filter(obj => obj.kind === kind);
+          const candidates = objects.filter(obj => obj.kind === kind);
           // Your own desk before someone else's.
           object = candidates.find(obj => ownerList(obj).includes(o.id)) || candidates.find(obj => !ownerList(obj).length) || candidates[0];
           if (object) break;
@@ -574,9 +639,9 @@
       if (!object && /rest/.test(text)) {
         // Resting happens in your own room, beside your bed.
         const room = ownRoomOf(plan, beds, o.id);
-        if (room && mine) { result.set(o.id, { x: mine.bed.spot[0], y: mine.bed.spot[1], objectId: null }); continue; }
+        if (room && mine) { result.set(o.id, { x: mine.bed.spot[0], y: mine.bed.spot[1], floor: mine.bed.floor, objectId: null }); continue; }
       }
-      if (!object) object = byId("sofa") || byId("armchair") || plan.objects.find(obj => obj.seats);
+      if (!object) object = byId("sofa") || byId("armchair") || objects.find(obj => obj.seats);
       result.set(o.id, seatAt(object));
     }
     return result;
@@ -586,22 +651,27 @@
   // and a spot to stand (or sit) at. Purely decorative things stay decor.
   const HANGING = new Set(["window", "picture", "poster"]);
   for (const plan of Object.values(plans)) {
+    if (!plan.floors) { plan.floor = 0; plan.floors = [plan]; }
+    // Ids are unique across the whole building, both floors.
     const counts = {};
-    const decor = [];
-    for (const d of plan.decor) {
-      if (!furniture[d.kind]) { decor.push(d); continue; }
-      counts[d.kind] = (counts[d.kind] || 0) + 1;
-      const id = `${d.kind}${counts[d.kind]}`;
-      const room = plan.rooms.find(r => inRect(d.x + d.w / 2, d.y + d.h / 2, r));
-      let spot;
-      if (d.kind === "chair" || d.kind === "beanbag") spot = [d.x + d.w / 2, d.y + d.h];
-      else if (HANGING.has(d.kind) && room) spot = [d.x + d.w / 2, room.y + WALL + 8];
-      else spot = [d.x + d.w / 2, d.y + d.h + 6];
-      const p = snapInside(plan, spot[0], spot[1]);
-      plan.objects.push({ ...d, id, spot: [Math.round(p.x), Math.round(p.y)], hanging: HANGING.has(d.kind) });
+    for (const floor of plan.floors) {
+      const decor = [];
+      for (const d of floor.decor) {
+        if (!furniture[d.kind]) { decor.push(d); continue; }
+        counts[d.kind] = (counts[d.kind] || 0) + 1;
+        const id = `${d.kind}${counts[d.kind]}`;
+        const room = floor.rooms.find(r => inRect(d.x + d.w / 2, d.y + d.h / 2, r));
+        let spot;
+        if (d.kind === "chair" || d.kind === "beanbag") spot = [d.x + d.w / 2, d.y + d.h];
+        else if (HANGING.has(d.kind) && room) spot = [d.x + d.w / 2, room.y + WALL + 8];
+        else spot = [d.x + d.w / 2, d.y + d.h + 6];
+        const p = snapInside(floor, spot[0], spot[1]);
+        floor.objects.push({ ...d, id, spot: [Math.round(p.x), Math.round(p.y)], hanging: HANGING.has(d.kind) });
+      }
+      floor.decor = decor;
+      for (const o of floor.objects) o.floor = floor.floor;
     }
-    plan.decor = decor;
   }
 
-  return { PLAN, WALL, furniture, plans, planFor, indoorActivity, locate, floorOf, frontDoorRect, isWalkable, roomAt, snapInside, routeInside, assignBeds, placeHousehold };
+  return { PLAN, WALL, furniture, plans, planFor, allObjects, indoorActivity, locate, floorOf, frontDoorRect, isWalkable, roomAt, snapInside, routeInside, assignBeds, placeHousehold };
 });

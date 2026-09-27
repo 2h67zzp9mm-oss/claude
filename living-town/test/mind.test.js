@@ -130,32 +130,50 @@ test("every home, the cafe, the workshop and the market have floor plans that fi
   const interiors = require("../shared/interiors");
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   for (const id of ["cafe", "workshop", "market"]) assert.ok(interiors.planFor(id) && world.buildings.find(b => b.id === id), `${id} has an inside`);
+  for (const id of ["seanHouse", "miloHouse", "roseCottage"]) assert.strictEqual(interiors.planFor(id).floors.length, 2, `${id} has an upstairs`);
   for (const b of world.buildings.filter(item => interiors.planFor(item.id))) {
     const plan = interiors.planFor(b.id);
-    assert.ok(plan.rooms.length >= 3, `${b.id} has several rooms`);
-    if (b.residents) assert.ok(plan.objects.filter(o => o.kind === "bed").length >= 2, `${b.id} has beds`);
-    for (const [, objectId] of plan.activities || []) assert.ok(plan.objects.some(o => o.id === objectId), `${b.id} activity goes to ${objectId}`);
+    const objects = interiors.allObjects(plan);
+    assert.ok(plan.floors.reduce((n, f) => n + f.rooms.length, 0) >= 3, `${b.id} has several rooms`);
+    if (b.residents) assert.ok(objects.filter(o => o.kind === "bed").length >= 2, `${b.id} has beds`);
+    for (const [, objectId] of plan.activities || []) assert.ok(objects.some(o => o.id === objectId), `${b.id} activity goes to ${objectId}`);
     const ids = new Set();
-    for (const o of plan.objects) {
-      assert.ok(!ids.has(o.id) && o.id.length <= 20, `${b.id} ${o.id} has a short, unique id`);
+    for (const o of objects) {
+      assert.ok(!ids.has(o.id) && o.id.length <= 20, `${b.id} ${o.id} has a short id, unique across floors`);
       ids.add(o.id);
-      assert.ok(o.x >= 0 && o.y >= 0 && o.x + o.w <= plan.width && o.y + o.h <= plan.height, `${b.id} ${o.id} inside the house`);
       assert.ok(interiors.furniture[o.kind], `${o.kind} has an effect`);
-      for (const [x, y] of [o.spot, ...(o.seats || []), ...(o.staff ? [o.staff] : [])]) assert.ok(interiors.isWalkable(plan, x, y), `${b.id} ${o.id} can be reached at ${x},${y}`);
     }
-    // Nothing blocks a doorway or the front door.
-    for (const d of [...plan.doors, interiors.frontDoorRect(plan)]) {
-      for (const o of [...plan.objects, ...plan.decor]) assert.ok(!overlaps(o, d), `${b.id}: ${o.id || o.kind} blocks a door`);
-    }
-    // Every room can be reached from the front door without leaving the floor.
-    for (const r of plan.rooms) {
-      const f = interiors.floorOf(r);
-      const goal = { x: f.x + f.w / 2, y: f.y + f.h / 2 };
-      const points = [{ x: plan.entrance[0], y: plan.entrance[1] }, ...interiors.routeInside(plan, { x: plan.entrance[0], y: plan.entrance[1] }, goal)];
-      for (let i = 1; i < points.length; i++) {
-        for (let t = 0; t <= 1; t += 0.05) {
-          const x = points[i - 1].x + (points[i].x - points[i - 1].x) * t, y = points[i - 1].y + (points[i].y - points[i - 1].y) * t;
-          assert.ok(interiors.isWalkable(plan, x, y), `${b.id}: the way to ${r.name} stays on the floor (${x.toFixed(0)},${y.toFixed(0)})`);
+    for (const floor of plan.floors) {
+      const where = `${b.id} floor ${floor.floor}`;
+      for (const o of floor.objects) {
+        assert.strictEqual(o.floor, floor.floor);
+        assert.ok(o.x >= 0 && o.y >= 0 && o.x + o.w <= floor.width && o.y + o.h <= floor.height, `${where} ${o.id} inside the house`);
+        for (const [x, y] of [o.spot, ...(o.seats || []), ...(o.staff ? [o.staff] : [])]) assert.ok(interiors.isWalkable(floor, x, y), `${where} ${o.id} can be reached at ${x},${y}`);
+      }
+      // Nothing blocks a doorway, the front door or the stairs.
+      const front = interiors.frontDoorRect(floor);
+      for (const d of [...floor.doors, ...(front ? [front] : []), ...(floor.stairs ? [floor.stairs] : [])]) {
+        for (const o of [...floor.objects, ...floor.decor]) assert.ok(!overlaps(o, d), `${where}: ${o.id || o.kind} blocks a way through`);
+      }
+      if (floor.stairs) {
+        assert.ok(interiors.isWalkable(floor, ...floor.stairs.spot), `${where}: the stairs can be reached`);
+        assert.ok(plan.floors[floor.stairs.to]?.stairs, `${where}: the stairs lead somewhere`);
+      }
+      assert.strictEqual(Boolean(floor.frontDoor), floor.floor === 0, `${where}: the front door is downstairs`);
+      // Every room on every floor can be reached from the front door without leaving the floor.
+      for (const r of floor.rooms) {
+        const f = interiors.floorOf(r);
+        const start = { x: plan.entrance[0], y: plan.entrance[1], floor: 0 };
+        const goal = { x: f.x + f.w / 2, y: f.y + f.h / 2, floor: floor.floor };
+        const points = [start, ...interiors.routeInside(plan, start, goal)];
+        assert.strictEqual(points[points.length - 1].floor, floor.floor, `${where}: the way to ${r.name} ends on the right floor`);
+        for (let i = 1; i < points.length; i++) {
+          if (points[i].floor !== points[i - 1].floor) continue; // up or down the stairs
+          const on = plan.floors[points[i].floor];
+          for (let t = 0; t <= 1; t += 0.05) {
+            const x = points[i - 1].x + (points[i].x - points[i - 1].x) * t, y = points[i - 1].y + (points[i].y - points[i - 1].y) * t;
+            assert.ok(interiors.isWalkable(on, x, y), `${where}: the way to ${r.name} stays on the floor (${x.toFixed(0)},${y.toFixed(0)})`);
+          }
         }
       }
     }
@@ -168,8 +186,9 @@ test("at home, everyone sleeps in their own bed and goes to the right furniture"
   const household = ["dad", "olive", "hazel"];
   const beds = interiors.assignBeds(sean, household);
   assert.strictEqual(new Set(household.map(id => beds.get(id).bed.id)).size, 3, "three different beds");
-  const oliveRoom = sean.rooms.find(r => r.name === "Olive's room");
+  const oliveRoom = sean.floors[1].rooms.find(r => r.name === "Olive's room");
   const oliveBed = beds.get("olive").bed;
+  assert.strictEqual(oliveBed.floor, 1, "bedrooms are upstairs");
   assert.ok(oliveBed.x >= oliveRoom.x && oliveBed.x < oliveRoom.x + oliveRoom.w, "Olive's bed is in Olive's room");
 
   const placed = interiors.placeHousehold(sean, [
@@ -178,8 +197,11 @@ test("at home, everyone sleeps in their own bed and goes to the right furniture"
     { id: "hazel", asleep: false, activity: "having family time" }
   ], household);
   assert.strictEqual(placed.get("olive").bed, oliveBed);
-  assert.strictEqual(sean.objects.find(o => o.id === placed.get("dad").objectId).kind, "tv");
-  assert.strictEqual(sean.objects.find(o => o.id === placed.get("hazel").objectId).kind, "table");
+  assert.strictEqual(placed.get("olive").floor, 1, "asleep upstairs");
+  const all = interiors.allObjects(sean);
+  assert.strictEqual(all.find(o => o.id === placed.get("dad").objectId).kind, "tv");
+  assert.strictEqual(all.find(o => o.id === placed.get("hazel").objectId).kind, "table");
+  assert.strictEqual(placed.get("hazel").floor, 0, "family time downstairs");
 
   // Milo and Zara share a double bed; a visitor gets a spare one.
   const milo = interiors.planFor("miloHouse");
@@ -241,8 +263,8 @@ test("nobody is ever in two places at once", () => {
 
 test("small things around the house can be used too", () => {
   const interiors = require("../shared/interiors");
-  const kinds = new Set(Object.values(interiors.plans).flatMap(p => p.objects.map(o => o.kind)));
-  for (const kind of ["bed", "sink", "chair", "counter", "fridge", "window", "plant", "wardrobe", "fruit"]) assert.ok(kinds.has(kind), `${kind} is usable`);
+  const kinds = new Set(Object.values(interiors.plans).flatMap(p => interiors.allObjects(p).map(o => o.kind)));
+  for (const kind of ["bed", "sink", "chair", "counter", "fridge", "window", "plant", "wardrobe", "fruit", "bath"]) assert.ok(kinds.has(kind), `${kind} is usable`);
   for (const [kind, f] of Object.entries(interiors.furniture)) {
     assert.ok(f.label && f.activity, kind);
     assert.ok(Object.keys(f.needs).every(n => ["energy", "hunger", "social", "fun"].includes(n)), `${kind} only boosts real needs`);
