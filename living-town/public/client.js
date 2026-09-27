@@ -133,7 +133,7 @@
       renderSelected();
     } else if (msg.type === "tick") {
       setClock(msg.now);
-      if (msg.town) town = msg.town;
+      if (msg.town) { town = msg.town; if (msg.town.brain) mreBrain = msg.town.brain; }
       msg.changed.forEach(mergeResident);
       msg.residents.forEach(mergeResident);
       if (msg.events.length) {
@@ -423,6 +423,12 @@
     return c;
   }
 
+  let mreHitBox = null;
+  function tappedMrE(p) {
+    if (!mreHitBox || !mreVisible(nowMs())) return false;
+    return [mreHitBox.body, mreHitBox.bubble].some(b => b && p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1);
+  }
+
   function mreVisible(now) { return Boolean(town.mre) && now < town.mre.until; }
 
   function drawMrE(now) {
@@ -452,7 +458,10 @@
     ctx.fillStyle = "#ffe9b8";
     ctx.fillText(label, x, y + 2 + fs * 0.72);
     ctx.restore();
-    drawChatBubble({ drawX: x, drawY: y + bob }, town.mre.text, true);
+    const bubble = drawChatBubble({ drawX: x, drawY: y + bob }, town.mre.text, true);
+    // Tap target: his body (generously sized for fingers) plus his speech bubble.
+    const reach = screenPx(22);
+    mreHitBox = { body: { x0: x - reach, y0: y - FEET_ROW * PX - 4, x1: x + reach, y1: y + screenPx(18) }, bubble };
   }
 
   function drawWeather() {
@@ -525,6 +534,7 @@
     ctx.fillStyle = magic ? "#3b1f73" : "#1a2940"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     lines.forEach((l, i) => ctx.fillText(l, x + width / 2, y + fs * 0.55 + lineH * (i + 0.5)));
     ctx.restore();
+    return { x0: x, y0: y, x1: x + width, y1: y + height + fs * 0.6 };
   }
 
   // --- Resident sheet ---
@@ -631,14 +641,14 @@
     if (!residents.size) return;
     const p = mapPoint(event);
     const playing = mode === "play" && me;
+    // Mr. E comes first: he's only around briefly and always stands beside
+    // residents, so they would otherwise swallow every tap meant for him.
+    if (tappedMrE(p)) return showToast(`✦ Mr. E: "${town.mre.text}"`);
     const hit = [...residents.values()]
       .filter(r => !hiddenInside(r) && r.id !== (playing ? me.residentId : null))
       .sort((a, b) => b.drawY - a.drawY)
       .find(r => Math.abs(r.drawX - p.x) < screenPx(playing ? 12 : 18) + 6 && p.y > r.drawY - FEET_ROW * PX - 4 && p.y < r.drawY + screenPx(14));
     if (hit) return select(hit.id);
-    if (mreVisible(nowMs()) && Math.abs(town.mre.x - p.x) < screenPx(16) + 6 && p.y > town.mre.y - FEET_ROW * PX - 4 && p.y < town.mre.y + screenPx(14)) {
-      return showToast(`✦ Mr. E: "${town.mre.text}"`);
-    }
     const pad = screenPx(6);
     const sign = signBoxes.find(s => p.x >= s.x0 - pad && p.x <= s.x1 + pad && p.y >= s.y0 - pad && p.y <= s.y1 + pad);
     if (!playing) { if (sign) showBuilding(sign.b); return; }
@@ -839,6 +849,7 @@
         showToast("✦ Mr. E is thinking…");
         const result = await api("/api/mre/surprise", { method: "POST" });
         gate.remove();
+        if (result.brain) mreBrain = result.brain;
         showToast(`✦ Mr. E: "${result.announcement}"`);
       } catch (error) { gate.querySelector("#gateError").textContent = error.message; }
     });

@@ -88,6 +88,22 @@ function ollamaGenerator({ url = "http://127.0.0.1:11434", model = "llama3.2:3b"
     }
   };
   generate.label = `local AI (${model})`;
+  // Is Ollama running, and is the model downloaded? Used for the status label.
+  generate.check = async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    try {
+      const response = await fetch(`${url}/api/tags`, { signal: controller.signal });
+      if (!response.ok) return `built-in storyteller (AI offline)`;
+      const { models = [] } = await response.json();
+      const found = models.some(m => m.name === model || m.name === `${model}:latest` || m.model === model);
+      return found ? generate.label : `built-in storyteller (${model} not downloaded)`;
+    } catch {
+      return "built-in storyteller (AI offline)";
+    } finally {
+      clearTimeout(timer);
+    }
+  };
   return generate;
 }
 
@@ -205,7 +221,13 @@ function builtInProposal(state, now) {
 
 function createMrE({ generate = null, log = console, random = Math.random } = {}) {
   let busy = false;
-  let lastBrain = generate ? generate.label || "local AI" : "built-in storyteller";
+  let lastBrain = generate ? "checking the local AI…" : "built-in storyteller";
+  let lastCheck = 0;
+  async function checkBrain() {
+    if (!generate?.check) return;
+    lastCheck = Date.now();
+    try { lastBrain = await generate.check(); } catch {}
+  }
 
   function ensureState(state) {
     state.effects = Array.isArray(state.effects) ? state.effects : [];
@@ -230,6 +252,9 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
   function bond(a, b, amount) {
     a.relationships[b.id] = Math.min(100, (Number(a.relationships[b.id]) || 0) + amount);
     b.relationships[a.id] = Math.min(100, (Number(b.relationships[a.id]) || 0) + amount);
+    // Bump revisions so clients receive the new relationship values.
+    a.lifeRevision = (a.lifeRevision || 0) + 1;
+    b.lifeRevision = (b.lifeRevision || 0) + 1;
   }
 
   function nudge(state, ids) {
@@ -364,6 +389,7 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
   /** Called from the simulation tick. Never blocks it. */
   function tick(state, now, helpers) {
     ensureState(state);
+    if (generate?.check && now - lastCheck > 10 * 60_000) checkBrain();
     state.effects = activeEffects(state, now);
     if (state.mre.visit && state.mre.visit.until <= now) state.mre.visit = null;
     resolvePending(state, now, helpers);
@@ -375,7 +401,7 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
     surprise(state, helpers).catch(err => log.error("Mr. E error:", err));
   }
 
-  return { tick, surprise, ensureState, get brain() { return lastBrain; }, get busy() { return busy; } };
+  return { tick, surprise, ensureState, checkBrain, get brain() { return lastBrain; }, get busy() { return busy; } };
 }
 
 module.exports = { createMrE, ollamaGenerator, normalizePlan, isSafe, clean, TYPES, SYSTEM_PROMPT };

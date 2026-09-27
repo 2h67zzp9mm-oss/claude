@@ -109,3 +109,22 @@ test("surprises never fail just because it's already raining", async () => {
     assert.ok(await createMrE({ log: { warn() {}, error() {} } }).surprise(state, helpers(state)), `attempt ${i}`);
   }
 });
+
+test("meet-ups bump both residents' revisions so phones get the new friendship", async () => {
+  const state = town(Date.now());
+  const olive = state.residents.find(r => r.id === "olive"), finn = state.residents.find(r => r.id === "finn");
+  const before = [olive.lifeRevision, finn.lifeRevision];
+  const gen = async () => ({ type: "friends", residentId: "olive", otherResidentId: "finn", place: "park", announcement: "Olive and Finn, meet me at the park..." });
+  await createMrE({ generate: gen, log: { warn() {}, error() {} } }).surprise(state, helpers(state));
+  assert.ok(olive.lifeRevision > before[0] && finn.lifeRevision > before[1]);
+});
+
+test("the brain label reflects whether the local AI is really available", async () => {
+  const gen = async () => ({});
+  gen.label = "local AI (test)";
+  gen.check = async () => "built-in storyteller (AI offline)";
+  const mrE = createMrE({ generate: gen, log: { warn() {}, error() {} } });
+  assert.match(mrE.brain, /checking/);
+  await mrE.checkBrain();
+  assert.strictEqual(mrE.brain, "built-in storyteller (AI offline)");
+});

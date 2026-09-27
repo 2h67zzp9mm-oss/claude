@@ -386,7 +386,7 @@ function residentDetail(r) {
 
 function townPayload() {
   const weather = (state.effects || []).find(e => e.kind === "weather" && e.until > Date.now());
-  return { mre: state.mre?.visit || null, weather: weather?.weather || "clear" };
+  return { mre: state.mre?.visit || null, weather: weather?.weather || "clear", brain: mre.brain };
 }
 
 function fullStatePayload() {
