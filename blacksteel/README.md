@@ -23,7 +23,22 @@ Open `index.html` in a browser (phone, tablet, or PC). No install, no server. Th
 - If the player picks something Sean didn't say or do, Shannon corrects it, so the prologue stays canon.
 - Tap the floor to walk. Tap a person or object (or its name under "Things here") for what you can do.
 - Hint button for both players. In Hazel's game the next thing to try glows after a short wait.
-- **Voice**: every character is read aloud by the device's built-in voices, each with their own pitch and pace. **Auto** turns the page when a line finishes. Both can be switched off.
+- **Voice**: every line is pre-recorded with ElevenLabs voices, one voice per character (see below). **Auto** turns the page when a line finishes. Both can be switched off.
+
+## Voices (ElevenLabs)
+
+Every spoken line is generated ahead of time and packed into one audio file per chapter (`voices/ch0.mp3` … `voices/ch8.mp3`), with `voices/manifest.json` saying where each line starts. The game plays a line only when its text matches exactly, so after changing any dialogue, regenerate.
+
+Setup (once): in the environment settings, allow `api.elevenlabs.io` under network access and add the API key as `ELEVENLABS_API_KEY`. Then, in a new session:
+
+```
+python3 blacksteel/voices/extract_lines.py   # list every spoken line (voices/lines.json)
+python3 blacksteel/voices/generate.py        # generate new or changed lines, then pack the chapter files
+```
+
+- `voices/cast.json` picks the ElevenLabs voice for each character. `generate.py --list` shows the voices your account can use. Change a `voice_id` and run `generate.py` again: only that character is regenerated.
+- The whole prologue is about 44,000 characters, which fits ElevenLabs' Creator plan.
+- Generated per-line audio is cached in `voices/cache/` (not committed), so reruns don't pay twice.
 
 ## Files
 

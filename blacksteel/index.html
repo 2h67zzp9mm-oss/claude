@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>The Blacksteel Pirates</title>
 <meta name="description" content="Prologue game: The Island That Never Existed">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -322,39 +323,49 @@
   const GW = () => (W && W.active ? W : W0);
 
   // ---------- voices ----------
-  const synth = window.speechSynthesis;
-  let voiceOn = pref("voice", true) && !!synth, autoOn = pref("auto", false);
+  // Every line is recorded ahead of time (voices/generate.py) and packed into one file per chapter.
+  // voices/manifest.json maps "<voice>|<exact text>" to [chapter, start, duration].
+  const VOICE_OF = { N: "Shannon", R: "Shannon", CAP: "Narrator", S: "Sean", Deke: "Deke", Mercer: "Mercer", Nia: "Nia", Harrow: "Harrow", Lily: "Lily", "Lily's mother": "LilyMother" };
+  const VO = { manifest: null, ctx: null, buffers: {}, src: null };
+  let voiceOn = pref("voice", true), autoOn = pref("auto", false);
   voiceBtn.setAttribute("aria-pressed", String(voiceOn));
   autoBtn.setAttribute("aria-pressed", String(autoOn));
-  if (!synth) voiceBtn.hidden = true;
-  let voices = [];
-  const FEMALE = /female|samantha|victoria|karen|moira|tessa|fiona|zira|susan|serena|allison|ava|kate|hazel|libby|sonia|jenny|aria|emma|amelie|nicky|martha|catherine|google uk english female|google us english/i;
-  const MALE = /(^|\W)male|daniel|alex|fred|arthur|oliver|david|mark|george|rishi|aaron|tom|james|guy|ryan|thomas|lee|google uk english male/i;
-  function pickVoices() {
-    const all = synth ? synth.getVoices().filter(v => /^en/i.test(v.lang)) : [];
-    const f = all.filter(v => FEMALE.test(v.name) && !/male/i.test(v.name.replace(/female/i, "")));
-    const m = all.filter(v => MALE.test(v.name) && !FEMALE.test(v.name));
-    const any = all.length ? all : (synth ? synth.getVoices() : []);
-    const gb = list => list.find(v => /GB|UK/i.test(v.lang + v.name)) || list[0];
-    voices = { f1: gb(f) || any[0], f2: f[1] || f[0] || any[0], m1: gb(m) || m[0] || any[0], m2: m[1] || m[0] || any[0], m3: m[2] || m[0] || any[0] };
+  voiceBtn.hidden = true;
+  fetch("voices/manifest.json").then(r => (r.ok ? r.json() : null)).then(m => { if (m) { VO.manifest = m; voiceBtn.hidden = false; } }).catch(() => {});
+  function voCtx() {
+    if (!VO.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) VO.ctx = new AC(); }
+    if (VO.ctx && VO.ctx.state === "suspended") VO.ctx.resume();
+    return VO.ctx;
   }
-  if (synth) { pickVoices(); synth.onvoiceschanged = pickVoices; }
-  // Who sounds like what: a voice, a pitch and a pace for each speaker.
-  const CAST = {
-    N: ["f1", 1, .95], R: ["f1", 1.05, 1], CAP: ["f1", .95, .9], S: ["m1", .95, 1],
-    Deke: ["m2", 1.05, 1.02], Mercer: ["m3", .75, .9], Nia: ["f2", 1.15, 1.05], Harrow: ["m1", .6, .85],
-    Lily: ["f2", 1.6, 1.05], "Lily's mother": ["f2", 1.1, 1], Olive: ["f2", 1.25, 1], Hazel: ["f1", 1.55, 1.05]
-  };
-  function speak(sp, text) {
-    if (!voiceOn || !synth || !text) return Promise.resolve();
-    const key = sp === "SIS" ? sis() : sp;
-    const [v, pitch, rate] = CAST[key] || ["f2", 1, 1];
-    const u = new SpeechSynthesisUtterance(text.replace(/[“”"]/g, "").replace(/’/g, "'"));
-    if (voices[v]) u.voice = voices[v];
-    u.pitch = pitch; u.rate = rate;
-    return new Promise(res => { u.onend = u.onerror = () => res(); synth.cancel(); synth.speak(u); });
+  function voBuffer(ch) {
+    if (!VO.manifest || !voCtx()) return Promise.resolve(null);
+    if (!VO.buffers[ch]) {
+      VO.buffers[ch] = fetch(`voices/ch${ch}.mp3`).then(r => r.arrayBuffer())
+        .then(b => new Promise((res, rej) => VO.ctx.decodeAudioData(b, res, rej))).catch(() => null);
+    }
+    return VO.buffers[ch];
   }
-  const hush = () => { if (synth) synth.cancel(); };
+  // Keep only the chapters around the current one decoded, so phones don't run out of memory.
+  function voPrepare(ch) {
+    for (const k of Object.keys(VO.buffers)) if (+k < ch - 1 || +k > ch + 1) delete VO.buffers[k];
+    voBuffer(ch).then(() => voBuffer(ch + 1));
+    if (ch === 0) voBuffer(0);
+  }
+  function hush() { if (VO.src) { try { VO.src.onended = null; VO.src.stop(); } catch (e) { /* already stopped */ } VO.src = null; } }
+  async function speak(sp, text) {
+    if (!voiceOn || !VO.manifest || !text) return;
+    const voice = sp === "SIS" ? sis() : VOICE_OF[sp];
+    const hit = voice && VO.manifest[voice + "|" + text];
+    if (!hit) { (window.__voMiss = window.__voMiss || []).push((voice || sp) + "|" + text); return; }
+    const [ch, start, dur] = hit;
+    const buf = await voBuffer(ch);
+    if (!buf) return;
+    hush();
+    const src = VO.ctx.createBufferSource();
+    src.buffer = buf; src.connect(VO.ctx.destination);
+    VO.src = src;
+    return new Promise(res => { src.onended = () => { if (VO.src === src) VO.src = null; res(); }; src.start(0, start, dur); });
+  }
   voiceBtn.addEventListener("click", () => { voiceOn = !voiceOn; setPref("voice", voiceOn); voiceBtn.setAttribute("aria-pressed", String(voiceOn)); if (!voiceOn) hush(); });
   autoBtn.addEventListener("click", () => { autoOn = !autoOn; setPref("auto", autoOn); autoBtn.setAttribute("aria-pressed", String(autoOn)); });
 
@@ -393,7 +404,8 @@
       const spoken = speak(sp, text);
       if (autoOn) {
         const minRead = 900 + text.length * 38;
-        Promise.all([spoken, new Promise(r => setTimeout(r, voiceOn ? 250 : minRead))]).then(() => { if (advance === mine) setTimeout(() => { if (advance === mine) mine(); }, 350); });
+        const hasVoice = voiceOn && VO.manifest && VO.manifest[(sp === "SIS" ? sis() : VOICE_OF[sp]) + "|" + text];
+        Promise.all([spoken, new Promise(r => setTimeout(r, hasVoice ? 250 : minRead))]).then(() => { if (advance === mine) setTimeout(() => { if (advance === mine) mine(); }, 350); });
       }
     });
   }
@@ -685,6 +697,7 @@
   async function runStory() {
     for (let i = S.ch; i < STORY.length; i++) {
       S.ch = i; save();
+      voPrepare(i);
       await STORY[i].run(G);
     }
     S.ch = STORY.length; save();
@@ -721,8 +734,8 @@
   let gen = 0;
   function begin(p, restart) {
     if (restart) wipe(p);
-    // Browsers only allow speech after a tap: this tap unlocks it.
-    if (synth && voiceOn) { try { synth.speak(new SpeechSynthesisUtterance(" ")); } catch (e) { /* ignore */ } }
+    // Browsers only allow sound after a tap: this tap unlocks it.
+    voCtx();
     S.player = p;
     const sv = load(p);
     S.ch = sv && sv.ch < STORY.length ? sv.ch : 0;

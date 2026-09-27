@@ -1,0 +1,17 @@
+{
+  "_about": "Which ElevenLabs voice reads each character. Swap any voice_id for one from your ElevenLabs voice library, then run generate.py again: only changed voices are regenerated.",
+  "model_id": "eleven_multilingual_v2",
+  "voices": {
+    "Shannon":    { "voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (British, dry and clear)", "stability": 0.5, "similarity_boost": 0.8, "style": 0.25 },
+    "Narrator":   { "voice_id": "pFZP5JQG7iQjIQuC4Bku", "name": "Lily (British, warm storyteller)", "stability": 0.55, "similarity_boost": 0.8, "style": 0.2 },
+    "Sean":       { "voice_id": "iP95p4xoKVk53GoZ742B", "name": "Chris (American, easygoing)", "stability": 0.45, "similarity_boost": 0.8, "style": 0.3 },
+    "Deke":       { "voice_id": "onwK4e9ZLuTAKqWW03F9", "name": "Daniel (British, measured)", "stability": 0.55, "similarity_boost": 0.8, "style": 0.2 },
+    "Mercer":     { "voice_id": "pqHfZKP75CvOlQylNhV4", "name": "Bill (older, gravelly)", "stability": 0.5, "similarity_boost": 0.8, "style": 0.25 },
+    "Nia":        { "voice_id": "FGY2WhTYpPnrIDTdsKH5", "name": "Laura (young, earnest)", "stability": 0.45, "similarity_boost": 0.8, "style": 0.3 },
+    "Harrow":     { "voice_id": "N2lVS1w4EtoT3dr4eOWO", "name": "Callum (cold, clipped)", "stability": 0.7, "similarity_boost": 0.8, "style": 0.1 },
+    "Lily":       { "voice_id": "cgSgspJ2msm6clMCkdW9", "name": "Jessica (bright, young)", "stability": 0.4, "similarity_boost": 0.75, "style": 0.4 },
+    "LilyMother": { "voice_id": "XrExE9yKIg1WjnnlVkGX", "name": "Matilda (warm)", "stability": 0.5, "similarity_boost": 0.8, "style": 0.3 },
+    "Olive":      { "voice_id": "EXAVITQu4vr4xnSDxMaL", "name": "Sarah (young, thoughtful)", "stability": 0.45, "similarity_boost": 0.8, "style": 0.3 },
+    "Hazel":      { "voice_id": "cgSgspJ2msm6clMCkdW9", "name": "Jessica (bright, young)", "stability": 0.35, "similarity_boost": 0.75, "style": 0.5 }
+  }
+}
