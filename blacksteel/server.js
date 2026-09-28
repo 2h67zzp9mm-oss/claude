@@ -88,6 +88,7 @@ const TYPES = {
   ".webp": "image/webp",
   ".svg": "image/svg+xml",
   ".mp3": "audio/mpeg",
+  ".glb": "model/gltf-binary",
   ".ico": "image/x-icon"
 };
 

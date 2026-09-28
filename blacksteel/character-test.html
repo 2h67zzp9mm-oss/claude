@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Captain Sean: model test</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #10141a; color: #d8d4c8; font: 13px/1.4 Georgia, serif; overflow: hidden; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 12px; top: 12px; max-width: 330px; background: rgba(10,12,16,.78); border: 1px solid #3a4250; border-radius: 8px; padding: 10px 12px; }
+  #hud h1 { margin: 0 0 6px; font-size: 15px; color: #e6c98a; }
+  #hud dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; }
+  #hud dt { color: #8f98a6; } #hud dd { margin: 0; }
+  #hud .ok { color: #8fd18f; } #hud .bad { color: #ff8c7a; }
+  #hud p { margin: 8px 0 0; color: #a8a292; font-size: 12px; }
+  #btns { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  button { background: #262d38; color: #d8d4c8; border: 1px solid #3a4250; border-radius: 6px; padding: 4px 9px; font: inherit; cursor: pointer; }
+  button:hover { background: #333c4a; }
+  body.shot #hud { display: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud">
+  <h1>Captain Sean, Blender v010</h1>
+  <dl id="stats"><dt>Loading</dt><dd>captain-sean-v010.glb</dd></dl>
+  <div id="btns">
+    <button data-v="front">Front</button><button data-v="side">Side</button>
+    <button data-v="back">Back</button><button data-v="three">3/4</button>
+    <button id="spin">Turntable</button><button id="bones">Bones</button>
+  </div>
+  <p>Stylized rigged blockout: rigid bone-parented parts, no skin weights, no animations, no production textures. Not final topology.</p>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const TARGET_H = 1.8542;
+const params = new URLSearchParams(location.search);
+if (params.has("shot")) document.body.classList.add("shot");
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x141a22);
+scene.fog = new THREE.Fog(0x141a22, 8, 22);
+
+const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.05, 60);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, TARGET_H * 0.52, 0);
+controls.enableDamping = true;
+
+// Stage: floor, 1 m grid, and a 1.8542 m height post so scale can be judged by eye.
+const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 64), new THREE.MeshStandardMaterial({ color: 0x3a3226, roughness: 0.95 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const grid = new THREE.GridHelper(12, 12, 0x6b5f48, 0x4a4132); grid.position.y = 0.002; scene.add(grid);
+const post = new THREE.Group();
+const line = new THREE.Mesh(new THREE.BoxGeometry(0.012, TARGET_H, 0.012), new THREE.MeshBasicMaterial({ color: 0xe6c98a }));
+line.position.set(1.15, TARGET_H / 2, 0); post.add(line);
+for (let i = 0; i <= 1; i += 0.25) {
+  const t = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.008, 0.008), new THREE.MeshBasicMaterial({ color: 0xe6c98a }));
+  t.position.set(1.15, TARGET_H * i, 0); post.add(t);
+}
+const cap = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.008, 0.008), new THREE.MeshBasicMaterial({ color: 0xff8c7a }));
+cap.position.set(1.15, TARGET_H, 0); post.add(cap);
+scene.add(post);
+
+scene.add(new THREE.HemisphereLight(0xcfdcff, 0x5a4a34, 2.2));
+const key = new THREE.DirectionalLight(0xfff0d8, 2.4);
+key.position.set(3, 5, 4); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.5, far: 15 });
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xdfe8ff, 1.6); fill.position.set(-2, 2.2, 5); scene.add(fill);
+const rim = new THREE.DirectionalLight(0x8fb0ff, 1.2); rim.position.set(-4, 3, -4); scene.add(rim);
+
+const VIEWS = { front: [0, 1, 5.6], side: [5.6, 1, 0], back: [0, 1, -5.6], three: [3.6, 1.6, 4.4] };
+function setView(name) {
+  const v = VIEWS[name] || VIEWS.three;
+  camera.position.set(...v); controls.target.set(0, TARGET_H * 0.52, 0); controls.update();
+}
+setView(params.get("view") || "three");
+document.querySelectorAll("button[data-v]").forEach(b => b.onclick = () => { spin = false; setView(b.dataset.v); });
+let spin = params.has("spin");
+document.getElementById("spin").onclick = () => { spin = !spin; };
+
+let character, skeletonHelper;
+const stats = document.getElementById("stats");
+function row(k, v, cls) { const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; if (cls) dd.className = cls; stats.append(dt, dd); }
+
+new GLTFLoader().load("models/captain-sean-v010.glb", gltf => {
+  character = gltf.scene;
+  character.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(character);
+  scene.updateMatrixWorld(true);
+
+  // Measure meshes only. Bones and empties don't bound the visible character.
+  const box = new THREE.Box3();
+  let meshes = 0, bones = 0; const mats = new Set();
+  character.traverse(o => {
+    if (o.isMesh) { meshes++; box.expandByObject(o); [].concat(o.material).forEach(m => mats.add(m.name)); }
+    if (o.isBone) bones++;
+  });
+  const size = box.getSize(new THREE.Vector3());
+  const height = size.y;
+  const ok = Math.abs(height - TARGET_H) < 0.0005;
+
+  skeletonHelper = new THREE.SkeletonHelper(character);
+  skeletonHelper.visible = false; scene.add(skeletonHelper);
+  document.getElementById("bones").onclick = () => { skeletonHelper.visible = !skeletonHelper.visible; };
+
+  stats.innerHTML = "";
+  row("Height (Y up)", height.toFixed(4) + " m " + (ok ? "✓ 1.8542" : "✗ expected 1.8542"), ok ? "ok" : "bad");
+  row("Feet at", "y = " + box.min.y.toFixed(4));
+  row("Width × depth", size.x.toFixed(3) + " × " + size.z.toFixed(3) + " m");
+  row("Meshes", String(meshes));
+  row("Bones", String(bones));
+  row("Materials", String(mats.size));
+  row("Animations", String(gltf.animations.length));
+
+  window.__captain = { height, min: box.min.toArray(), max: box.max.toArray(), meshes, bones, materials: [...mats].sort(), animations: gltf.animations.length, ok };
+  document.title = "Captain Sean: model test [" + (ok ? "OK" : "SCALE MISMATCH") + "]";
+  window.__captainReady = true;
+}, undefined, err => { stats.innerHTML = ""; row("Error", String(err.message || err), "bad"); window.__captainError = String(err); });
+
+addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+renderer.setAnimationLoop(() => {
+  if (spin && character) character.rotation.y += 0.008;
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
