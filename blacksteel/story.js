@@ -29,6 +29,17 @@
   let nopeN = 0;
   const no = G => G.say("N", NOPE[nopeN++ % NOPE.length]);
 
+  // Rotates so the same choice prompt doesn't repeat every single time.
+  const SAYS = [
+    "What does your father say?",
+    "What does he say?",
+    "How does he answer?",
+    "What's his answer?",
+    "What does he say back?"
+  ];
+  let saysN = 0;
+  const says = () => SAYS[saysN++ % SAYS.length];
+
   const CH = [];
 
   // =====================================================================
@@ -206,7 +217,7 @@
           ["R", "I found a mistake."],
           ["N", "I don't believe in mistakes. Not in ledgers, maps, money, or history. Mistakes are just lies that haven't been organized properly."]
         ]);
-        await ask(G, "What does your father say?", [
+        await ask(G, says(), [
           said("You called me on an Academy cipher to tell me someone misspelled a king?"),
           fix("Shannon, I'm eating.", "That's not what he said. He said something smug about a misspelled king. Close enough."),
           fix("What kind of mistake?", "That's not what he said. He said something smug about a misspelled king. Close enough.")
@@ -221,7 +232,7 @@
       }
       async function callTwo() {
         await G.say("N", "He flattened the chart and found the spot. Blank sea.");
-        await ask(G, "What does your father say?", [
+        await ask(G, says(), [
           said("Could be a restricted base."),
           { t: "“There's nothing here.”", say: [["S", "There's nothing here."], ["R", "That is exactly my point."]] },
           { t: "“Maybe someone just made a mistake.”", say: [["S", "Maybe someone just made a mistake."], ["R", "Were you listening to me at all?"], ["N", "He wasn't. He guessed it was a restricted base. So let's say he guessed that."]] }
@@ -239,7 +250,7 @@
           ["R", "Because a Central Authority Fleet survey team left for those coordinates five days ago. Deke's unit."],
           ["N", "Deke was your father's best friend from the Naval Academy. You'll meet him soon."]
         ]);
-        await ask(G, "What does your father say?", [
+        await ask(G, says(), [
           said("Does he know what he's sailing into?"),
           { t: "“Deke?”", say: [["S", "Deke?"], ["N", "Then he asked whether Deke knew what he was sailing into."]] },
           { t: "“How long have you known?”", say: [["S", "How long have you known?"], ["R", "Long enough to warn him. Ask me the real question."], ["S", "Does he know what he's sailing into?"]] }
@@ -265,7 +276,7 @@
           ["N", "Deke wanted to leave with him. Your father made him stay. Someone decent needed to remain inside the machine."],
           ["N", "It sounded sensible at the time. Now the machine had sent Deke to an island it planned to erase."]
         ]);
-        await ask(G, "What does your father say?", [
+        await ask(G, says(), [
           said("Send me the coordinates."),
           { t: "“I'm going.”", say: [["S", "I'm going."], ["R", "I know. You'll want the coordinates."]] },
           { t: "Say nothing.", say: [["N", "He said nothing for a long moment. Then: “Send me the coordinates.”"]] }
@@ -280,7 +291,7 @@
       }
       async function readPacket() {
         await G.say("N", "I'd arranged everything by urgency and marked the safest route in green. At the bottom, under the practical instructions, I wrote Deke's name by hand.");
-        await ask(G, "What does your father say?", [
+        await ask(G, says(), [
           said("You're the best."),
           { t: "“Thank you, Shannon.”", say: [["S", "Thank you, Shannon."], ["N", "Actually, he said “You're the best.” Quietly. I'm keeping it."]] },
           { t: "Say nothing.", say: [["N", "He tried to say nothing. It lasted about a second. Then, quietly: “You're the best.”"]] }
@@ -395,7 +406,7 @@
         ["N", "He looked from your father to the frigate lodged halfway onto the beach. For a moment neither man spoke. Relief crossed Deke's face so plainly that your father almost failed to recognize him."],
         ["Deke", "You know those are supposed to stop before they reach land."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("I was working with limited time and fewer brakes."),
         fix("Deke! You're alive.", "He was glad. He did not say it like that. He said:", [["S", "I was working with limited time and fewer brakes."]]),
         fix("Are you hurt?", "He could see that Deke was hurt. He answered the joke instead:", [["S", "I was working with limited time and fewer brakes."]])
@@ -411,7 +422,7 @@
         ["S", "After all those years at the Academy, that sounds like your instructional failure."],
         ["N", "Deke almost smiled. It vanished when another stretcher passed between them."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Tell me what happened."),
         fix("We have to get out of here.", "Not yet. First he asked:", [["S", "Tell me what happened."]]),
         fix("Who's Harrow?", "He'd find out. What he said was:", [["S", "Tell me what happened."]])
@@ -426,12 +437,12 @@
         ["Deke", "Then he told me six hundred civilians were a charting error, and ordered my platoon to begin at the school."]
       ]);
       await G.lines(sis(G, [["SIS", "The school? With kids in it?"], ["N", "Yes. Keep listening. Deke is about to do something very brave."]], [["SIS", "He said no. Right?"], ["N", "Listen."]]));
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("What did you do?"),
         fix("You didn't.", "He knew Deke. He asked anyway:", [["S", "What did you do?"]])
       ]);
       await G.say("Deke", "I asked for clarification.");
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Politely?"),
         fix("And?", "He smiled, faintly, despite everything. He asked:", [["S", "Politely?"]])
       ]);
@@ -444,7 +455,7 @@
         ["Deke", "The villagers are evacuating through the west channel. The reef hides them from the larger ships, but we need another twenty minutes."],
         ["Deke", "Harrow knows the stone cannot be destroyed, so he's collapsing the island around it. If he buries the chamber and kills the witnesses, the report can say we found nothing."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Where is the Record-Stone?"),
         fix("Then we get everyone out.", "That's what Deke wanted to hear. It's not what your father said. He said:", [["S", "Where is the Record-Stone?"]])
       ]);
@@ -453,7 +464,7 @@
         ["N", "Deke caught his sleeve before he could turn uphill."],
         ["Deke", "Listen to the whole sentence. I have nine people left, half of them wounded. The civilians need every rifle between here and the harbor."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Shannon risked her career to find this place. They sent seven warships to make sure nobody remembers what was under it. If we leave without even seeing the reason, everyone who died here becomes part of the correction."),
         fix("You're right. Let's help the families.", "He should have. He didn't. He said that if they left without seeing the reason, everyone who died here would become part of the correction.")
       ]);
@@ -624,7 +635,7 @@
         ["N", "A tiny hand."],
         ["Deke", "Sean. There's a baby in there."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Help me open it."),
         fix("That's impossible.", "His mind refused to put the child and the machines in the same world. But what he said was:", [["S", "Help me open it."]])
       ]);
@@ -684,7 +695,7 @@
       await G.lines(sis(G,
         [["SIS", "Olive! That's you!"], ["N", "It is."], ["SIS", "You were green!"], ["N", "Briefly."]],
         [["SIS", "That's me."], ["N", "That's you."], ["SIS", "The mark."], ["N", "I know. I can't tell you what it means. Nobody at this table can."]]));
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Who leaves a child down here?"),
         fix("Hello, little one.", "He would say that later. First, touching the warm brass, he asked:", [["S", "Who leaves a child down here?"]])
       ]);
@@ -857,7 +868,7 @@
         ["Deke", "Then find a piece he has not reached yet. I don't have a good answer, Sean. I have one chance to put distance between her and those cannons, and you are holding it."],
         ["N", "Your father understood what Deke was asking: leave his friend on the beach with two bullets and a wounded sergeant."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("No."),
         fix("Okay.", "No. He didn't say that. He couldn't. He said:", [["S", "No."]]),
         fix("Come with me.", "Deke wouldn't. And your father knew it. So he said:", [["S", "No."]])
@@ -1025,7 +1036,7 @@
         ["S", "I know one person who can find one."],
         ["Deke", "The smallest fishing boat still has a mast. Take it east until Bellgrave is below the horizon, then turn south. Avoid any port large enough to keep a Fleet office. Assume every message is being read, and every person who recognizes you is deciding whether the reward is worth it."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("You keep saying ‘you.’"),
         fix("Got it. East, then south.", "He heard the shape of it before that. He said:", [["S", "You keep saying ‘you.’"]])
       ]);
@@ -1040,7 +1051,7 @@
         ["Deke", "I don't know yet. I know the order was prepared before we transmitted the discovery. Bellgrave may not have been erased because of what we found. We may have been sent here because someone already knew it was here."]
       ]);
       await G.lines(sis(G, [["SIS", "Bellgrave was not the first."], ["N", "Now you know where that sentence comes from."]], [["SIS", "Not the first. Like our map!"], ["N", "Like your map."]]));
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Then we take this to Shannon and figure it out together."),
         fix("I'll go with you.", "He wanted to. What he said was:", [["S", "Then we take this to Shannon and figure it out together."]])
       ]);
@@ -1066,7 +1077,7 @@
         ["Deke", "That is why I'm not telling you."],
         ["N", "Deke clasped his left forearm. He could not yet trust the right. For a while they stayed that way, each holding on hard enough to turn a farewell into something else."]
       ]);
-      await ask(G, "What does your father say?", [
+      await ask(G, says(), [
         said("Come back."),
         fix("Goodbye, Deke.", "No. He never said goodbye. He said:", [["S", "Come back."]])
       ]);

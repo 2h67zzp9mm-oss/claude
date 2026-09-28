@@ -339,7 +339,7 @@
     return {
       cam: { pos: [3.2, 3.4, 9.5], look: [-1, 3, -60], fov: 46 },
       follow(cp, cl) { cp.set(3.2 + ship.position.x * .8, 3.4, 9.5); cl.set(-1 + ship.position.x * .6, 3, -60); },
-      floor: null, sea, bg: 0x2a130c, fog: [0x2a130c, .0065], exposure: 1.35,
+      floor: null, sea, bg: 0x2a130c, fog: [0x2a130c, .0065], exposure: 1.55,
       enter() { ship.position.x = 0; run.on = false; for (const r of rocks) r.visible = false; },
       update(dt, t) {
         rocking = Math.sin(t * .9) * .03;
@@ -540,7 +540,7 @@
       cam: { pos: [0, 2.7, 8], look: [0, 1.3, -2], fov: 42 },
       follow(cp, cl, p) { cp.set(p.pos.x * .6, 2.7, 8); cl.set(p.pos.x * .55, 1.3, -2); },
       floor: { x0: -6, x1: 6.5, z0: -3.5, z1: 2.5 }, floorMesh, sea,
-      bg: 0x06050a, fog: [0x0c0808, .012], exposure: 1.2,
+      bg: 0x06050a, fog: [0x0c0808, .012], exposure: 1.4,
       enter(S, opts) {
         mode = opts.mode || "arrival";
         const dawn = mode === "after" || mode === "sunrise";
@@ -714,7 +714,10 @@
       cam: { pos: [0, 3.4, 9], look: [0, 1.6, -4], fov: 44 },
       follow(cp, cl, p) { cp.set(p.pos.x * .5, 3.2, p.pos.z + 6.5); cl.set(p.pos.x * .3, 1.6, p.pos.z - 4.5); },
       floor: { x0: -2.2, x1: 2.2, z0: -14, z1: 4 }, floorMesh,
-      bg: 0x0a0608, fog: [0x140a08, .03], exposure: 1.2,
+      bg: 0x0a0608, fog: [0x140a08, .03], exposure: 1.4,
+      // Deke trails right behind Sean up the narrow street; when a tap is close to both him
+      // and the shrine hole, the hole should win rather than swallowing the tap.
+      pickPriority: { hole: 3, deke: 1 },
       enter(S, opts) {
         mode = opts.mode || "run";
         flee(mode === "run");
@@ -732,7 +735,10 @@
       update(dt, t) {
         if (mode === "run") {
           const p = sean.pos;
-          if (!deke.path.length) { const d = Math.hypot(deke.pos.x - p.x - .9, deke.pos.z - p.z - .6); if (d > 1.4) deke.walkTo(p.x + .9, p.z + .6, null, 1.4); else deke.look(p.x, p.z - 4); }
+          // Trail behind and slightly right, but never past the shrine's hole: otherwise he
+          // crowds the target hotspot at the top of the street and blocks tapping it.
+          const tz = Math.max(p.z + .6, -11.5);
+          if (!deke.path.length) { const d = Math.hypot(deke.pos.x - p.x - .6, deke.pos.z - tz); if (d > 1.4) deke.walkTo(p.x + .6, tz, null, 1.4); else deke.look(p.x, p.z - 4); }
         }
       },
       events: {
@@ -796,7 +802,7 @@
       cam: { pos: [0, 2.4, 7], look: [0, 1.4, -6], fov: 50 },
       follow(cp, cl, p) { cp.set(p.pos.x * .3, 2.3, p.pos.z + 4.5); cl.set(0, 1.4, p.pos.z - 5); },
       floor: { x0: -1.2, x1: 1.2, z0: -11, z1: 3.5 }, floorMesh,
-      bg: 0x020203, fog: [0x050506, .08], exposure: 1.3,
+      bg: 0x020203, fog: [0x050506, .08], exposure: 1.5,
       enter() { sean.place(0, 3, Math.PI); deke.place(.8, 2.4, Math.PI); },
       update(dt, t) {
         t0 += dt;
@@ -880,18 +886,20 @@
 
     const sean = K.actor("sean", "sean", -.8, 3.2, Math.PI);
     sean.gear({ coat: true, sword: true });
-    const deke = K.actor("deke", "deke", .8, 3, Math.PI);
+    // Off to the left, clear of the line from camera to the cradle/wheel (both sit to the right,
+    // around x=.9 to 1.9): standing at x=.8 put him almost exactly on that sightline and ate taps.
+    const deke = K.actor("deke", "deke", -1.4, 2.6, Math.PI);
     K.hotspot("deke", deke.root, [.8, 1.9, .8, 0, .95, 0], null, null);
     let tapT = -1, needleSpin = 0;
     return {
       cam: { pos: [0, 2.5, 6.2], look: [.3, 1.3, -1.8], fov: 46 },
       follow(cp, cl, p) { cp.set(p.pos.x * .4, 2.5, 6.2); cl.set(.3 + p.pos.x * .3, 1.3, -1.8); },
       floor: { x0: -3.4, x1: 3.2, z0: -1.9, z1: 3.6 }, floorMesh,
-      bg: 0x020203, fog: [0x040506, .05], exposure: 1.3,
-      pickPriority: { stone: 1, instruments: 2, cradle: 3 },
+      bg: 0x020203, fog: [0x040506, .05], exposure: 1.5,
+      pickPriority: { stone: 1, instruments: 2, cradle: 3, deke: 0 },
       enter(S, opts) {
         const f = (S && S.flags) || {};
-        sean.place(-.8, 3.2, Math.PI); deke.place(.8, 3, Math.PI);
+        sean.place(-.8, 3.2, Math.PI); deke.place(-1.4, 2.6, Math.PI);
         lid.rotation.x = f.cradleOpen ? -1.6 : 0;
         inside.visible = !f.babyTaken;
         sean.gear({ baby: !!f.babyTaken }); sean.pose("carry", !!f.babyTaken);
