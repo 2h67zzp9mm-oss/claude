@@ -272,7 +272,9 @@
     justify-content: flex-end !important;
     padding-bottom: 5% !important;
     background: linear-gradient(rgba(4,8,14,0) 35%, rgba(4,8,14,.88));
-    z-index: 6;
+    /* Higher than every mobile-landscape HUD overlay (box/chips/inv/header all sit at 6-9) so the
+       title screen's own buttons are always clickable on top of them, not blocked underneath. */
+    z-index: 20;
   }
   #title h2 {
     margin: 0;
@@ -291,6 +293,7 @@
   #title .p button.big { font: 22px/1 var(--display); padding: 12px 26px; background: #2a2016; border-color: var(--brass); color: var(--parchment); }
   #title .p button.small { font-size: 13px; padding: 6px 10px; color: var(--muted); }
   #title .p button.small.cont { color: var(--parchment); border-color: var(--brass); font-size: 14px; }
+  #title .note { margin-top: 10px; max-width: 46ch; font-size: 13px; line-height: 1.4; color: var(--muted); font-style: italic; }
 
   @media (max-width: 520px) {
     #title .sub { display: none; }
@@ -896,10 +899,15 @@
     title.innerHTML = `<h2>The Island That Never Existed</h2>
       <div class="sub">A Blacksteel Pirates prologue, as told by Shannon</div>
       <div class="who">Who's playing tonight?</div>
-      <div class="players">${block("olive")}${block("hazel")}</div>`;
+      <div class="players">${block("olive")}${block("hazel")}</div>
+      <div class="note">${W ? "Each of you has your own game and your own save. Whoever isn't playing will be in the story, listening." : "This device can't show the 3D scenes, so the story plays with paintings and a list of things to tap."}</div>`;
     title.hidden = false;
+    // This flavor text belongs to the title screen, not the big dialogue box: showing it there
+    // (as idleText used to) made #box a large overlay that could sit over the title's own
+    // buttons and block taps on mobile, and took up screen space with nothing actually being
+    // narrated. Hide the dialogue box entirely while the title screen is up.
+    box.hidden = true;
     title.querySelectorAll("[data-face]").forEach(el => paintFace(el, el.dataset.face));
-    idleText(W ? "Each of you has your own game and your own save. Whoever isn't playing will be in the story, listening." : "This device can't show the 3D scenes, so the story plays with paintings and a list of things to tap.");
     title.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => begin(b.dataset.play, false)));
     title.querySelectorAll("[data-restart]").forEach(b => b.addEventListener("click", () => begin(b.dataset.restart, true)));
   }
@@ -913,7 +921,7 @@
     S.ch = sv && sv.ch < STORY.length ? sv.ch : 0;
     S.cp = sv && sv.ch < STORY.length ? sv.cp || null : null;
     S.stage = 0; S.flags = {}; S.inv = [];
-    title.hidden = true; menuBtn.hidden = false;
+    title.hidden = true; box.hidden = false; menuBtn.hidden = false;
     const mine = ++gen;
     runStory().catch(err => { if (mine === gen) { console.error(err); idleText("Something went wrong. Tap Menu to go back."); } });
   }
