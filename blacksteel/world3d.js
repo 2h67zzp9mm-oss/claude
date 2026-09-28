@@ -324,7 +324,7 @@ vec3 wave(vec2 p){
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.4;
     renderer.outputColorSpace = T.SRGBColorSpace;
     canvasEl = renderer.domElement;
     canvasEl.id = "world3d";
@@ -358,7 +358,7 @@ vec3 wave(vec2 p){
     scene.add(cur.root);
     scene.background = new T.Color(cur.bg !== undefined ? cur.bg : 0x07050a);
     scene.fog = cur.fog ? new T.FogExp2(cur.fog[0], cur.fog[1]) : null;
-    renderer.toneMappingExposure = cur.exposure || 1.15;
+    renderer.toneMappingExposure = cur.exposure || 1.4;
     camera.fov = cur.cam.fov || 38; camera.updateProjectionMatrix();
     camPos.fromArray(cur.cam.pos); camLook.fromArray(cur.cam.look);
     camAnim = null; camFree = false;
