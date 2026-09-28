@@ -38,8 +38,11 @@
   const LOOKS = {
     sean: { h: 1.86, build: 1.06, skin: 0xc8966c, hair: "bald", beard: "full", beardColor: 0x18120e, glasses: true,
       shirt: 0x2c3038, coat: 0x1f242c, coatTrim: true, epaulettes: true, pants: 0x1a1d22, boots: 0x141312, sash: 0x6a4588 },
-    deke: { h: 1.83, build: .96, skin: 0x8a5a3a, hair: "short", hairColor: 0x15100c, goggles: "cracked", blood: true,
-      shirt: 0x3a3f46, coat: PALE, coatTorn: true, insignia: true, pants: 0x3b4048, boots: 0x1c1a18, rifle: "back" },
+    // Reference: dark navy coat (not pale), flat cap with goggles on the brim, stubble, brass
+    // buttons/buckles, a heavy belt. Previously a pale, plain coat and bare short hair with no
+    // trim, which under night lighting read as a flat, featureless dark shape.
+    deke: { h: 1.83, build: .96, skin: 0x8a5a3a, hair: "cap", capColor: 0x232a35, beard: "stubble", beardColor: 0x241c16, goggles: "cracked", blood: true,
+      shirt: 0x3a3f46, coat: 0x1b2230, coatTrim: true, coatTorn: true, insignia: true, epaulettes: true, sash: 0x3a2a1a, pants: 0x3b4048, boots: 0x1c1a18, rifle: "back" },
     mercer: { h: 1.78, build: 1.1, skin: 0xb88a68, hair: "short", hairColor: 0x8e8a84, beard: "stubble", beardColor: 0x7d7872, blood: true,
       shirt: 0x3a3f46, coat: LINING, pants: 0x3b4048, boots: 0x1c1a18, pistol: true },
     nia: { h: 1.66, build: .84, skin: 0x6e4630, hair: "bun", hairColor: 0x0f0b09,
