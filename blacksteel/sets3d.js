@@ -499,6 +499,21 @@
     K.hotspot("glass", glass, [3.5, .2, 3.5], [2.6, 1.2], [3.4, 1.4]);
     const cliffChunk = K.rock(6, black, 18, 4, -24, R, 1, 1.3, 1, 91);
 
+    // driftwood, seaweed, and loose stones scattered where Sean actually walks: the wide shots
+    // toward the village and harbor already carry the scene, but the near ground was bare.
+    const driftM = K.mat(0x4a3520, .85);
+    for (const [x, z, rot, len] of [[-2.6, 1.6, .3, 2.1], [2.3, 2.7, -.5, 1.6], [-5.6, .5, 1.1, 1.8], [.4, -.6, .8, 1.3]]) {
+      const log = K.cyl(.11, .15, len, driftM, x, .09, z, R, 8);
+      log.rotation.set(0, rot, Math.PI / 2); log.castShadow = true;
+    }
+    const weedM = K.mat(0x2e4a2a, .75, { side: T.DoubleSide });
+    for (let i = 0; i < 9; i++) {
+      const x = -6 + (i % 3) * 3.2 + Math.sin(i * 2.1) * .8, z = -.5 + Math.floor(i / 3) * 1.3 + Math.cos(i * 1.7) * .6;
+      const wg = new T.Group(); wg.position.set(x, 0, z); wg.rotation.y = i * 1.3; R.add(wg);
+      for (let b = 0; b < 3; b++) { const blade = new T.Mesh(new T.PlaneGeometry(.1, .4 + (b % 2) * .15), weedM); blade.position.y = .2; blade.rotation.y = b * 1.1; blade.rotation.x = -.3; wg.add(blade); }
+    }
+    for (let i = 0; i < 8; i++) K.rock(.18 + (i % 3) * .08, K.mat(0x8a8474, .9), -6.5 + i * 1.6, .02, 2 + (i % 2) * 1.4, R, 1, .55, 1, 200 + i);
+
     // people
     const sean = K.actor("sean", "sean", -4, 1.4, Math.PI / 2);
     sean.gear({ coat: true, sword: true });
