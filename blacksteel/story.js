@@ -134,11 +134,14 @@
             case "bucket": return G.say("N", "The leak. He'd spent a year learning which leaks were harmless and which ones wanted him dead. This one was harmless. Mostly.");
             case "bunk": return G.say("N", f.plateMoved ? "His bunk, now with dinner on it." : "His bunk. Unmade. It had been unmade for a year.");
             case "table":
-              // A steeper, near-overhead angle (not fully vertical, which breaks the camera's
-              // lookAt) so the tall communicator doesn't lean over and visually overlap the
-              // flatter items beside it the way a shallower angle did. Stays here — "Step
-              // back" button — until the player leaves, so items can be tapped up close.
-              await G.closeup([0, 3.6, -.55], [0, .78, -1.15], .9);
+              // A steep-ish angle (not fully vertical, which breaks the camera's lookAt) so the
+              // tall communicator doesn't lean over and visually overlap the flatter items beside
+              // it. y must stay below the cabin's ceiling (y=2.8) — an earlier attempt at y=3.2
+              // poked above it and rendered the room from outside/above. Also kept away from the
+              // hanging lantern (pivot around x=.05, y=2.6, z=-.75): a point+spot light that far
+              // overexposed the floor when the camera first sat almost right next to it. Stays
+              // here — "Step back" button — until the player leaves, so items stay tappable.
+              await G.closeup([0, 2.5, .6], [0, .78, -1.15], .9);
               return G.say("N", "Loose receipts, tide tables, the remains of dinner, and the communicator. He called this his navigation desk.");
             case "receipts": return G.say("N", "Receipts, in no order. My brother keeps receipts the way some people keep grudges: everywhere, and forever.");
             case "chart": return G.say("N", f.chartSpread ? "A sea chart. Where Bellgrave should be, there's nothing. Just open water with a circle he drew around it." : "A corner of a sea chart, sticking out from under his dinner plate.");
