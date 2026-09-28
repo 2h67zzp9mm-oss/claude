@@ -126,8 +126,10 @@
       }
     }
 
-    // saber on the left hip
-    const scabbard = new T.Group(); scabbard.position.set(.2 * B, .02, .02); scabbard.rotation.set(.95, 0, .12); hips.add(scabbard);
+    // saber on the left hip: the coat skirt above is a tube with a gap left open for the leg to
+    // swing through, and after its 180° flip (`m.rotation.y = Math.PI`) that gap sits on the -X
+    // side. The scabbard has to open through the same gap or the coat's fabric clips through it.
+    const scabbard = new T.Group(); scabbard.position.set(-.2 * B, .02, .02); scabbard.rotation.set(.95, 0, -.12); hips.add(scabbard);
     cylm(.02, .016, .88, M.iron, 0, -.44, 0, scabbard, 10);
     cylm(.024, .024, .05, M.steel, 0, -.86, 0, scabbard, 10);
     cylm(.016, .016, .15, mat(0x2b1d14, .8), 0, .09, 0, scabbard, 10);

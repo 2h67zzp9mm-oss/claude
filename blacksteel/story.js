@@ -133,7 +133,10 @@
             case "shelf": return G.say("N", "Books he meant to read. Charts he meant to fix. And his compass. It pointed north. For three more nights, it would keep doing that.");
             case "bucket": return G.say("N", "The leak. He'd spent a year learning which leaks were harmless and which ones wanted him dead. This one was harmless. Mostly.");
             case "bunk": return G.say("N", f.plateMoved ? "His bunk, now with dinner on it." : "His bunk. Unmade. It had been unmade for a year.");
-            case "table": return G.say("N", "Loose receipts, tide tables, the remains of dinner, and the communicator. He called this his navigation desk.");
+            case "table":
+              await G.W.cam([0, 3.1, -.15], [0, .78, -1.15], .9);
+              await G.say("N", "Loose receipts, tide tables, the remains of dinner, and the communicator. He called this his navigation desk.");
+              return G.W.camReset(.9);
             case "receipts": return G.say("N", "Receipts, in no order. My brother keeps receipts the way some people keep grudges: everywhere, and forever.");
             case "chart": return G.say("N", f.chartSpread ? "A sea chart. Where Bellgrave should be, there's nothing. Just open water with a circle he drew around it." : "A corner of a sea chart, sticking out from under his dinner plate.");
             case "plate": return G.say("N", "I'm told it was fish. I choose not to investigate further.");
