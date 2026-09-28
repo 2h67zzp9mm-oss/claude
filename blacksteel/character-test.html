@@ -27,8 +27,8 @@
 </head>
 <body>
 <div id="hud">
-  <h1>Captain Sean, Blender v010</h1>
-  <dl id="stats"><dt>Loading</dt><dd>captain-sean-v010.glb</dd></dl>
+  <h1>Captain Sean, Blender v011</h1>
+  <dl id="stats"><dt>Loading</dt><dd>captain-sean-v011</dd></dl>
   <div id="btns">
     <button data-v="front">Front</button><button data-v="side">Side</button>
     <button data-v="back">Back</button><button data-v="three">3/4</button>
@@ -99,40 +99,71 @@ let character, skeletonHelper;
 const stats = document.getElementById("stats");
 function row(k, v, cls) { const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; if (cls) dd.className = cls; stats.append(dt, dd); }
 
-new GLTFLoader().load("models/captain-sean-v010.glb", gltf => {
-  character = gltf.scene;
-  character.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  scene.add(character);
-  scene.updateMatrixWorld(true);
+// v011 is the approved modular set: start in the base (no jacket), swap to the full model when Sean
+// puts the jacket on. The swap keeps the character's transform. ?model=full starts jacket-on;
+// ?model=v010 loads the earlier single-file export.
+const MODELS = {
+  base: "models/v011/Captain-Sean-Base-NoJacket-v011.glb",
+  full: "models/v011/Captain-Sean-Full-v011.glb",
+  v010: "models/captain-sean-v010.glb",
+};
+const loader = new GLTFLoader();
+const cache = {};
+const load = key => cache[key] || (cache[key] = new Promise((res, rej) => loader.load(MODELS[key], res, undefined, rej)));
+let current = null, currentKey = null;
+const jacketBtn = document.createElement("button"); jacketBtn.id = "jacket";
+document.getElementById("btns").prepend(jacketBtn);
 
-  // Measure meshes only. Bones and empties don't bound the visible character.
+function measure(root, gltf, key) {
   const box = new THREE.Box3();
   let meshes = 0, bones = 0; const mats = new Set();
-  character.traverse(o => {
+  root.updateMatrixWorld(true);
+  root.traverse(o => {
     if (o.isMesh) { meshes++; box.expandByObject(o); [].concat(o.material).forEach(m => mats.add(m.name)); }
     if (o.isBone) bones++;
   });
   const size = box.getSize(new THREE.Vector3());
-  const height = size.y;
-  const ok = Math.abs(height - TARGET_H) < 0.0005;
-
-  skeletonHelper = new THREE.SkeletonHelper(character);
-  skeletonHelper.visible = false; scene.add(skeletonHelper);
-  document.getElementById("bones").onclick = () => { skeletonHelper.visible = !skeletonHelper.visible; };
-
+  const height = size.y, ok = Math.abs(height - TARGET_H) < 0.0005;
   stats.innerHTML = "";
+  row("Model", MODELS[key].split("/").pop());
   row("Height (Y up)", height.toFixed(4) + " m " + (ok ? "✓ 1.8542" : "✗ expected 1.8542"), ok ? "ok" : "bad");
   row("Feet at", "y = " + box.min.y.toFixed(4));
   row("Width × depth", size.x.toFixed(3) + " × " + size.z.toFixed(3) + " m");
-  row("Meshes", String(meshes));
-  row("Bones", String(bones));
+  row("Meshes / bones", meshes + " / " + bones);
   row("Materials", String(mats.size));
   row("Animations", String(gltf.animations.length));
-
-  window.__captain = { height, min: box.min.toArray(), max: box.max.toArray(), meshes, bones, materials: [...mats].sort(), animations: gltf.animations.length, ok };
+  window.__captain = { key, height, min: box.min.toArray(), max: box.max.toArray(), meshes, bones, materials: [...mats].sort(), animations: gltf.animations.length, ok };
   document.title = "Captain Sean: model test [" + (ok ? "OK" : "SCALE MISMATCH") + "]";
+}
+
+async function show(key) {
+  const gltf = await load(key);
+  const root = gltf.scene;
+  if (current) { root.position.copy(current.position); root.rotation.copy(current.rotation); scene.remove(current); }
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(root); current = root; currentKey = key; character = root;
+  if (skeletonHelper) { const vis = skeletonHelper.visible; scene.remove(skeletonHelper); skeletonHelper = new THREE.SkeletonHelper(root); skeletonHelper.visible = vis; scene.add(skeletonHelper); }
+  else { skeletonHelper = new THREE.SkeletonHelper(root); skeletonHelper.visible = false; scene.add(skeletonHelper); }
+  measure(root, gltf, key);
+  jacketBtn.textContent = key === "base" ? "Put on jacket" : key === "full" ? "Take off jacket" : "";
+  jacketBtn.style.display = key === "v010" ? "none" : "";
   window.__captainReady = true;
-}, undefined, err => { stats.innerHTML = ""; row("Error", String(err.message || err), "bad"); window.__captainError = String(err); });
+}
+jacketBtn.onclick = () => show(currentKey === "base" ? "full" : "base");
+document.getElementById("bones").onclick = () => { if (skeletonHelper) skeletonHelper.visible = !skeletonHelper.visible; };
+const start = params.get("model") in MODELS ? params.get("model") : "base";
+// ?selftest: start in base, move and turn Sean, swap the jacket on, and report whether the transform and height held.
+async function selftest() {
+  await show("base");
+  current.position.set(0.3, 0, -0.2); current.rotation.y = 0.5;
+  const before = { h: window.__captain.height, p: current.position.toArray(), r: current.rotation.y };
+  await show("full");
+  const after = { h: window.__captain.height, p: current.position.toArray(), r: current.rotation.y, key: currentKey };
+  await show("base"); const back = { h: window.__captain.height, p: current.position.toArray(), key: currentKey };
+  const pre = document.createElement("pre"); pre.id = "selftest"; pre.textContent = JSON.stringify({ before, after, back });
+  document.body.appendChild(pre);
+}
+(params.has("selftest") ? selftest() : show(start)).catch(err => { stats.innerHTML = ""; row("Error", String(err.message || err), "bad"); window.__captainError = String(err); });
 
 addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 renderer.setAnimationLoop(() => {
