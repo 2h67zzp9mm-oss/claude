@@ -43,11 +43,14 @@
     // trim, which under night lighting read as a flat, featureless dark shape.
     deke: { h: 1.83, build: .96, skin: 0x8a5a3a, hair: "cap", capColor: 0x232a35, beard: "stubble", beardColor: 0x241c16, goggles: "cracked", blood: true,
       shirt: 0x3a3f46, coat: 0x1b2230, coatTrim: true, coatTorn: true, insignia: true, epaulettes: true, sash: 0x3a2a1a, pants: 0x3b4048, boots: 0x1c1a18, rifle: "back" },
+    // A grizzled veteran sergeant: brass rank badge, a worn leather belt, trim on the coat so he
+    // doesn't read as the same flat shape as the rank-and-file troopers under him.
     mercer: { h: 1.78, build: 1.1, skin: 0xb88a68, hair: "short", hairColor: 0x8e8a84, beard: "stubble", beardColor: 0x7d7872, blood: true,
-      shirt: 0x3a3f46, coat: LINING, pants: 0x3b4048, boots: 0x1c1a18, pistol: true },
-    nia: { h: 1.66, build: .84, skin: 0x6e4630, hair: "bun", hairColor: 0x0f0b09,
+      shirt: 0x3a3f46, coat: LINING, coatTrim: true, insignia: true, sash: 0x4a3a22, pants: 0x3b4048, boots: 0x1c1a18, pistol: true },
+    // Young and less decorated than the veterans, but still a soldier: a comms badge and belt.
+    nia: { h: 1.66, build: .84, skin: 0x6e4630, hair: "bun", hairColor: 0x0f0b09, insignia: true, sash: 0x3a2a1a,
       shirt: 0x3a3f46, coat: LINING, pants: 0x3b4048, boots: 0x1c1a18, rifle: "hands", sling: true },
-    trooper: { h: 1.78, build: 1, skin: 0xa77a58, hair: "short", hairColor: 0x2a1f18,
+    trooper: { h: 1.78, build: 1, skin: 0xa77a58, hair: "short", hairColor: 0x2a1f18, insignia: true, sash: 0x3a2a1a,
       shirt: 0x3a3f46, coat: LINING, pants: 0x3b4048, boots: 0x1c1a18, rifle: "back" },
     soldier: { h: 1.8, build: 1, skin: 0x9c7458, hair: "cap", hairColor: 0x1b1d22, capColor: 0xe8e4da,
       shirt: 0xcfc9bb, coat: 0xe8e4da, coatTrim: true, pants: 0xcfc9bb, boots: 0x101012, rifle: "bayonet" }
@@ -111,7 +114,9 @@
       sk.userData.skirt = true;
     }
     if (L.sash) {
-      const sash = mesh(new T.TorusGeometry(.175 * B, .032, 10, 28), mat(L.sash, .75), 0, .05, 0, hips);
+      // Radius must clear the coat skirt's top rim (~.22-.25*B here) or the sash renders tucked
+      // inside the coat's tube instead of visibly over it, peeking out oddly through its leg-gap.
+      const sash = mesh(new T.TorusGeometry(.27 * B, .032, 10, 28), mat(L.sash, .75), 0, .05, 0, hips);
       sash.rotation.x = Math.PI / 2; sash.scale.set(1, .78, 1);
     }
     const tails = new T.Group(); tails.position.set(.06, .03, .15); hips.add(tails);

@@ -134,9 +134,12 @@
             case "bucket": return G.say("N", "The leak. He'd spent a year learning which leaks were harmless and which ones wanted him dead. This one was harmless. Mostly.");
             case "bunk": return G.say("N", f.plateMoved ? "His bunk, now with dinner on it." : "His bunk. Unmade. It had been unmade for a year.");
             case "table":
-              await G.W.cam([0, 3.1, -.15], [0, .78, -1.15], .9);
-              await G.say("N", "Loose receipts, tide tables, the remains of dinner, and the communicator. He called this his navigation desk.");
-              return G.W.camReset(.9);
+              // A steeper, near-overhead angle (not fully vertical, which breaks the camera's
+              // lookAt) so the tall communicator doesn't lean over and visually overlap the
+              // flatter items beside it the way a shallower angle did. Stays here — "Step
+              // back" button — until the player leaves, so items can be tapped up close.
+              await G.closeup([0, 3.6, -.55], [0, .78, -1.15], .9);
+              return G.say("N", "Loose receipts, tide tables, the remains of dinner, and the communicator. He called this his navigation desk.");
             case "receipts": return G.say("N", "Receipts, in no order. My brother keeps receipts the way some people keep grudges: everywhere, and forever.");
             case "chart": return G.say("N", f.chartSpread ? "A sea chart. Where Bellgrave should be, there's nothing. Just open water with a circle he drew around it." : "A corner of a sea chart, sticking out from under his dinner plate.");
             case "plate": return G.say("N", "I'm told it was fish. I choose not to investigate further.");
@@ -176,9 +179,13 @@
               G.give("chart");
               return G.say("N", "He pulled the chart free. It smelled like fish.");
             case "coat":
-              if (st < 2) return G.say("N", st === 0 ? "He wasn't going anywhere yet. He was eating." : "Not yet. I was still talking.");
+              // The coat can be put on any time — no required order. The one exception: mid-call
+              // (st===2), reaching for it is the actual trigger for Shannon stopping him — that
+              // check has to run first, since sitDown() is the only thing that advances past
+              // stage 2 (the door click does too, but a player already wearing the coat and not
+              // touching the door would otherwise get stuck here forever).
               if (st === 2) return sitDown();
-              if (st === 3) return G.say("N", "His hand had fallen away from the coat. For once, he was listening.");
+              if (has("coat")) return G.say("N", "Already on.");
               G.give("coat");
               return G.say("N", "He pulled on his coat.");
             case "door":
