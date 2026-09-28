@@ -468,10 +468,12 @@ vec3 wave(vec2 p){
   }
 
   // ---------- hint glow ----------
+  // glowId can be a single hotspot id (the usual hint nudge) or a Set of ids (the "show me
+  // everything" button), so both share the same pulsing-emissive mechanism.
   function applyGlow(t) {
     if (!cur) return;
     for (const k in cur.K.hs) {
-      const on = k === glowId;
+      const on = glowId instanceof Set ? glowId.has(k) : k === glowId;
       cur.K.hs[k].group.traverse(o => {
         if (!o.isMesh || !o.material || !o.material.emissive || o.userData.noGlow) return;
         if (on) {
