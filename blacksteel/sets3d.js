@@ -1010,5 +1010,41 @@
     };
   };
 
+  // ===================================================================
+  // Debug preview: Captain Sean, the Blender-exported rigged blockout (not wired into the
+  // story). Reached via index.html's ?captainsean debug hook, not from normal play.
+  // ===================================================================
+  SETS.captainSeanTest = function (K) {
+    const R = K.root;
+    const floorMesh = new T.Mesh(new T.CircleGeometry(4, 40), K.mat(0x3a3226, .92));
+    floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; R.add(floorMesh);
+    R.add(new T.GridHelper(8, 8, 0x6b5f48, 0x4a4132));
+    R.add(new T.HemisphereLight(0xcfdcff, 0x5a4a34, 1.4));
+    const key = new T.DirectionalLight(0xfff0d8, 1.8); key.position.set(3, 5, 4); key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024); R.add(key);
+    const fill = new T.DirectionalLight(0xdfe8ff, 1.1); fill.position.set(-3, 2, 4); R.add(fill);
+
+    const holder = new T.Group(); R.add(holder);
+    let status = "loading";
+    // window.GLBLoad: a small custom loader (glbload.js), not three.js's own GLTFLoader — see
+    // that file's header for why. Exposes bonesByName for future pose-driving work.
+    window.GLBLoad.load("models/captain-sean-v010.glb").then(({ scene, bones, meshCount, materialCount }) => {
+      holder.add(scene);
+      status = "ready (" + meshCount + " meshes, " + Object.keys(bones).length + " bones, " + materialCount + " materials, no skin/animation)";
+      window.__captainSeanBones = bones;
+      window.__captainSeanStatus = status;
+    }).catch(err => { status = "error: " + err.message; window.__captainSeanStatus = status; console.error(err); });
+
+    return {
+      cam: { pos: [0, 1.5, 4.2], look: [0, .95, 0], fov: 36 },
+      follow(cp, cl) { cp.set(0, 1.5, 4.2); cl.set(0, .95, 0); },
+      floor: { x0: -2, x1: 2, z0: -2, z1: 2 }, floorMesh,
+      bg: 0x141a22, fog: [0x141a22, .02],
+      enter() {},
+      // A slow idle turn so a static, unanimated rig doesn't read as simply frozen/broken.
+      update(dt, t) { holder.rotation.y = t * .12; }
+    };
+  };
+
   window.SETS = SETS;
 })();
