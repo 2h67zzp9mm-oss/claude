@@ -382,6 +382,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script src="people3d.js"></script>
 <script src="world3d.js"></script>
+<script src="glbload.js"></script>
 <script src="sets3d.js"></script>
 <script src="art.js"></script>
 <script src="story.js"></script>
@@ -934,7 +935,15 @@
   }
   menuBtn.addEventListener("click", () => { gen++; finishPlay = null; finish(); showTitle(); });
 
+  // Debug preview, not part of the story: ?captainsean loads the Blender-exported test model
+  // directly, standing in a bare turntable scene. Menu returns to the normal title screen.
+  async function debugCaptainSean() {
+    title.hidden = true; box.hidden = true; menuBtn.hidden = false;
+    await scene3d("captainSeanTest");
+  }
+
   ART.preload();
-  showTitle();
+  if (new URLSearchParams(location.search).has("captainsean")) debugCaptainSean();
+  else showTitle();
 })();
 </script>
