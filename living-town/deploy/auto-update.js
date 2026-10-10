@@ -13,7 +13,7 @@
  *      Anything fails? Stop, log it, and leave the live town alone.
  *   4. Fast-forward the live checkout. Git never touches `data/` or
  *      `node_modules/` (both ignored). If the package lock changed, reinstall.
- *   5. Restart what changed (Living Town, and Blacksteel if it's installed)
+ *   5. Restart what changed (Little Town, and Blacksteel if it's installed)
  *      and check each answers. If one doesn't, roll back to the previous
  *      version and restart again.
  *

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Living Town — one shared, always-running world.
+ * Little Town — one shared, always-running world.
  *
  * The server owns the canonical simulation and ticks once per real second
  * whether or not anyone is connected. Browsers connect over WebSocket and
@@ -563,7 +563,7 @@ function welcomeTroupe(now) {
   for (const a of arrived) for (const b of arrived) if (a !== b) a.relationships[b.id] = 60 + Math.floor(Math.random() * 15);
   cast.syncHomes(state);
   for (const resident of arrived) { life.ensureResidentLife(resident, now); mind.ensureMind(resident); }
-  if (arrived.length) addEvent(`🎪 A traveling circus troupe has put up the Big Top by the market: ${arrived.map(r => r.name).join(", ")}. Welcome to Living Town!`, now);
+  if (arrived.length) addEvent(`🎪 A traveling circus troupe has put up the Big Top by the market: ${arrived.map(r => r.name).join(", ")}. Welcome to Little Town!`, now);
 }
 welcomeTroupe(bootTime);
 
@@ -825,7 +825,7 @@ app.post("/api/residents", handle((req, res) => {
   cast.syncHomes(state);
   life.ensureResidentLife(resident, now);
   mind.ensureMind(resident);
-  addEvent(`${resident.name} moved into ${home.name}. Welcome to Living Town!`, now);
+  addEvent(`${resident.name} moved into ${home.name}. Welcome to Little Town!`, now);
   broadcastRoster();
   res.status(201).json({ resident: residentSummary(resident) });
 }));
@@ -1197,7 +1197,7 @@ const viewer = viewerToken ? startViewer({
 }) : null;
 
 server.listen(PORT, HOST, () => {
-  console.log(`Living Town server running — http://${HOST}:${PORT}`);
+  console.log(`Little Town server running — http://${HOST}:${PORT}`);
   console.log(`Schema ${SCHEMA_VERSION} · assets ${assetVersion} · autosave every ${AUTOSAVE_MS / 1000}s`);
 });
 

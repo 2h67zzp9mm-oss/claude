@@ -104,7 +104,7 @@ function profileFor(member, born) {
     name: member.name, born, role: member.role, custom: true, noHistory: true, summary: member.summary,
     likes: member.likes, dislikes: member.dislikes, values: ["kindness", "a good show"], goals: member.goals,
     family: [], historyTracks: ["community"],
-    career: child ? { kind: "school", title: "Elementary student", level: 1, organization: "Living Town School" }
+    career: child ? { kind: "school", title: "Elementary student", level: 1, organization: "Little Town School" }
       : { kind: "free", title: member.role, level: 1, organization: "The Big Top" }
   };
 }

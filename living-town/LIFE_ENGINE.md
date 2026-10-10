@@ -1,4 +1,4 @@
-# Living Town Life Engine (0.5)
+# Little Town Life Engine (0.5)
 
 ## Honest model
 

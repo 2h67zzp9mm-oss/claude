@@ -1,8 +1,8 @@
-# Living Town
+# Little Town
 
-Living Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
+Little Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.18.2
+## Honest status — 0.18.3
 
 Working now:
 
@@ -90,8 +90,8 @@ launchctl load ~/Library/LaunchAgents/com.livingtown.server.plist
 Mouse deploys new versions by itself. Nobody has to copy files or restart anything.
 
 - `com.livingtown.updater` runs `deploy/auto-update.js` every 5 minutes. It watches the `claude/code-review-4vrxjs` branch on GitHub (set `LIVING_TOWN_BRANCH` in its service file to change that).
-- When there's something new, it tests it first in a temporary copy (the full `npm test` for Living Town, and a code check for Blacksteel). Only if everything passes does it fast-forward the live checkout and restart what changed.
-- After a restart it checks each game answers (Living Town on 4310, Blacksteel on 4320 if it's installed). If one doesn't, it rolls back to the previous version and restarts again.
+- When there's something new, it tests it first in a temporary copy (the full `npm test` for Little Town, and a code check for Blacksteel). Only if everything passes does it fast-forward the live checkout and restart what changed.
+- After a restart it checks each game answers (Little Town on 4310, Blacksteel on 4320 if it's installed). If one doesn't, it rolls back to the previous version and restarts again.
 - It only fast-forwards (rewritten history is refused), skips a pass while someone has uncommitted changes in the checkout, and never touches `data/` or `node_modules/`.
 - Log: `/tmp/living-town-updater.log`. To test without changing anything: `node deploy/auto-update.js --self-test`.
 - Install: `bash deploy/install-updater.sh`. Remove: `launchctl bootout gui/$(id -u)/com.livingtown.updater && rm ~/Library/LaunchAgents/com.livingtown.updater.plist`.
@@ -127,7 +127,7 @@ brew services start ollama
 ollama pull llama3.2:3b
 ```
 
-Then restart Living Town. His status shows in the owner's profile menu under "Mr. E's brain". Settings:
+Then restart Little Town. His status shows in the owner's profile menu under "Mr. E's brain". Settings:
 
 - `LIVING_TOWN_MRE_MODEL` — which model to use (default `llama3.2:3b`)
 - `LIVING_TOWN_OLLAMA_URL` — where Ollama is running (default `http://127.0.0.1:11434`)

@@ -72,7 +72,7 @@ function createStore({ dataDir, backupIntervalMs = 60_000, maxBackups = 30, snap
         let age;
         try { age = Date.now() - fs.statSync(lockFile).mtimeMs; } catch { continue; }
         if (age < LOCK_STALE_MS) {
-          log.error(`Refusing to start: another Living Town server looks like it's already running (lock is ${Math.round(age / 1000)}s old).`);
+          log.error(`Refusing to start: another Little Town server looks like it's already running (lock is ${Math.round(age / 1000)}s old).`);
           process.exit(1);
         }
         log.warn("Found a stale lock file (server likely crashed) — recovering it.");

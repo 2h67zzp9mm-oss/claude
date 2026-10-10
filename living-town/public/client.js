@@ -763,7 +763,7 @@
     const sorted = Object.entries(r.relationships || {}).sort((a, b) => b[1] - a[1]);
     ui.closestFriend.textContent = residents.get(sorted[0]?.[0])?.name || "Nobody yet";
     ui.age.textContent = String(r.profile?.age ?? "—");
-    ui.career.textContent = `${r.career?.title || "Resident"} · ${r.career?.organization || "Living Town"}`;
+    ui.career.textContent = `${r.career?.title || "Resident"} · ${r.career?.organization || "Little Town"}`;
     const goal = r.goals?.find(item => !item.completed) || r.goals?.[r.goals.length - 1];
     ui.goal.textContent = goal ? capitalize(goal.text) : "Finding a new direction";
     ui.goalProgress.style.width = `${Math.round(goal?.progress || 0)}%`;
@@ -1265,7 +1265,7 @@
     const offers = (mine?.questOffers || []).map(q => `<li><b>❗</b><span>${escapeHtml(q.requesterName)} has a favour to ask. Find them in town!</span></li>`).join("");
     const stickers = (mine?.keepsakes || []).slice().reverse().map(k => `<span title="${escapeHtml(k.name)}">${escapeHtml(k.emoji)}</span>`).join("");
     todayEl.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button>
-      <h2>Today in Living Town</h2><ol class="today-list">${rows}</ol>
+      <h2>Today in Little Town</h2><ol class="today-list">${rows}</ol>
       ${mine ? `<h3>Favours</h3><ul class="today-list">${quests + offers || "<li><b>❗</b><span>Look for a ❗ over someone in town. They might need your help!</span></li>"}</ul>
       <h3>⭐ ${mine.stars || 0} Town Stars · Sticker book</h3><div class="sticker-book">${stickers || "<em>Earn stickers from events and favours!</em>"}</div>` : ""}</div>`;
     todayEl.classList.remove("hidden");

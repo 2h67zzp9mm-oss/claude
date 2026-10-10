@@ -85,6 +85,9 @@ test("on a real server, nobody standing still stands on anybody else", async () 
   await waitForStart(server);
   const client = await connectClient(port);
   await until(() => client.residents.size === 13, "everyone, troupe included");
+  // Like a phone, learn who lives where (the troupe's home is the Big Top),
+  // so people at home in bed count as indoors.
+  world.setHomeAssignments(client.messages.find(m => m.type === "state").homes);
   const squashed = () => {
     const standing = [...client.residents.values()].filter(r => Math.hypot(r.targetX - r.x, r.targetY - r.y) < 1 && !interiors.locate(r, world));
     const pairs = [];
@@ -97,6 +100,7 @@ test("on a real server, nobody standing still stands on anybody else", async () 
     await new Promise(resolve => setTimeout(resolve, 1000));
     assert.deepStrictEqual(squashed(), []);
   }
+  world.setHomeAssignments({});
   client.ws.close();
   assert.strictEqual(await stop(server), 0);
 });

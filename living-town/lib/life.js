@@ -34,7 +34,7 @@ const profiles = {
     values: ["curiosity", "loyalty", "independence"],
     goals: ["finish a town story collection", "learn a new creative skill", "discover a place nobody else notices"],
     family: [{ id: "dad", type: "father" }, { id: "hazel", type: "younger sister" }],
-    career: { kind: "school", title: "Student", level: 3, organization: "Living Town School" },
+    career: { kind: "school", title: "Student", level: 3, organization: "Little Town School" },
     historyTracks: ["school", "creative", "friendship", "family"]
   },
   hazel: {
@@ -45,7 +45,7 @@ const profiles = {
     values: ["bravery", "play", "family"],
     goals: ["make an animal field guide", "master a new soccer move", "build the best secret fort"],
     family: [{ id: "dad", type: "father" }, { id: "olive", type: "older sister" }],
-    career: { kind: "school", title: "Elementary student", level: 1, organization: "Living Town School" },
+    career: { kind: "school", title: "Elementary student", level: 1, organization: "Little Town School" },
     historyTracks: ["school", "play", "animals", "family"]
   },
   dad: {
@@ -100,7 +100,7 @@ const profiles = {
     values: ["patience", "durability", "keeping promises"],
     goals: ["finish a community bench", "pass on every useful shop trick", "catalog the workshop tools"],
     family: [{ id: "milo", type: "son" }, { id: "zara", type: "daughter-in-law" }, { id: "nova", type: "grandchild" }],
-    career: { kind: "retired", title: "Retired master carpenter", level: 6, organization: "Living Town Workshop" },
+    career: { kind: "retired", title: "Retired master carpenter", level: 6, organization: "Little Town Workshop" },
     careerStartAge: 18,
     careerStages: ["site foreman", "workshop owner", "retired master carpenter"],
     transitions: { "retired master carpenter": "handed over the workshop keys and became a" },
