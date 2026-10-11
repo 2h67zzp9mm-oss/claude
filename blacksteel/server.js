@@ -138,7 +138,7 @@ const entryHTML = `<!DOCTYPE html>
       const errorDiv = document.getElementById("error");
       errorDiv.textContent = "";
       try {
-        const res = await fetch("/check-code", {
+        const res = await fetch("check-code", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code }),
@@ -146,7 +146,7 @@ const entryHTML = `<!DOCTYPE html>
         });
         const data = await res.json();
         if (res.ok) {
-          window.location.href = "/";
+          location.reload();
         } else {
           errorDiv.textContent = data.message || "Invalid code";
         }
