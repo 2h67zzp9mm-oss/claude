@@ -592,8 +592,10 @@
       fallback = false;
     } else {
       // Without 3D graphics the story still plays: a painted backdrop and a list of things to tap.
+      // Scenes with their own hand-painted art (see art.js SCENES) use it directly, keyed the
+      // same as the 3D set; anything not painted yet falls back to a generic ambient backdrop.
       world2d.style.visibility = "";
-      ART.show("frame", S);
+      ART.show(ART.scenes.includes(key) ? key : "frame", S);
       fallback = true;
     }
   }
@@ -636,7 +638,7 @@
   const give = id => { if (!S.inv.includes(id)) S.inv.push(id); renderInv(); };
   const drop = id => { S.inv = S.inv.filter(x => x !== id); if (S.sel === id) S.sel = null; renderInv(); };
   const has = id => S.inv.includes(id);
-  function refresh() { GW().refresh(S); renderInv(); renderChips(); }
+  function refresh() { GW().refresh(S); if (fallback) ART.refresh(S); renderInv(); renderChips(); }
 
   // ---------- verbs ----------
   let verbsEl = null;
@@ -692,7 +694,14 @@
   stage.addEventListener("click", e => {
     if (advance) { advance(); return; }
     if (!steerEl.hidden) { const r = stage.getBoundingClientRect(); GW().ev("steer", e.clientX < r.left + r.width / 2 ? -1 : 1); return; }
-    if (!cfg || S.busy || !W || !W.active) { closeVerbs(); return; }
+    if (!cfg || S.busy) { closeVerbs(); return; }
+    if (!W || !W.active) {
+      // 2D fallback: the painted scene's hotspots are real SVG elements, so hit-test them directly.
+      const hsEl = e.target.closest && e.target.closest("[data-hs]");
+      if (hsEl) { tapHotspot(hsEl.dataset.hs, { x: e.clientX, y: e.clientY }); return; }
+      closeVerbs();
+      return;
+    }
     let ev = e;
     if (tremor) ev = { clientX: e.clientX + (Math.random() - .5) * 26, clientY: e.clientY + (Math.random() - .5) * 26 };
     const hit = W.pick(ev);

@@ -9,7 +9,7 @@
  */
 (function () {
   "use strict";
-  if (!window.THREE || !window.PEOPLE) { window.WORLD = { ok: false }; return; }
+  if (!window.THREE || !window.PEOPLE) { window.WORLD = { ok: false, init: () => false }; return; }
   const T = THREE;
 
   // ---------- helpers shared with sets ----------
