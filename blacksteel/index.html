@@ -584,18 +584,23 @@
     return Promise.resolve();
   }
   let fallback = false;
+  // Scenes with a complete, hand-painted, point-and-click set in art.js (hotspots matching the
+  // 3D version exactly) render in 2D by default now, the start of the King's Quest VII-style
+  // pivot — not just as a no-WebGL fallback. Everything else still uses the 3D engine until it
+  // gets the same treatment.
+  const PAINTED_SETS = new Set(["cabin"]);
   async function scene3d(key, opts) {
     closeVerbs();
-    if (W) {
+    if (W && !PAINTED_SETS.has(key)) {
       world2d.style.visibility = "hidden";
       W.load(key, S, opts || {});
       fallback = false;
     } else {
-      // Without 3D graphics the story still plays: a painted backdrop and a list of things to tap.
-      // Scenes with their own hand-painted art (see art.js SCENES) use it directly, keyed the
-      // same as the 3D set; anything not painted yet falls back to a generic ambient backdrop.
+      // Without 3D graphics (or for a scene painted in 2D on purpose) the story still plays:
+      // a painted backdrop with directly-clickable hotspots, or a generic ambient backdrop and
+      // a list of things to tap for scenes not painted yet.
       world2d.style.visibility = "";
-      ART.show(ART.scenes.includes(key) ? key : "frame", S);
+      ART.show(PAINTED_SETS.has(key) ? key : "frame", S);
       fallback = true;
     }
   }
