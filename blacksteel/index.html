@@ -882,6 +882,12 @@
     }
     S.ch = STORY.length; S.cp = null; save();
     await card("The End", "of the Prologue");
+    await scene2d("ship");
+    await say("CAP", "Years later, a black ship would carry the name they gave him.");
+    await scene2d("island");
+    await say("CAP", "There would be other islands.");
+    await scene2d("battle");
+    await say("CAP", "And a crew to stand beside him.");
     idleText("The Island That Never Existed. Tap Menu to play again, or to let your sister have a turn.");
   }
 

@@ -1222,6 +1222,10 @@
       bg: cardBG, ov: cardOV, fx: emberFX,
       init: r => ({ embers: Array.from({ length: 30 }, () => ({ x: r() * 800, y: r() * 480, v: 6 + r() * 16, s: .6 + r() * 1.4, p: r() * TAU, m: .6 + r() * .4 })) })
     },
+    // Paintings from the family's new artwork, shown after the prologue as a look ahead.
+    ship: { img: "art/ship_blacksteel.jpg", bg: titleBG },
+    island: { img: "art/island_beach.jpg", bg: titleBG },
+    battle: { img: "art/battle_crabs.jpg", bg: titleBG },
     cabin: {
       bg: cabinBG, ov: cabinOV, fx: cabinFX, sway: true,
       init: r => ({ motes: makeMotes(r, 50, 200, 60, 420, 340), drip: 1.2, drop: null, ripple: null })
