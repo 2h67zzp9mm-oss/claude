@@ -1145,6 +1145,119 @@
     }
   }
 
+  // CABIN (painted-photo version): same cabin, same hotspot ids and game-state logic as
+  // cabinOV/cabinFX above, but laid over a real painted background image instead of a
+  // hand-drawn SVG one, with Sean's cutout sprite standing in the room. Coordinates are in
+  // the background's own native pixel space (see the scene's vb), not the usual 800x480.
+  // Props baked into the background (coat on its hook, the saber, the plate) don't yet have
+  // a "taken" variant to switch to, so those hotspots work correctly but won't visibly change
+  // the painting when used — only the chart, packet and communicator screen do, same as before.
+  function cabinOV2(S) {
+    const f = S.flags, st = S.stage, has = id => S.inv.includes(id);
+    const plateOnTable = !f.plateMoved;
+    const chartUnder = !has("chart") && !f.chartSpread;
+    const packetOnTable = st >= 3 && !has("packet");
+    const live = st > 0 && st < 4;
+    const sean = has("coat") ? "art/cabin2d/sean-prologue-age24-longcoat-v001.png" : "art/cabin2d/sean-prologue-age24-nojacket-v001.png";
+    return `<defs>
+        <radialGradient id="oScreen2" cx=".5" cy=".5" r=".7"><stop offset="0" stop-color="${live ? "#3f8078" : "#1b2b2a"}"/><stop offset="1" stop-color="${live ? "#163432" : "#0b1414"}"/></radialGradient>
+        <linearGradient id="oParch2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#efe1bd"/><stop offset="1" stop-color="#c9ae7c"/></linearGradient>
+        <filter id="oBlur2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4"/></filter>
+      </defs>
+
+      <!-- Sean, standing at the table -->
+      <image href="art/cabin2d/${sean.split("/").pop()}" x="760" y="155" width="320" height="485" preserveAspectRatio="xMidYMax meet"/>
+
+      <!-- the chart, spread out once pulled from under the plate -->
+      ${f.chartSpread ? `<g>
+        <path d="M965 455 L1270 440 L1290 495 L950 510 Z" fill="#000" opacity=".3" filter="url(#oBlur2)"/>
+        <path d="M975 405 L1260 392 L1280 460 L960 475 Z" fill="url(#oParch2)"/>
+        <path d="M1005 420 q20 -14 36 0 q-14 17 -36 0z M1220 406 q18 -10 28 4 q-10 14 -28 -4z M1035 445 q10 -7 20 0" fill="#9b8a60"/>
+        <path d="M975 405 L1120 437 M1120 437 L1280 460 M1120 437 L1260 392 M1120 437 L960 475" stroke="#8a6c44" stroke-width=".8" opacity=".6"/>
+        <circle cx="1120" cy="437" r="13" fill="none" stroke="#b0413a" stroke-width="3" stroke-dasharray="4 3.5"/>
+      </g>` : ""}
+
+      <!-- the communicator's screen, replacing the painted idle one with the live state -->
+      <rect x="1352" y="345" width="68" height="52" rx="2" fill="url(#oScreen2)"/>
+      ${live ? `<path id="wave" d="M1356 371 H1416" stroke="#bff0e2" stroke-width="2" fill="none"/>` : `<path d="M1360 362 h12 M1382 374 h15 M1366 384 h8" stroke="#2c4644" stroke-width="1.4"/>`}
+      <circle cx="1412" cy="353" r="6" fill="${st === 0 ? "#e0623e" : "#6fbf73"}" class="${st === 0 ? "blink" : ""}"/>
+
+      ${packetOnTable ? `<g>
+        <rect x="1418" y="452" width="40" height="28" rx="1.5" fill="#cdb682"/>
+        <rect x="1421" y="449" width="37" height="27" rx="1.5" fill="#dcc896"/>
+        <path d="M1421 462 h37 M1439 449 v27" stroke="#7a5433" stroke-width="1.6"/>
+        <circle cx="1439" cy="463" r="4.5" fill="#9e2a22"/>
+      </g>` : ""}
+
+      <!-- hotspots (invisible, drawn last so they sit on top; the general table rect goes
+           first so the more specific item rects on top of it win the click) -->
+      <rect data-hs="door" x="20" y="30" width="230" height="620"/>
+      ${has("coat") ? "" : `<rect data-hs="coat" x="300" y="140" width="170" height="330"/>`}
+      ${has("sword") ? "" : `<rect data-hs="sword" x="420" y="95" width="240" height="85"/>`}
+      <rect data-hs="porthole" x="1290" y="60" width="220" height="220"/>
+      <rect data-hs="shelf" x="845" y="50" width="310" height="380"/>
+      <rect data-hs="bunk" x="465" y="140" width="400" height="330"/>
+      <rect data-hs="bucket" x="150" y="570" width="90" height="90"/>
+      <rect data-hs="table" x="890" y="380" width="770" height="300"/>
+      <rect data-hs="receipts" x="895" y="415" width="150" height="70"/>
+      ${chartUnder || f.chartSpread ? `<rect data-hs="chart" x="${f.chartSpread ? 960 : 1040}" y="${f.chartSpread ? 395 : 418}" width="${f.chartSpread ? 330 : 240}" height="${f.chartSpread ? 115 : 90}"/>` : ""}
+      ${plateOnTable ? `<rect data-hs="plate" x="1040" y="418" width="200" height="75"/>` : ""}
+      <rect data-hs="comm" x="1270" y="325" width="180" height="140"/>
+      <rect data-hs="tides" x="1335" y="398" width="85" height="35"/>
+      ${packetOnTable ? `<rect data-hs="packet" x="1413" y="447" width="55" height="40"/>` : ""}`;
+  }
+
+  function cabinFX2(t, dt, L, N, env, st) {
+    const sway = Math.sin(t * .8) * .9 + Math.sin(t * .37 + 1) * .35;
+    env.tilt(sway);
+    const lx = 1150, ly = 145;
+    let g = L.createRadialGradient(lx, ly, 8, lx, ly, 820);
+    g.addColorStop(0, "rgba(255,196,110,.42)");
+    g.addColorStop(.18, "rgba(230,150,60,.2)");
+    g.addColorStop(.55, "rgba(160,90,30,.07)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    L.fillStyle = g; L.fillRect(0, 0, 1672, 941);
+    motes(L, st.motes, dt, t, lx, ly + 220, 560, .5);
+
+    // the sea outside the porthole, level with the world while the cabin tilts
+    const px = 1400, py = 165, pr = 85;
+    N.save();
+    N.beginPath(); N.arc(px, py, pr, 0, TAU); N.clip();
+    N.translate(px, py); N.rotate(-sway * Math.PI / 180 * 1.6); N.translate(-px, -py);
+    g = N.createLinearGradient(0, py - 60, 0, py + 6);
+    g.addColorStop(0, "#08111d"); g.addColorStop(1, "#1d3550");
+    N.fillStyle = g; N.fillRect(px - pr, py - 60, pr * 2, 66);
+    N.fillStyle = "rgba(242,234,206,.25)"; N.beginPath(); N.arc(px + 60, py - 65, 42, 0, TAU); N.fill();
+    N.fillStyle = "#efe7cc"; N.beginPath(); N.arc(px + 60, py - 65, 21, 0, TAU); N.fill();
+    const hz = py + 6;
+    g = N.createLinearGradient(0, hz, 0, hz + 160);
+    g.addColorStop(0, "#1b3450"); g.addColorStop(1, "#050c16");
+    N.fillStyle = g; N.fillRect(px - pr, hz, pr * 2, 160);
+    for (let i = 0; i < 9; i++) {
+      const y = hz + 8 + i * 13 + i * i * .8;
+      N.strokeStyle = `rgba(150,185,215,${(.35 - i * .03).toFixed(3)})`; N.lineWidth = 2;
+      N.beginPath();
+      for (let x = px - pr + 10; x <= px + pr - 10; x += 10) {
+        const yy = y + Math.sin(x * .04 + t * (1.2 + i * .1) + i) * (2 + i * .8);
+        x === px - pr + 10 ? N.moveTo(x, yy) : N.lineTo(x, yy);
+      }
+      N.stroke();
+    }
+    N.restore();
+
+    // Shannon's signal on the communicator screen
+    const sx = 1352, sy = 345, sw = 68, sh = 52;
+    g = L.createRadialGradient(sx + sw / 2, sy + sh / 2, 4, sx + sw / 2, sy + sh / 2, 120);
+    g.addColorStop(0, "rgba(120,220,200,.3)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    L.fillStyle = g; L.fillRect(sx - 60, sy - 60, sw + 120, sh + 120);
+    const wave = env.q("#wave");
+    if (wave) {
+      let d = `M${sx + 4} ${sy + 21}`;
+      for (let x = sx + 6; x <= sx + sw - 4; x += 3) d += ` L${x} ${(sy + 21 + Math.sin(x * .5 + t * 9) * (4 + 2 * Math.sin(t * 3 + x)) * (.5 + .5 * Math.sin(t * 2.3))).toFixed(1)}`;
+      wave.setAttribute("d", d);
+    }
+  }
+
   // ===================================================================
   // registry
   // ===================================================================
@@ -1223,8 +1336,9 @@
       init: r => ({ embers: Array.from({ length: 30 }, () => ({ x: r() * 800, y: r() * 480, v: 6 + r() * 16, s: .6 + r() * 1.4, p: r() * TAU, m: .6 + r() * .4 })) })
     },
     cabin: {
-      bg: cabinBG, ov: cabinOV, fx: cabinFX, sway: true,
-      init: r => ({ motes: makeMotes(r, 50, 200, 60, 420, 340), drip: 1.2, drop: null, ripple: null })
+      img: "art/cabin2d/cabin-painterly-empty-v001.png", vb: [1672, 941],
+      ov: cabinOV2, fx: cabinFX2, sway: true,
+      init: r => ({ motes: makeMotes(r, 70, 300, 80, 1100, 700) })
     }
   };
 
@@ -1273,9 +1387,12 @@
     const dt = Math.min(.05, last ? (ts - last) / 1000 : .016);
     last = ts;
     const N = els.N.getContext("2d"), L = els.L.getContext("2d"), C = els.C.getContext("2d");
-    // the canvases cover the 800x480 scene exactly (slice-fit like the images)
-    const k = Math.max(els.N.width / 800, els.N.height / 480);
-    const ox = (els.N.width - 800 * k) / 2, oy = (els.N.height - 480 * k) / 2;
+    // the canvases cover the scene's logical box exactly (slice-fit like the images). Most
+    // scenes are hand-drawn at 800x480; a scene with its own photographic art (a different
+    // native aspect ratio) sets vb to its real pixel size so the overlay/fx line up with it.
+    const [vbW, vbH] = cur.vb || [800, 480];
+    const k = Math.max(els.N.width / vbW, els.N.height / vbH);
+    const ox = (els.N.width - vbW * k) / 2, oy = (els.N.height - vbH * k) / 2;
     for (const c of [N, L, C]) { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, els.N.width, els.N.height); c.setTransform(k, 0, 0, k, ox, oy); }
     tiltDeg = 0;
     cur.fx(t, dt, L, N, env, st);
@@ -1291,7 +1408,8 @@
 
   function renderOV(S) {
     const svg = cur.ov ? cur.ov(S, ovData) : "";
-    els.ov.innerHTML = `<svg viewBox="0 0 800 480" preserveAspectRatio="xMidYMid slice">${svg}</svg>`;
+    const [vbW, vbH] = cur.vb || [800, 480];
+    els.ov.innerHTML = `<svg viewBox="0 0 ${vbW} ${vbH}" preserveAspectRatio="xMidYMid slice">${svg}</svg>`;
   }
 
   function show(key, S, data) {
