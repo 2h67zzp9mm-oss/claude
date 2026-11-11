@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, setHomeAssignments, destinations, SKIN_TONES, HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
+  const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, route, setHomeAssignments, destinations, SKIN_TONES, HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
   const $ = selector => document.querySelector(selector);
   // The read-only window for visiting family (see lib/viewer.js).
   const VISITOR = document.documentElement.dataset.viewer === "1";
@@ -119,8 +119,40 @@
     connect();
   }
 
+  // Your own character starts walking on your phone the moment you tap,
+  // along the same route and at the same pace the town server uses, instead of
+  // waiting for the next update and chasing it.
+  const PLAYER_SPEED = 48;
+  let predict = null;
+  function startPredict(payload) {
+    const r = residents.get(payload.residentId);
+    if (!r || typeof route !== "function") return;
+    predict = { id: r.id, path: route(r.drawX, r.drawY, payload.x, payload.y), tx: payload.x, ty: payload.y, at: performance.now(), doneAt: 0 };
+  }
+  function stepPredict(dt) {
+    if (!predict) return false;
+    const r = residents.get(predict.id);
+    if (!r || mode !== "play") { predict = null; return false; }
+    const t = performance.now();
+    // The server went somewhere else (rejected, went indoors, a new target): let it lead.
+    if (t - predict.at > 1500 && Math.hypot((r.targetX ?? predict.tx) - predict.tx, (r.targetY ?? predict.ty) - predict.ty) > 12) { predict = null; return false; }
+    let budget = PLAYER_SPEED * dt;
+    while (budget > 0 && predict.path.length) {
+      const n = predict.path[0], gap = Math.hypot(n.x - r.drawX, n.y - r.drawY);
+      if (gap <= budget) { r.drawX = n.x; r.drawY = n.y; budget -= gap; predict.path.shift(); }
+      else { r.drawX += (n.x - r.drawX) / gap * budget; r.drawY += (n.y - r.drawY) / gap * budget; budget = 0; }
+    }
+    if (!predict.path.length) {
+      if (!predict.doneAt) predict.doneAt = t;
+      // Wait here until the server catches up, then hand back.
+      if (Math.hypot(r.x - predict.tx, r.y - predict.ty) < 6 || t - predict.doneAt > 3000) predict = null;
+    }
+    return true;
+  }
+
   function send(payload) {
     if (VISITOR) return;
+    if (payload?.type === "control" && me && payload.residentId === me.residentId) startPredict(payload);
     if (socket && socket.readyState === 1) socket.send(JSON.stringify(payload));
   }
 
@@ -370,11 +402,17 @@
   function frame(time) {
     const dt = Math.min(0.1, (time - lastFrame) / 1000);
     lastFrame = time;
+    const predicting = stepPredict(dt) ? predict?.id : null;
     for (const r of residents.values()) {
-      const k = Math.min(1, dt * 4);
-      r.drawX += (r.x - r.drawX) * k;
-      r.drawY += (r.y - r.drawY) * k;
-      if (Math.hypot(r.x - r.drawX, r.y - r.drawY) > 120) { r.drawX = r.x; r.drawY = r.y; }
+      if (r.id === predicting) continue;
+      // Glide at a steady walking pace between updates rather than lunging
+      // and then slowing down every second.
+      const gap = Math.hypot(r.x - r.drawX, r.y - r.drawY);
+      if (gap > 120) { r.drawX = r.x; r.drawY = r.y; continue; }
+      if (gap < 0.05) continue;
+      const step = Math.min(gap, Math.max(gap * dt * 1.5, 52 * dt));
+      r.drawX += (r.x - r.drawX) / gap * step;
+      r.drawY += (r.y - r.drawY) / gap * step;
     }
     followPlayer(dt);
     moveMrE(dt);

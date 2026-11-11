@@ -219,6 +219,12 @@
     while (ids[0] !== best.start) ids.unshift(shortest[best.start].prev[ids[0]]);
     const points = ids.map(id => ({ x: walkNodes[id][0], y: walkNodes[id][1] }));
     points.push({ x: tx, y: ty });
+    // Don't walk back to a corner you've already passed, or past the spot you
+    // tapped and back again: skip a waypoint that would mean doubling back.
+    const back = (a, b, c) => (b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y) < 0;
+    const from = { x: fx, y: fy };
+    while (points.length > 1 && back(from, points[0], points[1])) points.shift();
+    while (points.length > 2 && back(points[points.length - 3], points[points.length - 2], points[points.length - 1])) points.splice(points.length - 2, 1);
     return points;
   }
 

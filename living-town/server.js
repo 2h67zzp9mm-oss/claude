@@ -52,6 +52,7 @@ try { tronConversations = JSON.parse(fs.readFileSync(TRON_MEMORY_FILE, "utf8"));
 if (!Array.isArray(tronConversations)) tronConversations = [];
 const SCHEMA_VERSION = 3;
 const TICK_MS = 1000;
+const PLAYER_SPEED = 48; // map units per second; public/client.js walks your own character at the same pace
 const AUTOSAVE_MS = 10_000;
 const MAX_MESSAGE_BYTES = 1024;
 const MAX_EVENTS = 200;
@@ -369,7 +370,8 @@ function updateResident(r, dtHours, elapsedSeconds, date) {
 
   if (!Array.isArray(r.path)) r.path = [];
   // Follow the walkway waypoints, carrying leftover movement to the next one.
-  let budget = 40 * mind.mindFor(r.id).speed * elapsedSeconds;
+  // Players walk at one steady pace, the same one their phone shows them.
+  let budget = (controlled ? PLAYER_SPEED : 40 * mind.mindFor(r.id).speed) * elapsedSeconds;
   while (budget > 0 && r.path.length) {
     const next = r.path[0];
     const gap = Math.hypot(next.x - r.x, next.y - r.y);
