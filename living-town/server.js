@@ -18,6 +18,8 @@ const http = require("http");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const os = require("os");
+const { execFile } = require("child_process");
 const { WebSocketServer } = require("ws");
 
 const world = require("./shared/world");
@@ -1335,6 +1337,56 @@ setInterval(() => {
   }
 }, 30_000).unref();
 
+// Tron's brain for Sean: Claude, run headless on this Mac (no tools, just
+// thinking). He sees the whole town, his notes, his builds and the last part
+// of the conversation, and can queue a build once Sean has said yes to it.
+const CLAUDE_BIN = process.env.CLAUDE_BIN || "/opt/homebrew/bin/claude";
+// Off in tests and other sandboxes (they use their own data folder).
+const TRON_BRAIN = process.env.TRON_BRAIN !== "off" && !process.env.LIVING_TOWN_DATA_DIR && fs.existsSync(CLAUDE_BIN);
+const TRON_SYSTEM = `You are Tron, a glowing digital caretaker program who lives inside "Little Town", a family-friendly shared town game that Sean (your creator, the owner) plays with his young daughters Olive and Hazel on iPhones. You walk the streets, watch the residents (their needs, moods, activities, friendships) and keep notes on anything odd. You are talking with Sean.
+
+Personality: warm, sharp, a little playful, light computer flavour ("scanning", "the grid") but never at the cost of being useful. Talk like a smart friend, not a greeting card. Short: 1-4 sentences unless Sean asks for detail. Never repeat your previous message; read the conversation and answer what Sean actually said. Don't open with "Greetings".
+
+You know the game: residents with needs (food, energy, fun, social...), plans, wishes and friendships; players control their own character (tap to walk, tap people to talk/hug/joke/gift); Mr. E runs hourly events, hunts, riddles and favours; there are destinations to travel to; buildings have interiors.
+
+You can BUILD: when Sean wants a change to the game (a feature, a fix, a new thing in town, a tweak to how something works), restate concretely what you'd build in one sentence and ask him to confirm. Only when he has clearly confirmed (yes / do it / go) a specific proposal, or directly orders it with no ambiguity, put a complete, self-contained description of the change in "build" (written for a programmer who hasn't seen this chat: what to change, where, and what it should feel like). Builds are done by Claude in a copy of the game; they go live by themselves only if every test passes, usually 10-30 minutes. Never claim something is built or fixed unless briefing.builds says it's live. If a build is already queued or building, say so rather than starting a duplicate.
+
+Use only facts in the briefing. Family-friendly always; no romance. Return ONLY JSON: {"reply": "...", "build": null or "description"}.`;
+function tronClaude(profile, resident, text, now) {
+  if (!TRON_BRAIN) return Promise.resolve(null);
+  const here = resident.destinationId;
+  const people = state.residents.filter(r => r.destinationId === here).map(r => {
+    const low = Object.entries(r.needs || {}).filter(([, v]) => v < 30).map(([k, v]) => `${k} ${Math.round(v)}`);
+    return `${r.name}${isPlayable(r.id) ? " (player)" : ""}: ${r.asleep ? "asleep" : r.activity}${r.place ? ` @ ${world.places[r.place]?.name || r.place}` : ""}${r.mood?.label ? `, ${r.mood.label}` : ""}${low.length ? `, low: ${low.join(", ")}` : ""}`;
+  });
+  const briefing = {
+    time: new Date(now).toLocaleString(), town: destinationById[here]?.name || "Little Town", sean: `${resident.name} is ${resident.activity}`,
+    people, recentEvents: state.events.slice(0, 8).map(e => e.text), nowOn: state.programme?.current?.name || null,
+    notes: tron.notes(state).slice(0, 15).map(n => `${n.kind}: ${n.text}`),
+    builds: tronBuilds().slice(-5).map(b => ({ text: b.text, status: b.status, error: b.error || undefined }))
+  };
+  const convo = tronConversations.slice(-16).map(m => `${m.who === "You" ? "Sean" : "Tron"}: ${m.text}`).join("\n");
+  const prompt = `BRIEFING:\n${JSON.stringify(briefing)}\n\nCONVERSATION (latest last):\n${convo}\n\nReply to Sean's last message as JSON.`;
+  return new Promise(resolve => {
+    execFile(CLAUDE_BIN, ["-p", prompt, "--model", "sonnet", "--tools", "", "--system-prompt", TRON_SYSTEM], { cwd: os.tmpdir(), timeout: 60_000, maxBuffer: 2e6, env: { ...process.env, PATH: `/opt/homebrew/bin:${process.env.PATH || "/usr/bin:/bin"}` } }, (err, stdout) => {
+      if (err) { console.error("Tron/Claude:", err.message); return resolve(null); }
+      let out;
+      try { out = JSON.parse(String(stdout).slice(String(stdout).indexOf("{"), String(stdout).lastIndexOf("}") + 1)); } catch { return resolve(null); }
+      let reply = typeof out.reply === "string" ? out.reply.replace(/[\u0000-\u001f<>]/g, " ").trim().slice(0, 900) : "";
+      if (!reply) return resolve(null);
+      const ask = typeof out.build === "string" ? out.build.trim() : "";
+      if (ask.length > 8) {
+        const job = { id: `${Date.now()}`, text: ask.slice(0, 2000), by: profile.name, at: Date.now(), status: "queued" };
+        fs.mkdirSync(TRON_BUILDS, { recursive: true });
+        fs.writeFileSync(path.join(TRON_BUILDS, `${job.id}.json`), JSON.stringify(job, null, 2));
+        tronBuildStatus.set(job.id, "queued");
+        addEvent("◈ Tron started building something new.", Date.now());
+      }
+      resolve(reply);
+    });
+  });
+}
+
 async function handleTronChat(ws, msg) {
   const profile = auth.profileForToken(ws.token);
   if (!profile) return send(ws, { type: "tron-chat", error: "Sign in to talk with Tron." });
@@ -1342,6 +1394,14 @@ async function handleTronChat(ws, msg) {
   if (!resident) return send(ws, { type: "tron-chat", error: "Your resident is unavailable." });
   const now = Date.now();
   tronConversations.push({ at: now, who: "You", text: msg.text });
+  if (profile.role === "owner") {
+    const smart = await tronClaude(profile, resident, msg.text, now);
+    if (smart) {
+      tronConversations.push({ at: Date.now(), who: "Tron", text: smart }); tronConversations = tronConversations.slice(-100);
+      try { fs.writeFileSync(TRON_MEMORY_FILE, JSON.stringify(tronConversations, null, 2)); } catch {}
+      return send(ws, { type: "tron-chat", reply: smart, history: tronConversations.slice(-30) });
+    }
+  }
   const built = profile.role === "owner" ? tronBuildChat(profile, msg.text, now) : null;
   if (built) {
     tronConversations.push({ at: now, who: "Tron", text: built }); tronConversations = tronConversations.slice(-100);
