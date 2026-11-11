@@ -536,6 +536,7 @@ function tick() {
     }
   }
   mre.tick(state, now, mreHelpers);
+  tron.tick(state, now, tronCtx);
   if (now - lastShowCheck >= 30_000) { lastShowCheck = now; troupe.tick(state, now, addEvent); }
   if (now - lastWillCheck >= 10_000) { lastWillCheck = now; will.tick(state, now, willContext); }
   if (now - lastAwareCheck >= 4000) { lastAwareCheck = now; awareness.tick(state, now, awareContext); }
@@ -596,6 +597,8 @@ const mreGenerator = process.env.LIVING_TOWN_MRE_AI === "off" ? null : ollamaGen
   model: process.env.LIVING_TOWN_MRE_MODEL || "llama3.2:3b"
 });
 const mre = createMrE({ generate: mreGenerator });
+const tron = require("./lib/tron").createTron({ world, dir: path.join(__dirname, "tron", "world-state") });
+const tronCtx = { players: () => playerResidents(), isPlayer: r => playerResidents().includes(r) };
 const npcGenerator = process.env.LIVING_TOWN_NPC_AI === "on" ? ollamaGenerator({
   url: process.env.LIVING_TOWN_OLLAMA_URL || "http://127.0.0.1:11435",
   model: process.env.LIVING_TOWN_NPC_MODEL || "qwen3.5:9b",
@@ -713,7 +716,7 @@ function residentDetail(r) {
 
 function townPayload({ full = false } = {}) {
   const weather = (state.effects || []).find(e => e.kind === "weather" && e.until > Date.now());
-  const town = { mre: mre.publicView(state, Date.now()), weather: weather?.weather || "clear", brain: mre.brain, npcBrain: npcBrain.status() };
+  const town = { mre: mre.publicView(state, Date.now()), tron: tron.publicView(state), weather: weather?.weather || "clear", brain: mre.brain, npcBrain: npcBrain.status() };
   // The programme only goes out when it changes (or with the full state).
   const view = programme.publicView(state, Date.now());
   const json = JSON.stringify(view);
@@ -1278,14 +1281,14 @@ async function handleTronChat(ws, msg) {
   if (!resident) return send(ws, { type: "tron-chat", error: "Your resident is unavailable." });
   const now = Date.now();
   tronConversations.push({ at: now, who: "You", text: msg.text });
-  const briefing = { town: destinationById[resident.destinationId]?.name || "Little Town", people: state.residents.filter(r => r.destinationId === resident.destinationId).map(r => `${r.name}: ${r.activity}`).slice(0, 10), events: state.events.slice(0, 5).map(e => e.text), memory: tronConversations.slice(-12) };
-  let reply = `I heard you. ${briefing.town} is in view, and I am keeping your request in our shared log.`;
+  const briefing = { town: destinationById[resident.destinationId]?.name || "Little Town", people: state.residents.filter(r => r.destinationId === resident.destinationId).map(r => `${r.name}: ${r.activity}`).slice(0, 10), events: state.events.slice(0, 5).map(e => e.text), notes: tron.notes(state).slice(0, 12).map(n => `${n.kind}: ${n.text}`), memory: tronConversations.slice(-12) };
+  let reply = tron.answer(state, msg.text);
   if (npcGenerator) try {
     // A caretaker who is temporarily thinking is useful; one who keeps the
     // player waiting on an overloaded local model feels broken. Fall back
     // quickly while the model continues serving the town in the background.
     const raw = await Promise.race([
-      npcGenerator("You are Tron, a wise, warm, concise caretaker of Little Town. The player is your creator. Remember the supplied conversation, explain what you know, and help make thoughtful plans. Do not claim actions you did not take. Return JSON only.", JSON.stringify({ message: msg.text, briefing }), { type: "object", additionalProperties: false, properties: { reply: { type: "string", minLength: 1, maxLength: 500 } }, required: ["reply"] }).catch(() => null),
+      npcGenerator("You are Tron, a friendly glowing digital program who lives in Little Town and looks after it for your creator, Sean. You walk the streets, watch everyone, and keep notes (supplied in briefing.notes) on anything odd: residents stuck, too hungry or tired, standing on each other, events nobody attends, friendships going cold. Answer in 1-4 short sentences, upbeat with a little computer flavour ('scanning', 'the grid'). When asked what's going on, what's weird, or what to change, use the notes and give concrete recommendations. Never invent facts that aren't in the briefing. Do not claim actions you did not take. Return JSON only.", JSON.stringify({ message: msg.text, briefing }), { type: "object", additionalProperties: false, properties: { reply: { type: "string", minLength: 1, maxLength: 500 } }, required: ["reply"] }).catch(() => null),
       new Promise(resolve => setTimeout(() => resolve(null), 10_000))
     ]);
     // eslint-disable-next-line no-control-regex -- remove transport controls from local model output.

@@ -169,7 +169,7 @@
       showToast(msg.reason);
     } else if (msg.type === "travel-result") {
       if (msg.error) showToast(msg.error);
-      else { $("#travelCard").classList.add("hidden"); showToast("Welcome to your new destination."); }
+      else { $("#travelCard").classList.add("hidden"); const d = (destinations || []).find(x => x.id === msg.destinationId); showToast(!msg.destinationId || msg.destinationId === "little-town" ? "Welcome home to Little Town!" : `Welcome to ${d?.name || "a new town"}!`); }
     } else if (msg.type === "tron-chat") { if (msg.error) showToast(msg.error); else renderTron(msg.history || []); }
   }
 
@@ -380,7 +380,7 @@
     followMyDoor();
     followSocial();
     followPlay();
-    if (time - lastBanner > 500) { lastBanner = time; updateBanner(); }
+    if (time - lastBanner > 500) { lastBanner = time; updateBanner(); updateTownName(); }
     try {
       if (interior.id) drawInterior(dt);
       else if (backing) drawTown(dt);
@@ -441,6 +441,7 @@
     [...visible].reverse().forEach(r => { if (r.speech && now >= r.speech.from && now < r.speech.until) drawChatBubble(r, r.speech.text, false, bubbles); });
     drawWeather();
     drawMrE(now);
+    drawTron();
     scenery.drawAbove(ctx, sky);
   }
 
@@ -650,6 +651,49 @@
     const reach = screenPx(speaking ? 22 : 12) + (speaking ? 0 : 4);
     mreHitBox = { body: { x0: x - reach, y0: y - FEET_ROW * PX - 4, x1: x + reach, y1: y + screenPx(speaking ? 18 : 14) }, bubble };
   }
+
+  // Tron: Sean's glowing caretaker program. He lives in town, watches how it's
+  // running, and you can tap him to ask what's going on.
+  const TRON_LOOK = { skin: "#0b1a24", hair: "#0b1a24", shirt: "#0e2230", pants: "#0b1a24", shoes: "#08131b", style: "short", accessory: "none" };
+  let tronCanvas = null, tronHit = null;
+  const tronDraw = { x: 0, y: 0, placed: false };
+  function tronSprite() {
+    if (tronCanvas) return tronCanvas;
+    const c = buildSprite(TRON_LOOK, 0), g = c.getContext("2d");
+    g.fillStyle = "#5ef2ff";
+    g.fillRect(6, 6, 4, 1);                          // visor
+    g.fillRect(7, 10, 2, 6); g.fillRect(5, 12, 6, 1); // chest circuit
+    g.fillRect(5, 17, 1, 4); g.fillRect(10, 17, 1, 4); // leg lines
+    tronCanvas = c;
+    return c;
+  }
+  function drawTron() {
+    const T = town.tron;
+    if (!T) { tronHit = null; return; }
+    if (!tronDraw.placed || Math.hypot(T.x - tronDraw.x, T.y - tronDraw.y) > 150) Object.assign(tronDraw, { x: T.x, y: T.y, placed: true });
+    tronDraw.x += (T.x - tronDraw.x) * 0.08; tronDraw.y += (T.y - tronDraw.y) * 0.08;
+    const { x, y } = tronDraw, t = performance.now() / 1000;
+    ctx.save();
+    const glow = ctx.createRadialGradient(x, y - 10, 1, x, y - 10, 22);
+    glow.addColorStop(0, `rgba(94,242,255,${0.28 + Math.sin(t * 3) * 0.08})`); glow.addColorStop(1, "rgba(94,242,255,0)");
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y - 10, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(94,242,255,.6)"; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.ellipse(x, y, 10, 4, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(tronSprite(), x - (SPRITE_W * PX) / 2, y - FEET_ROW * PX, SPRITE_W * PX, SPRITE_H * PX);
+    ctx.imageSmoothingEnabled = true;
+    const fs = screenPx(10);
+    ctx.font = `800 ${fs}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const label = T.notes ? `◈ Tron · ${T.notes}` : "◈ Tron";
+    const w = ctx.measureText(label).width + fs;
+    ctx.fillStyle = "rgba(8,30,44,.88)"; ctx.beginPath(); ctx.roundRect(x - w / 2, y + 2, w, fs * 1.4, fs * 0.7); ctx.fill();
+    ctx.strokeStyle = "#5ef2ff"; ctx.lineWidth = screenPx(1); ctx.stroke();
+    ctx.fillStyle = "#bff9ff"; ctx.fillText(label, x, y + 2 + fs * 0.72);
+    ctx.restore();
+    const reach = screenPx(18);
+    tronHit = { x0: x - reach, y0: y - FEET_ROW * PX - 6, x1: x + reach, y1: y + screenPx(20) };
+  }
+  function tappedTron(p) { return tronHit && p.x >= tronHit.x0 && p.x <= tronHit.x1 && p.y >= tronHit.y0 && p.y <= tronHit.y1; }
 
   function drawWeather() {
     if (town.weather === "rain") {
@@ -1499,6 +1543,7 @@
     const speaking = mreSpeaking(nowMs());
     if (playing && tappedMrE(p) && riddleForMe()) return openRiddle();
     if (speaking && tappedMrE(p)) return showToast(mreTapText(nowMs()));
+    if (tappedTron(p)) return me?.role === "owner" ? showTron() : showToast(`◈ Tron is scanning ${town.tron?.watching || "the town"}… beep boop.`);
     // Hunt items and lost things for favours: tap to collect (walking over if needed).
     // At least 24 screen px around each item, nearest one wins.
     const reach = Math.max(10, screenPx(24));
@@ -1585,7 +1630,7 @@
   }
   $("#travelButton").addEventListener("click", showTravelMenu);
   function renderTron(history) { const log = $("#tronLog"); if (log) { log.innerHTML = history.map(m => `<p class="tron-message"><b>${escapeHtml(m.who)}</b>${escapeHtml(m.text)}</p>`).join(""); log.scrollTop = log.scrollHeight; } }
-  function showTron() { if (!me) return showProfileMenu(); const card = $("#tronCard"); card.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><p class="eyebrow">CARETAKER</p><h2>Talk to Tron</h2><p class="today-intro">Tron watches this town, remembers your conversations, and helps you decide what to improve.</p><div id="tronLog" class="tron-log"><p class="tron-message"><b>Tron</b>I am here. What should we understand or build together?</p></div><form id="tronForm" class="tron-form"><input maxlength="600" placeholder="Talk to Tron…" aria-label="Message Tron" /><button>Send</button></form></div>`; card.classList.remove("hidden"); card.querySelector(".today-close").onclick = () => card.classList.add("hidden"); card.querySelector("#tronForm").onsubmit = e => { e.preventDefault(); const input = e.currentTarget.querySelector("input"); const text = input.value.trim(); if (text) { const log = card.querySelector("#tronLog"); input.value = ""; input.disabled = true; log.insertAdjacentHTML("beforeend", `<p class="tron-message"><b>You</b>${escapeHtml(text)}</p><p class="tron-message tron-thinking"><b>Tron</b>Thinking…</p>`); log.scrollTop = log.scrollHeight; send({ type: "tron-chat", text }); window.setTimeout(() => { input.disabled = false; input.focus(); }, 10_500); } }; }
+  function showTron() { if (!me) return showProfileMenu(); const card = $("#tronCard"); card.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><p class="eyebrow">CARETAKER</p><h2>Talk to Tron</h2><p class="today-intro">Tron lives in town, watches how everyone is doing, and tells you what he'd change.</p><div id="tronLog" class="tron-log"><p class="tron-message"><b>Tron</b>Greetings, creator. I'm keeping watch over ${escapeHtml(town.tron?.watching || "the town")}. I have ${town.tron?.notes || 0} notes. Ask me "what's going on?", "anything weird?" or "what should we change?"</p></div><form id="tronForm" class="tron-form"><input maxlength="600" placeholder="Talk to Tron…" aria-label="Message Tron" /><button>Send</button></form></div>`; card.classList.remove("hidden"); card.querySelector(".today-close").onclick = () => card.classList.add("hidden"); card.querySelector("#tronForm").onsubmit = e => { e.preventDefault(); const input = e.currentTarget.querySelector("input"); const text = input.value.trim(); if (text) { const log = card.querySelector("#tronLog"); input.value = ""; input.disabled = true; log.insertAdjacentHTML("beforeend", `<p class="tron-message"><b>You</b>${escapeHtml(text)}</p><p class="tron-message tron-thinking"><b>Tron</b>Thinking…</p>`); log.scrollTop = log.scrollHeight; send({ type: "tron-chat", text }); window.setTimeout(() => { input.disabled = false; input.focus(); }, 10_500); } }; }
   $("#tronButton").addEventListener("click", showTron);
 
   const pointers = new Map();
@@ -1646,7 +1691,25 @@
   $("#editResident").addEventListener("click", () => { const r = selected(); if (r) showCharacterEditor(r); });
   $("#expandSheet").addEventListener("click", () => ui.sheet.classList.toggle("open"));
   $(".sheet-handle").addEventListener("click", () => ui.sheet.classList.toggle("open"));
-  $("#peopleButton").addEventListener("click", () => ui.sheet.classList.add("open"));
+  $("#peopleButton").addEventListener("click", openPeople);
+  $("#todayButton").addEventListener("click", openToday);
+  // Everyone in town, with a face, where they are, and a ❗ if they need you.
+  function openPeople() {
+    const asks = new Set((myResident()?.questOffers || []).map(q => q.requesterId));
+    const here = activeDestinationId();
+    const list = [...residents.values()].filter(r => (!me || r.id !== me.residentId) && (r.destinationId || "little-town") === here)
+      .sort((a, b) => (asks.has(b.id) - asks.has(a.id)) || a.name.localeCompare(b.name));
+    const rows = list.map(r => `<button class="person-row" data-resident="${escapeHtml(r.id)}"><img src="${spriteFor(r, 0).toDataURL()}" alt=""><span><strong>${asks.has(r.id) ? "❗ " : ""}${escapeHtml(r.name)}</strong><small>${escapeHtml(r.asleep ? "Asleep 💤" : capitalizeFirst(r.activity || ""))}</small></span><i aria-hidden="true">→</i></button>`).join("");
+    todayEl.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><h2>People</h2><p class="today-intro">Tap someone to go and see them.</p><div class="people-list">${rows}</div></div>`;
+    revealToday();
+  }
+  function updateTownName() {
+    const id = activeDestinationId();
+    const name = id === "little-town" ? "Little Town" : (destinations || []).find(d => d.id === id)?.name || "Little Town";
+    const el = document.querySelector(".town-title span");
+    if (el && el.textContent !== name) el.textContent = name;
+  }
+  function capitalizeFirst(t) { return t ? t.charAt(0).toUpperCase() + t.slice(1) : ""; }
   $("#storiesButton").addEventListener("click", () => { ui.sheet.classList.add("open"); $('[data-panel="eventsPanel"]').click(); });
   $("#recenterButton").addEventListener("click", () => {
     const r = selected();
@@ -1704,7 +1767,7 @@
     showToast(`Playing as ${profile.name}`);
   }
 
-  function gateShell(content, closable = false) {
+  function gateShell(content, closable = false, title = "Who’s visiting town?") {
     let gate = $("#playerGate");
     if (!gate) {
       gate = document.createElement("section");
@@ -1712,7 +1775,7 @@
       gate.className = "player-gate";
       $(".app-shell").append(gate);
     }
-    gate.innerHTML = `<div class="gate-card"><p class="eyebrow">ONE SHARED WORLD</p><h2>Who’s visiting town?</h2>${content}<p id="gateError" class="gate-error" role="alert"></p>${closable ? '<button id="closeGate" class="text-button">Just watch the town</button>' : ""}</div>`;
+    gate.innerHTML = `<div class="gate-card"><p class="eyebrow">ONE SHARED WORLD</p>${title ? `<h2>${title}</h2>` : ""}${content}<p id="gateError" class="gate-error" role="alert"></p>${closable ? '<button id="closeGate" class="text-button">Just watch the town</button>' : ""}</div>`;
     gate.querySelector("#closeGate")?.addEventListener("click", () => gate.remove());
     return gate;
   }
@@ -1751,14 +1814,16 @@
     const claimed = new Set(status.profiles.map(profile => profile.residentId));
     const canCreate = owner && status.playable.some(id => !claimed.has(id));
     const others = owner ? status.profiles.filter(p => p.id !== me.id).map(p => `<li><b>${escapeHtml(p.name)}</b> · ${escapeHtml(residentName(p.residentId))}<span><button class="text-button" data-reset="${escapeHtml(p.id)}">Reset PIN</button><button class="text-button danger" data-remove="${escapeHtml(p.id)}">Remove</button></span></li>`).join("") : "";
-    const ownerTools = owner ? `<button id="addResident" class="wide-button">Add a new resident</button><button id="askMrE" class="soft-button">✦ Ask Mr. E for a surprise</button><p class="gate-copy small">Mr. E's brain: ${escapeHtml(mreBrain || "starting up")}</p><p class="gate-copy small">NPC planning: ${escapeHtml(town.npcBrain?.mode || "adaptive planner")} · ${town.npcBrain?.accepted || 0} model plans accepted this session</p>` : "";
-    const gate = gateShell(`<div class="login-avatar">${escapeHtml(me.name.charAt(0))}</div><h3>${escapeHtml(me.name)}</h3><p class="gate-copy">Plays as ${escapeHtml(residentName(me.residentId))}</p><button id="editLook" class="soft-button">Customize my character</button>${ownerTools}${canCreate ? '<button id="createPlayer" class="soft-button">Create another player</button>' : ""}${others ? `<ul class="player-admin">${others}</ul>` : ""}<button id="backToTown" class="soft-button">Back to town</button><button id="logoutPlayer" class="text-button">Switch player</button>`);
+    const ownerTools = owner ? `<button id="ownerTravel" class="soft-button">⌁ Travel to another town</button><button id="ownerTron" class="soft-button">◈ Talk to Tron</button><button id="addResident" class="wide-button">Add a new resident</button><button id="askMrE" class="soft-button">✦ Ask Mr. E for a surprise</button><p class="gate-copy small">Mr. E's brain: ${escapeHtml(mreBrain || "starting up")}</p><p class="gate-copy small">NPC planning: ${escapeHtml(town.npcBrain?.mode || "adaptive planner")} · ${town.npcBrain?.accepted || 0} model plans accepted this session</p>` : "";
+    const gate = gateShell(`<div class="login-avatar">${escapeHtml(me.name.charAt(0))}</div><h3>${escapeHtml(me.name)}</h3><p class="gate-copy">Plays as ${escapeHtml(residentName(me.residentId))}</p><button id="editLook" class="soft-button">Customize my character</button>${ownerTools}${canCreate ? '<button id="createPlayer" class="soft-button">Create another player</button>' : ""}${others ? `<ul class="player-admin">${others}</ul>` : ""}<button id="backToTown" class="soft-button">Back to town</button><button id="logoutPlayer" class="text-button">Switch player</button>`, false, "");
     gate.querySelector("#backToTown").addEventListener("click", () => gate.remove());
     gate.querySelector("#editLook").addEventListener("click", () => {
       const mine = residents.get(me.residentId);
       if (mine) showCharacterEditor(mine); else showToast("Your character hasn't loaded yet.");
     });
     gate.querySelector("#addResident")?.addEventListener("click", () => showCharacterEditor(null));
+    gate.querySelector("#ownerTravel")?.addEventListener("click", () => { gate.remove(); showTravelMenu(); });
+    gate.querySelector("#ownerTron")?.addEventListener("click", () => { gate.remove(); showTron(); });
     gate.querySelector("#askMrE")?.addEventListener("click", async () => {
       try {
         showToast("✦ Mr. E is thinking…");
@@ -1786,7 +1851,7 @@
   }
 
   function showPinReset(profileId) {
-    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Profile</button><h3>Reset PIN</h3><form id="pinForm"><label>New PIN<input name="pin" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" required></label><button class="wide-button">Save PIN</button></form>`);
+    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Profile</button><h3>Reset PIN</h3><form id="pinForm"><label>New PIN<input name="pin" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" required></label><button class="wide-button">Save PIN</button></form>`, false, "");
     gate.querySelector("#backMenu").addEventListener("click", showProfileMenu);
     onSubmit(gate, "#pinForm", async data => {
       await api(`/api/auth/profiles/${encodeURIComponent(profileId)}/pin`, { method: "PUT", body: JSON.stringify({ pin: data.get("pin") }) });
@@ -1821,7 +1886,7 @@
         <label>Pants<input name="pants" type="color" value="${escapeHtml(look.pants)}"></label>
         <label>Shoes<input name="shoes" type="color" value="${escapeHtml(look.shoes)}"></label>
         <button class="wide-button">${isNew ? "Welcome them to town" : "Save"}</button>
-      </form>${editDetails && !isNew ? '<button id="moveAway" class="text-button danger">Move away from town</button>' : ""}`);
+      </form>${editDetails && !isNew ? '<button id="moveAway" class="text-button danger">Move away from town</button>' : ""}`, false, "");
     const form = gate.querySelector("#characterForm");
     const preview = gate.querySelector("#lookPreview").getContext("2d");
     const lookFromForm = () => {
@@ -1864,7 +1929,7 @@
   function showCreator(status) {
     const claimed = new Set(status.profiles.map(profile => profile.residentId));
     const options = status.playable.filter(id => !claimed.has(id)).map(id => `<option value="${escapeHtml(id)}">${escapeHtml(residentName(id))}</option>`).join("");
-    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Profile</button><h3>Create player</h3><form id="creatorForm" class="creator-form"><label>Player name<input name="name" maxlength="24" required></label><label>Plays as<select name="residentId">${options}</select></label><label>PIN (4–6 digits)<input name="pin" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" type="password" autocomplete="new-password" required></label><button class="wide-button">Create player</button></form>`);
+    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Profile</button><h3>Create player</h3><form id="creatorForm" class="creator-form"><label>Player name<input name="name" maxlength="24" required></label><label>Plays as<select name="residentId">${options}</select></label><label>PIN (4–6 digits)<input name="pin" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" type="password" autocomplete="new-password" required></label><button class="wide-button">Create player</button></form>`, false, "");
     gate.querySelector("#backMenu").addEventListener("click", showProfileMenu);
     onSubmit(gate, "#creatorForm", async data => {
       await api("/api/auth/profiles", { method: "POST", body: JSON.stringify({ name: data.get("name"), residentId: data.get("residentId"), pin: data.get("pin") }) });
