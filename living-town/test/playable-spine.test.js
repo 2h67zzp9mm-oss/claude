@@ -48,7 +48,7 @@ test("playable spine is protected without weakening the town shell", async () =>
   assert.strictEqual(wasm.headers.get("cache-control"), "private, no-store");
 
   const serviceWorker = await (await fetch(url("/sw.js"))).text();
-  assert.ok(serviceWorker.includes('url.pathname.startsWith("/playable-spine/")'));
+  assert.ok(serviceWorker.includes('rel.startsWith("/playable-spine/")'), "the service worker never caches the preview");
   assert.strictEqual(await stop(server), 0);
 });
 
