@@ -107,6 +107,33 @@ function createTron({ world, dir, log = console, random = Math.random }) {
     t.notes = t.notes.filter(n => now - n.at < 24 * 3600_000 && !/^cold:[^:]+:/.test(n.key));
   }
 
+  // Little things Tron does about what he notices. Gentle, and never to players.
+  const acted = new Map(); // key -> time
+  function help(state, now, ctx) {
+    const t = ensure(state);
+    const once = (key, ms) => { if (now - (acted.get(key) || 0) < ms) return false; acted.set(key, now); return true; };
+    const byId = id => state.residents.find(r => r.id === id);
+    const goLook = place => { if (!place || !world.places[place]) return; const s = world.spotFor(null, place); if (s) { const to = world.snapToWalkable(s.x + 22, s.y + 10); t.walker.path = world.route(t.walker.x, t.walker.y, to.x, to.y); t.walker.watching = place; t.walker.restUntil = now + 90_000; } };
+    for (const n of t.notes) {
+      if (now - n.at > 5 * 60_000) continue;
+      const [kind, a, b] = n.key.split(":");
+      if ((kind === "stuck" || kind === "needs") && once(n.key, 2 * 3600_000)) {
+        const r = byId(a); if (!r || ctx.isPlayer(r)) continue;
+        ctx.nudge(r, kind === "needs" ? "Tron reminded me to look after myself" : "Tron gave me a nudge");
+        ctx.log(`◈ Tron gave ${r.name} a friendly nudge.`);
+        goLook(r.place);
+      } else if (kind === "overlap" && once(n.key, 30 * 60_000)) {
+        const r = byId(b); if (r && !ctx.isPlayer(r)) ctx.makeRoom(r);
+      } else if (kind === "favours" && once(n.key, 3 * 3600_000)) {
+        const p = byId(a); if (p) ctx.tell(p, `◈ Tron: ${n.text.replace(` for ${p.name}`, " for you")}`);
+      } else if (kind === "empty" && once(n.key, 3600_000)) {
+        ctx.rally(n.place, a);
+        ctx.log(`◈ Tron pinged the town: come to ${world.places[n.place]?.name || "the event"}!`);
+        goLook(n.place);
+      }
+    }
+  }
+
   function writeNotes(state, now) {
     if (!dir) return;
     const t = ensure(state);
@@ -120,7 +147,7 @@ function createTron({ world, dir, log = console, random = Math.random }) {
   function tick(state, now, ctx) {
     const t = ensure(state);
     wander(t, now);
-    if (now - lastScan >= SCAN_MS) { lastScan = now; try { scan(state, now, ctx); } catch (err) { log.error("Tron scan:", err); } }
+    if (now - lastScan >= SCAN_MS) { lastScan = now; try { scan(state, now, ctx); if (ctx.nudge) help(state, now, ctx); } catch (err) { log.error("Tron scan:", err); } }
     if (now - lastWrite >= 10 * 60_000) { lastWrite = now; writeNotes(state, now); }
   }
 

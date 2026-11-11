@@ -598,7 +598,20 @@ const mreGenerator = process.env.LIVING_TOWN_MRE_AI === "off" ? null : ollamaGen
 });
 const mre = createMrE({ generate: mreGenerator });
 const tron = require("./lib/tron").createTron({ world, dir: path.join(__dirname, "tron", "world-state") });
-const tronCtx = { players: () => playerResidents(), isPlayer: r => playerResidents().includes(r) };
+const tronCtx = {
+  players: () => playerResidents(), isPlayer: r => playerResidents().includes(r),
+  // Let them pick something new to do (the planner re-decides right away).
+  nudge: (r, why) => { if (r.mind) r.mind.commitUntil = 0; r.intent = "rethinking after a nudge from Tron"; will.feel(r, "◈", why, { now: Date.now() }); },
+  makeRoom: r => { if (!r.place || isControlled(r.id)) return; const p = freeSpotAt(r, r.place); if (p) walkTo(r, p.x, p.y); },
+  tell: (p, text) => { for (const ws of socketsOf(p.id)) send(ws, { type: "toast", text }); },
+  rally: (place, eventId) => {
+    state.effects = Array.isArray(state.effects) ? state.effects : [];
+    const ev = state.programme?.current;
+    if (!ev || ev.id !== eventId || state.effects.some(e => e.id === `${eventId}-tron`)) return;
+    state.effects.push({ id: `${eventId}-tron`, kind: "happening", place, pull: 1.4, until: ev.end, reason: `Tron's ping about the ${ev.name.toLowerCase()}`, activity: null });
+  },
+  log: text => addEvent(text)
+};
 const npcGenerator = process.env.LIVING_TOWN_NPC_AI === "on" ? ollamaGenerator({
   url: process.env.LIVING_TOWN_OLLAMA_URL || "http://127.0.0.1:11435",
   model: process.env.LIVING_TOWN_NPC_MODEL || "qwen3.5:9b",
@@ -1274,6 +1287,52 @@ function handleControl(ws, msg) {
   r.asleep = false;
 }
 
+// --- Tron's builds: Sean asks, Tron confirms, deploy/tron-builder.cjs gets Claude to build it. ---
+const TRON_BUILDS = path.join(DATA_DIR, "tron-builds");
+let tronPending = null;
+const tronBuildStatus = new Map();
+function tronBuilds() {
+  try { return fs.readdirSync(TRON_BUILDS).filter(f => f.endsWith(".json")).sort().map(f => JSON.parse(fs.readFileSync(path.join(TRON_BUILDS, f), "utf8"))); } catch { return []; }
+}
+function tronBuildLine(b) {
+  return ({ queued: `“${b.text}” is in my queue.`, building: `I'm building “${b.text}” right now with Claude.`, deploying: `“${b.text}” passed every test and is on its way into town.`,
+    live: `“${b.text}” is live! ${b.summary || ""}`, failed: `“${b.text}” didn't work out: ${b.error}` })[b.status] || `“${b.text}”: ${b.status}`;
+}
+function tronBuildChat(profile, text, now) {
+  const t = text.trim();
+  if (tronPending && now - tronPending.at < 15 * 60_000 && /^(yes|yep|yeah|do it|go|go ahead|build it|ok|okay|sure)\b/i.test(t)) {
+    const job = { id: `${now}`, text: tronPending.text, by: profile.name, at: now, status: "queued" };
+    tronPending = null;
+    fs.mkdirSync(TRON_BUILDS, { recursive: true });
+    fs.writeFileSync(path.join(TRON_BUILDS, `${job.id}.json`), JSON.stringify(job, null, 2));
+    tronBuildStatus.set(job.id, "queued");
+    return "Building program engaged. I've handed it to Claude. It takes a while: Claude writes it, every test has to pass, then it goes live by itself. Ask me \"how's the build?\" any time.";
+  }
+  if (tronPending && /^(no|nope|cancel|never ?mind|stop)\b/i.test(t)) { tronPending = null; return "Cancelled. Nothing will be built."; }
+  if (/\b(build|how'?s|status)\b.*\b(going|status|build|builds)\b|^builds?\??$/i.test(t) && !/^(build|make|add|create|put|change)\b/i.test(t)) {
+    const list = tronBuilds().slice(-3);
+    return list.length ? list.map(tronBuildLine).join(" ") : "No builds yet. Ask me to build something, like \"build a bench by the pond\".";
+  }
+  if (/^(please |can you |could you |tron,? )?(build|make|add|create|put|change|fix)\b/i.test(t) && t.length > 8) {
+    tronPending = { text: t.replace(/^(please |can you |could you |tron,? )/i, "").replace(/\?$/, ""), at: now };
+    return `You want me to build: “${tronPending.text}”. Say yes and I'll get Claude on it. If every test passes, it goes live in town by itself (say no to cancel).`;
+  }
+  return null;
+}
+// Tell the owner when a build finishes or fails.
+setInterval(() => {
+  for (const b of tronBuilds()) {
+    if (tronBuildStatus.get(b.id) === b.status) continue;
+    const first = !tronBuildStatus.has(b.id);
+    tronBuildStatus.set(b.id, b.status);
+    if (first || !["live", "failed"].includes(b.status)) continue;
+    const line = `◈ Tron: ${tronBuildLine(b)}`;
+    tronConversations.push({ at: Date.now(), who: "Tron", text: tronBuildLine(b) });
+    if (b.status === "live") addEvent(`◈ Tron built something new: ${b.text}`);
+    for (const p of auth.profiles().filter(x => x.role === "owner")) for (const ws of socketsOf(p.residentId)) send(ws, { type: "toast", text: line });
+  }
+}, 30_000).unref();
+
 async function handleTronChat(ws, msg) {
   const profile = auth.profileForToken(ws.token);
   if (!profile) return send(ws, { type: "tron-chat", error: "Sign in to talk with Tron." });
@@ -1281,6 +1340,12 @@ async function handleTronChat(ws, msg) {
   if (!resident) return send(ws, { type: "tron-chat", error: "Your resident is unavailable." });
   const now = Date.now();
   tronConversations.push({ at: now, who: "You", text: msg.text });
+  const built = profile.role === "owner" ? tronBuildChat(profile, msg.text, now) : null;
+  if (built) {
+    tronConversations.push({ at: now, who: "Tron", text: built }); tronConversations = tronConversations.slice(-100);
+    try { fs.writeFileSync(TRON_MEMORY_FILE, JSON.stringify(tronConversations, null, 2)); } catch {}
+    return send(ws, { type: "tron-chat", reply: built, history: tronConversations.slice(-30) });
+  }
   const briefing = { town: destinationById[resident.destinationId]?.name || "Little Town", people: state.residents.filter(r => r.destinationId === resident.destinationId).map(r => `${r.name}: ${r.activity}`).slice(0, 10), events: state.events.slice(0, 5).map(e => e.text), notes: tron.notes(state).slice(0, 12).map(n => `${n.kind}: ${n.text}`), memory: tronConversations.slice(-12) };
   let reply = tron.answer(state, msg.text);
   if (npcGenerator) try {

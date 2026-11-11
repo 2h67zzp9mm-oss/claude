@@ -3,3 +3,4 @@ living-town/data/
 *.tmp-*
 *.zip
 living-town/viewer-token
+living-town/tron/world-state/observations.md

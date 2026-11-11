@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.livingtown.tron-builder</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/sean/Projects/living-town-0.5/living-town/deploy/tron-builder.cjs</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/sean/Projects/living-town-0.5/living-town</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key><string>/Users/sean</string>
+  </dict>
+  <key>StartInterval</key><integer>120</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/tmp/tron-builder.log</string>
+  <key>StandardErrorPath</key><string>/tmp/tron-builder.log</string>
+</dict>
+</plist>

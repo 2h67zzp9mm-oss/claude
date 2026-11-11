@@ -170,6 +170,7 @@
     } else if (msg.type === "travel-result") {
       if (msg.error) showToast(msg.error);
       else { $("#travelCard").classList.add("hidden"); const d = (destinations || []).find(x => x.id === msg.destinationId); showToast(!msg.destinationId || msg.destinationId === "little-town" ? "Welcome home to Little Town!" : `Welcome to ${d?.name || "a new town"}!`); }
+    } else if (msg.type === "toast") { if (typeof msg.text === "string") showToast(msg.text);
     } else if (msg.type === "tron-chat") { if (msg.error) showToast(msg.error); else renderTron(msg.history || []); }
   }
 
