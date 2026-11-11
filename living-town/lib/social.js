@@ -13,6 +13,7 @@
 
 const will = require("./will");
 const speech = require("./speech");
+const cognition = require("./cognition");
 const { places } = require("../shared/world");
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -117,6 +118,15 @@ const ACTIONS = {
     yesEffect: { rel: 2, fun: 8, feel: ["😜", "Playful teasing with {actor}"] },
     noEffect: { rel: -6, stress: 8, mood: -4, friction: true, feel: ["😠", "{actor} teased me"], actorFeel: ["😬", "Teasing {target} went wrong"] }
   },
+  gift: {
+    label: "Give a gift (5⭐)", emoji: "🎁", cost: 5,
+    ask: ["I got you a little something!", "Here, this is for you!", "Surprise! A present for you."],
+    yes: ["For me? Oh, thank you so much!", "It's wonderful! You're the best!", "Aww, you shouldn't have! Thank you!"],
+    no: ["Oh! Thank you... I'll save it for later.", "That's sweet, thank you."],
+    chance: ({ rel, t, mood }) => 0.75 + t.agreeableness * 0.15 + rel * 0.1 + mood * 0.1,
+    yesEffect: { rel: 10, social: 10, mood: 8, feel: ["🎁", "{actor} gave me a present"], actorFeel: ["😊", "{target} was so happy with my present"] },
+    noEffect: { rel: 4, social: 4 }
+  },
   sorry: {
     label: "Say sorry", emoji: "🙏",
     ask: ["I'm sorry. I didn't mean it.", "Sorry about before. Friends?", "I want to say sorry."],
@@ -167,11 +177,19 @@ function perform(state, actor, target, actionId, now, ctx, { place = null } = {}
   const fill = text => text.replace(/\{actor\}/g, actor.name).replace(/\{target\}/g, target.name).replace(/\{place\}/g, placeName);
   // Some things (a hug, a treat) need a friendship first; family always qualifies.
   const allowed = action.minRel === undefined || relValue >= action.minRel || family;
-  const accepted = allowed && ctx.random() < clamp(action.chance(facts), 0, 0.97);
-  const effect = accepted ? action.yesEffect : action.noEffect;
+  if (action.cost && (actor.stars || 0) < action.cost) return { error: `You need ${action.cost} ⭐ for a gift. Earn stars at events and by doing favours!` };
+  if (action.cost) actor.stars -= action.cost;
+  // Doing the same thing to the same person again and again gets old fast.
+  target.socialRecent = (target.socialRecent || []).filter(e => now - e.at < 20 * 60_000);
+  const repeats = target.socialRecent.filter(e => e.by === actor.id && e.action === actionId).length;
+  target.socialRecent.push({ by: actor.id, action: actionId, at: now });
+  const accepted = allowed && ctx.random() < clamp(action.chance(facts) - repeats * 0.3, 0, 0.97);
+  const base = accepted ? action.yesEffect : action.noEffect;
+  const effect = repeats && accepted ? { ...base, rel: Math.floor((base.rel || 0) / (repeats + 1)) } : base;
 
   const actorLine = fill(pick(action.ask));
   let targetLine = fill(pick(accepted && action.yes.length ? action.yes : action.no));
+  if (!accepted && repeats >= 2) targetLine = pick(["You already did that! Let's do something else.", "Again? Ha, try something new!", "I think that's enough of that for now!"]);
   let event = null;
 
   // Friendship both ways, needs and mood.
@@ -209,6 +227,16 @@ function perform(state, actor, target, actionId, now, ctx, { place = null } = {}
     }
   }
 
+  // Ground a friendly chat in the character's actual needs and intentions.
+  if (accepted && actionId === "chat") {
+    const plan = cognition.current(target);
+    const low = Object.entries(target.needs).sort((a, b) => a[1] - b[1])[0];
+    const recent = cognition.retrieve(target, { targetId: actor.id, now }, 4).find(m => m.about === actor.id && now - m.at > 10 * 60_000);
+    if (low?.[1] < 35) targetLine = ({ hunger: "I could use a snack. Maybe a cafe visit next?", energy: "I am ready for a quiet rest at home.", social: "I was hoping for some company. Thanks for stopping by!", fun: "I could use a little adventure. What shall we do next?" })[low[0]];
+    else if (plan) targetLine = `I am planning on ${plan.text}. It is nice to see you!`;
+    else if (recent) targetLine = "It is good to see you again. I remember our last chat!";
+  }
+
   // Both remember it (a friendly moment counts toward "make up" wishes).
   const tone = effect.friction ? "friction" : accepted ? "friendly" : "declined";
   const memory = (self, other, text) => { self.memories = [{ at: now, about: other.id, text, type: "conversation", tone }, ...(self.memories || [])].slice(0, 120); };
@@ -223,14 +251,14 @@ function perform(state, actor, target, actionId, now, ctx, { place = null } = {}
   if (!event && effect.friction) event = `${target.name} didn't like ${actor.name}'s teasing.`;
   if (!event && accepted && ["hug", "sorry"].includes(actionId)) event = actionId === "hug" ? `${actor.name} and ${target.name} shared a hug.` : `${actor.name} said sorry to ${target.name}, and they made up.`;
   if (event) ctx.addEvent(event, now);
-  return { accepted, actorLine, targetLine, event, relationship: relLabel(Number(target.relationships[actor.id]) || 0, family) };
+  return { accepted, actorLine, targetLine, event, repeats, relBefore: relValue, relAfter: Number(target.relationships[actor.id]) || 0, relationship: relLabel(Number(target.relationships[actor.id]) || 0, family) };
 }
 
 function capitalize(text) { return text.charAt(0).toUpperCase() + text.slice(1); }
 
 /** What the phone menu needs: the actions, and which need a close friendship. */
 function menu() {
-  return Object.entries(ACTIONS).map(([id, a]) => ({ id, label: a.label, emoji: a.emoji, minRel: a.minRel ?? null, needsPlace: Boolean(a.needsPlace) }));
+  return Object.entries(ACTIONS).map(([id, a]) => ({ id, label: a.label, emoji: a.emoji, minRel: a.minRel ?? null, cost: a.cost || 0, needsPlace: Boolean(a.needsPlace) }));
 }
 
 module.exports = { ACTIONS, perform, menu, relLabel };

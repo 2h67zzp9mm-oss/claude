@@ -139,8 +139,25 @@
     { id: "milo", name: "Milo", color: "#ff9966", x: 470, y: 566 },
     { id: "zara", name: "Zara", color: "#ff6f91", x: 486, y: 568 },
     { id: "finn", name: "Finn", color: "#64b5f6", x: 454, y: 564 },
-    { id: "nova", name: "Nova", color: "#ffd166", x: 500, y: 562 }
+    { id: "nova", name: "Nova", color: "#ffd166", x: 500, y: 562 },
+    { id: "moss", name: "Moss", color: "#759e62", x: 462, y: 552, destinationId: "copper-clover", role: "gardener" },
+    { id: "pip", name: "Pip", color: "#6e9db0", x: 476, y: 560, destinationId: "copper-clover", role: "repairer" },
+    { id: "nell", name: "Nell", color: "#db9a64", x: 492, y: 552, destinationId: "copper-clover", role: "baker" },
+    { id: "juno", name: "Juno", color: "#cb6d6d", x: 462, y: 552, destinationId: "patchwork-commons", role: "textile artist" },
+    { id: "tavi", name: "Tavi", color: "#d4a64c", x: 476, y: 560, destinationId: "patchwork-commons", role: "market trader" },
+    { id: "dottie", name: "Dottie", color: "#886bb8", x: 492, y: 552, destinationId: "patchwork-commons", role: "performer" },
+    { id: "wren", name: "Wren", color: "#4f8794", x: 462, y: 552, destinationId: "riverlight", role: "boatkeeper" },
+    { id: "lumi", name: "Lumi", color: "#a884c7", x: 476, y: 560, destinationId: "riverlight", role: "ceramic artist" },
+    { id: "otis", name: "Otis", color: "#c68652", x: 492, y: 552, destinationId: "riverlight", role: "cafe keeper" }
   ];
+
+  const destinations = [
+    { id: "little-town", name: "Little Town", subtitle: "Your familiar home town", map: "assets/town-map.webp", arrival: { x: 478, y: 556 } },
+    { id: "copper-clover", name: "Copper & Clover", subtitle: "Gardens, repairs, and warm bakery mornings", map: "assets/destinations/copper-clover-concept.png", arrival: { x: 478, y: 556 } },
+    { id: "patchwork-commons", name: "Patchwork Commons", subtitle: "Makers, market stalls, and small performances", map: "assets/destinations/patchwork-commons-concept.png", arrival: { x: 478, y: 556 } },
+    { id: "riverlight", name: "Riverlight", subtitle: "Willows, ceramics, and waterside cafes", map: "assets/destinations/riverlight-concept.png", arrival: { x: 478, y: 556 } }
+  ];
+  const destinationById = Object.fromEntries(destinations.map(destination => [destination.id, destination]));
 
   // The last few styles and accessories came with the Big Top troupe.
   const HAIR_STYLES = ["short", "long", "pigtails", "buns", "curls", "swoop", "bald", "bunny", "yarn", "jester", "rook", "king", "ribbons", "robot"];
@@ -222,5 +239,5 @@
     return { x: best.x + (x - best.x) * k, y: best.y + (y - best.y) * k };
   }
 
-  return { MAP, places, walkNodes, walkEdges, buildings, homeBuildings, setHomeAssignments, SKIN_TONES, homeOf, spotFor, route, snapToWalkable, inPlace, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, HAIR_STYLES, ACCESSORIES, nearestPlace };
+  return { MAP, places, walkNodes, walkEdges, buildings, homeBuildings, setHomeAssignments, SKIN_TONES, homeOf, spotFor, route, snapToWalkable, inPlace, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, residentSeeds, destinations, destinationById, HAIR_STYLES, ACCESSORIES, nearestPlace };
 });

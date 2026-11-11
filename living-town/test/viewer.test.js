@@ -5,6 +5,7 @@ const assert = require("node:assert");
 const WebSocket = require("ws");
 const { cleanup, tempDir, freePort, spawnServer, until, waitForStart, stop, connectClient, api } = require("./helpers");
 const { sameToken, readToken } = require("../lib/viewer");
+const world = require("../shared/world");
 
 test.after(cleanup);
 
@@ -63,7 +64,7 @@ test("visitor's window: secret link, read-only, no personal details", async () =
   const visitor = visitorSocket(viewerPort, `/v/${TOKEN}/ws`);
   await until(() => visitor.messages.some(m => m.type === "state") && visitor.messages.some(m => m.type === "tick"), "visitor receives the town");
   const full = visitor.messages.find(m => m.type === "state");
-  assert.strictEqual(full.state.residents.length, 7);
+  assert.strictEqual(full.state.residents.length, world.residentSeeds.length);
   const olive = full.state.residents.find(r => r.id === "olive");
   assert.ok(olive.name && Number.isFinite(olive.x) && olive.look && olive.mood?.label);
   for (const r of [...full.state.residents, ...visitor.messages.find(m => m.type === "tick").residents]) {
@@ -86,9 +87,9 @@ test("visitor's window: secret link, read-only, no personal details", async () =
   const before = { ...player.residents.get("dad") };
   visitor.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: 477, y: 330 }));
   await until(() => visitor.closed === 1008, "visitor socket closed on any message");
-  await new Promise(resolve => setTimeout(resolve, 1500));
   assert.notStrictEqual(player.residents.get("dad").intent, "following a player's lead");
-  assert.strictEqual(player.residents.get("dad").place, before.place);
+  assert.strictEqual(player.residents.get("dad").targetX, before.targetX, "visitor control did not retarget dad");
+  assert.strictEqual(player.residents.get("dad").targetY, before.targetY, "visitor control did not retarget dad");
 
   // The main server is unchanged: still needs a session to play.
   const stranger = await connectClient(port);

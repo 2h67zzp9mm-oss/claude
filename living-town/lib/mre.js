@@ -77,7 +77,7 @@ function clean(value, max) {
 }
 
 /** Talks to a local Ollama server. Returns an async generate(system, user, schema). */
-function ollamaGenerator({ url = "http://127.0.0.1:11434", model = "llama3.2:3b", timeoutMs = 90_000 } = {}) {
+function ollamaGenerator({ url = "http://127.0.0.1:11434", model = "llama3.2:3b", timeoutMs = 90_000, numPredict = 220, temperature = 0.9, numCtx = 4096, think = false } = {}) {
   const generate = async (system, user, schema) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -90,7 +90,9 @@ function ollamaGenerator({ url = "http://127.0.0.1:11434", model = "llama3.2:3b"
           model,
           stream: false,
           format: schema,
-          options: { temperature: 0.9, num_predict: 220 },
+          think,
+          keep_alive: "20m",
+          options: { temperature, num_predict: numPredict, num_ctx: numCtx },
           messages: [{ role: "system", content: system }, { role: "user", content: user }]
         })
       });

@@ -380,14 +380,25 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js" } }
+</script>
+<script type="module">
+// GLTFLoader ships only as an ES module (and itself imports "three" by bare specifier, hence
+// the import map above). Everything else here is a classic global-THREE script, so this
+// bridges just the loader class onto window for captain-rig.js to use; the meshes/materials
+// it produces are plain THREE objects and work fine added into the classic scene graph.
+import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js";
+window.GLTFLoader = GLTFLoader;
+</script>
 <script src="people3d.js"></script>
+<script src="captain-rig.js"></script>
 <script src="world3d.js"></script>
-<script src="glbload.js"></script>
 <script src="sets3d.js"></script>
 <script src="art.js"></script>
 <script src="story.js"></script>
 <script>
-(() => {
+(async () => {
   "use strict";
 
   // ---------- state and saves ----------
@@ -941,15 +952,8 @@
   }
   menuBtn.addEventListener("click", () => { gen++; finishPlay = null; finish(); showTitle(); });
 
-  // Debug preview, not part of the story: ?captainsean loads the Blender-exported test model
-  // directly, standing in a bare turntable scene. Menu returns to the normal title screen.
-  async function debugCaptainSean() {
-    title.hidden = true; box.hidden = true; menuBtn.hidden = false;
-    await scene3d("captainSeanTest");
-  }
-
   ART.preload();
-  if (new URLSearchParams(location.search).has("captainsean")) debugCaptainSean();
-  else showTitle();
+  if (window.CAPTAIN_RIG) await window.CAPTAIN_RIG.preload();
+  showTitle();
 })();
 </script>

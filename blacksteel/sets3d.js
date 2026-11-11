@@ -73,24 +73,34 @@
     const ring = new T.Mesh(new T.TorusGeometry(.055, .012, 8, 20), brass); ring.position.set(.36, .98, .1); door.add(ring);
     K.hotspot("door", door, [1.1, 2.1, .3, 0, 1.05, .1], [-2.1, -.25], [-2.1, -2.2]);
 
-    // coat on its hook
+    // coat on its hook: the real Blender export (Captain-Sean-Hanging-Jacket-v002) when it
+    // loaded, else the original painted-primitive coat as a fallback.
     K.sph(.03, brass, -1.3, 1.9, -2.1);
     const coatHook = new T.Group(); coatHook.position.set(-1.3, 1.88, -2.02); R.add(coatHook);
-    const cloth = K.mat(0x1a1f26, .92, { side: T.DoubleSide });
-    const hang = new T.Mesh(new T.CylinderGeometry(.1, .3, 1.15, 20, 4, true, Math.PI * .15, Math.PI * 1.7), cloth);
-    hang.rotation.y = Math.PI; hang.position.y = -.6; hang.scale.z = .45; hang.castShadow = true; coatHook.add(hang);
-    for (const s of [-1, 1]) { const sl = new T.Mesh(new T.CapsuleGeometry(.05, .5, 4, 10), cloth); sl.position.set(s * .17, -.42, .02); sl.rotation.z = s * .12; sl.castShadow = true; coatHook.add(sl); }
-    for (let i = 0; i < 4; i++) K.sph(.014, brass, .06, -.3 - i * .13, .09, coatHook);
+    if (window.CAPTAIN_RIG && window.CAPTAIN_RIG.ready) {
+      coatHook.add(window.CAPTAIN_RIG.hangingJacketProp());
+    } else {
+      const cloth = K.mat(0x1a1f26, .92, { side: T.DoubleSide });
+      const hang = new T.Mesh(new T.CylinderGeometry(.1, .3, 1.15, 20, 4, true, Math.PI * .15, Math.PI * 1.7), cloth);
+      hang.rotation.y = Math.PI; hang.position.y = -.6; hang.scale.z = .45; hang.castShadow = true; coatHook.add(hang);
+      for (const s of [-1, 1]) { const sl = new T.Mesh(new T.CapsuleGeometry(.05, .5, 4, 10), cloth); sl.position.set(s * .17, -.42, .02); sl.rotation.z = s * .12; sl.castShadow = true; coatHook.add(sl); }
+      for (let i = 0; i < 4; i++) K.sph(.014, brass, .06, -.3 - i * .13, .09, coatHook);
+    }
     K.hotspot("coat", coatHook, [.7, 1.25, .35, 0, -.6, .05], [-1.3, -.25], [-1.3, -2.2]);
 
-    // Nightforge on its pegs
-    for (const x of [-.55, .55]) K.cyl(.018, .018, .12, dw, x, 1.98, -2.12).rotation.x = Math.PI / 2;
-    const sword = new T.Group(); sword.position.set(0, 2.0, -2.06); R.add(sword);
-    K.cyl(.022, .016, 1.1, iron, .05, 0, 0, sword, 10).rotation.z = Math.PI / 2 - .04;
-    K.cyl(.017, .017, .16, K.mat(0x2b1d14, .8), -.6, .005, 0, sword, 10).rotation.z = Math.PI / 2;
-    const bow = new T.Mesh(new T.TorusGeometry(.07, .007, 6, 16, Math.PI), steel); bow.position.set(-.6, .01, 0); sword.add(bow);
-    K.sph(.024, steel, -.69, 0, 0, sword);
-    K.hotspot("sword", sword, [1.5, .3, .2, -.05, 0, 0], [-.1, -.25], [-.1, -2.2]);
+    // Nightforge on its wall display: the real export (Nightforge-Wall-Display-v002, sword
+    // plus plaque) when it loaded, else the original painted-primitive pegs as a fallback.
+    const sword = new T.Group(); sword.position.set(0, 1.7, -2.1); R.add(sword);
+    if (window.CAPTAIN_RIG && window.CAPTAIN_RIG.ready) {
+      sword.add(window.CAPTAIN_RIG.wallDisplayProp());
+    } else {
+      for (const x of [-.55, .55]) K.cyl(.018, .018, .12, dw, x, .28, -.02, sword).rotation.x = Math.PI / 2;
+      K.cyl(.022, .016, 1.1, iron, .05, .3, .04, sword, 10).rotation.z = Math.PI / 2 - .04;
+      K.cyl(.017, .017, .16, K.mat(0x2b1d14, .8), -.55, .305, .04, sword, 10).rotation.z = Math.PI / 2;
+      const bow = new T.Mesh(new T.TorusGeometry(.07, .007, 6, 16, Math.PI), steel); bow.position.set(-.55, .31, .04); sword.add(bow);
+      K.sph(.024, steel, -.64, .3, .04, sword);
+    }
+    K.hotspot("sword", sword, [1.5, .6, .3, -.05, .3, 0], [-.1, -.25], [-.1, -2.2]);
 
     // porthole with a live sea
     const port = new T.Group(); port.position.set(1.75, 1.6, -2.18); R.add(port);
@@ -1007,42 +1017,6 @@
         // Resolves when the gull has landed and the paper is on the boat, however slow the device.
         gull() { gull.visible = true; gullT = 0; return new Promise(r => { const id = setInterval(() => { if (paper.visible) { clearInterval(id); r(); } }, 100); }); }
       }
-    };
-  };
-
-  // ===================================================================
-  // Debug preview: Captain Sean, the Blender-exported rigged blockout (not wired into the
-  // story). Reached via index.html's ?captainsean debug hook, not from normal play.
-  // ===================================================================
-  SETS.captainSeanTest = function (K) {
-    const R = K.root;
-    const floorMesh = new T.Mesh(new T.CircleGeometry(4, 40), K.mat(0x3a3226, .92));
-    floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; R.add(floorMesh);
-    R.add(new T.GridHelper(8, 8, 0x6b5f48, 0x4a4132));
-    R.add(new T.HemisphereLight(0xcfdcff, 0x5a4a34, 1.4));
-    const key = new T.DirectionalLight(0xfff0d8, 1.8); key.position.set(3, 5, 4); key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024); R.add(key);
-    const fill = new T.DirectionalLight(0xdfe8ff, 1.1); fill.position.set(-3, 2, 4); R.add(fill);
-
-    const holder = new T.Group(); R.add(holder);
-    let status = "loading";
-    // window.GLBLoad: a small custom loader (glbload.js), not three.js's own GLTFLoader — see
-    // that file's header for why. Exposes bonesByName for future pose-driving work.
-    window.GLBLoad.load("models/captain-sean-v010.glb").then(({ scene, bones, meshCount, materialCount }) => {
-      holder.add(scene);
-      status = "ready (" + meshCount + " meshes, " + Object.keys(bones).length + " bones, " + materialCount + " materials, no skin/animation)";
-      window.__captainSeanBones = bones;
-      window.__captainSeanStatus = status;
-    }).catch(err => { status = "error: " + err.message; window.__captainSeanStatus = status; console.error(err); });
-
-    return {
-      cam: { pos: [0, 1.5, 4.2], look: [0, .95, 0], fov: 36 },
-      follow(cp, cl) { cp.set(0, 1.5, 4.2); cl.set(0, .95, 0); },
-      floor: { x0: -2, x1: 2, z0: -2, z1: 2 }, floorMesh,
-      bg: 0x141a22, fog: [0x141a22, .02],
-      enter() {},
-      // A slow idle turn so a static, unanimated rig doesn't read as simply frozen/broken.
-      update(dt, t) { holder.rotation.y = t * .12; }
     };
   };
 

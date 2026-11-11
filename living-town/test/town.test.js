@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const { cleanup, tempDir, freePort, spawnServer, until, waitForStart, stop, connectClient, api } = require("./helpers");
+const world = require("../shared/world");
 
 test.after(cleanup);
 
@@ -15,9 +16,9 @@ test("custom residents: create, play, customize, persist, move away", async () =
   await waitForStart(server);
   const owner = (await api(port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
   const watcher = await connectClient(port);
-  await until(() => watcher.residents.size === 7, "initial town");
+  await until(() => watcher.residents.size === world.residentSeeds.length, "initial town");
 
-  const body = { name: "Pip", age: 8, homeId: "roseCottage", look: { skin: "#8d5524", style: "pigtails", hair: "#222222", shirt: "#ff0000" } };
+  const body = { name: "Bea", age: 8, homeId: "roseCottage", look: { skin: "#8d5524", style: "pigtails", hair: "#222222", shirt: "#ff0000" } };
   assert.strictEqual((await api(port, "POST", "/api/residents", body)).status, 403, "only the owner adds residents");
   assert.strictEqual((await api(port, "POST", "/api/residents", { ...body, name: "<b>" }, owner)).status, 400);
   assert.strictEqual((await api(port, "POST", "/api/residents", { ...body, homeId: "cafe" }, owner)).status, 400);
@@ -31,15 +32,15 @@ test("custom residents: create, play, customize, persist, move away", async () =
   assert.strictEqual(pip.profile.lifeStage, "child");
   assert.strictEqual(pip.look.style, "pigtails");
   assert.ok(pip.playable);
-  assert.ok(watcher.events.some(e => /Pip moved into Rose Cottage/.test(e.text)));
+  assert.ok(watcher.events.some(e => /Bea moved into Rose Cottage/.test(e.text)));
 
-  // Pip can be played.
-  const player = await api(port, "POST", "/api/auth/profiles", { name: "Pip", residentId: pipId, pin: "1234" }, owner);
+  // Bea can be played.
+  const player = await api(port, "POST", "/api/auth/profiles", { name: "Bea", residentId: pipId, pin: "1234" }, owner);
   assert.strictEqual(player.status, 201);
   const pipLogin = await api(port, "POST", "/api/auth/login", { profileId: player.body.profile.id, pin: "1234" });
   const pipClient = await connectClient(port, { cookie: pipLogin.cookie });
   pipClient.ws.send(JSON.stringify({ type: "control", residentId: pipId, x: 477, y: 330 }));
-  await until(() => watcher.residents.get(pipId)?.targetX === 477, "Pip walks where the player points");
+  await until(() => watcher.residents.get(pipId)?.targetX === 477, "Bea walks where the player points");
 
   // The owner renames and rehomes; a player restyles their own character.
   assert.strictEqual((await api(port, "PUT", `/api/residents/${pipId}`, { name: "Pippa", age: 9, homeId: "finnCottage" }, owner)).status, 200);

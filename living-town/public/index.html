@@ -23,7 +23,7 @@
       <section class="world-card">
         <canvas id="townCanvas" aria-label="Little Town map"></canvas>
         <div class="place-chip" id="placeChip">Little Town</div>
-        <button id="eventBanner" class="event-banner hidden" aria-label="Today in Little Town"></button>
+        <button id="eventBanner" class="event-banner hidden" aria-label="Things to do in Little Town"></button>
         <div class="zoom-hint">Drag to explore · Pinch to zoom · Tap to move</div>
         <button id="recenterButton" class="map-button" aria-label="Center map">⌖</button>
         <div id="interior" class="interior hidden" aria-live="polite">
@@ -63,6 +63,7 @@
           <div><span>Closest</span><strong id="closestFriend">—</strong></div>
         </div>
         <div id="sheetDetails" class="sheet-details">
+          <section id="residentThinking" class="resident-thinking hidden" aria-label="Plans and learning"></section>
           <div id="needsPanel" class="needs-panel"></div>
           <p id="profileSummary" class="profile-summary"></p>
           <div class="will-block">
@@ -97,6 +98,8 @@
         <button class="dock-button active" data-mode="observe"><b>⌂</b><span>Town</span></button>
         <button class="dock-button" id="playButton" data-mode="play"><b>➤</b><span>Play</span></button>
         <button class="dock-button" id="peopleButton"><b>♟</b><span>People</span></button>
+        <button class="dock-button" id="travelButton"><b>⌁</b><span>Travel</span></button>
+        <button class="dock-button" id="tronButton"><b>◈</b><span>Tron</span></button>
         <button class="dock-button" id="storiesButton"><b>✦</b><span>Stories</span></button>
       </nav>
 
@@ -106,7 +109,9 @@
         <ul id="returnEvents"></ul>
         <button id="dismissReturn" class="wide-button">Back to town</button>
       </section>
-      <section id="todayCard" class="today-card hidden" aria-live="polite"></section>
+      <section id="todayCard" class="today-card hidden" role="dialog" aria-modal="true" aria-label="Things to do in Little Town"></section>
+      <section id="travelCard" class="today-card hidden" role="dialog" aria-modal="true" aria-label="Travel between towns"></section>
+      <section id="tronCard" class="today-card hidden" role="dialog" aria-modal="true" aria-label="Talk to Tron"></section>
       <div id="toast" class="toast hidden" role="status"></div>
     </main>
     <script src="shared/world.js"></script>

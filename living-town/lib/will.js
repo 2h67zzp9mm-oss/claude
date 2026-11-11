@@ -327,4 +327,4 @@ function publicView(resident, now = Date.now()) {
   return { wishes: resident.wishes.map(w => ({ emoji: w.emoji, text: w.text })), feelings };
 }
 
-module.exports = { ensure, feel, choose, placeBonus, tick, onConversation, publicView, candidates, imperative, MAX_WISHES };
+module.exports = { ensure, feel, like, choose, placeBonus, tick, onConversation, publicView, candidates, imperative, MAX_WISHES };

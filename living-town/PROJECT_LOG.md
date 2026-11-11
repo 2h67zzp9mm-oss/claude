@@ -445,3 +445,25 @@ Residents now want things of their own and act on them (`lib/will.js`, hooked in
 - Phones that installed the app to their home screen may keep the old icon name until it's removed and added again.
 - **Test fix found while releasing:** the "nobody stands on anybody" server test failed at night. Asleep troupe members at the Big Top's door looked like two people standing on each other, because the test never learned that the Big Top is their home. Phones do learn it, from the server's list of who lives where. The test now uses that list too. The restart gate held back the restart until it was fixed.
 
+
+# Version 0.18.4: easier ways to find something to do
+
+- The Today panel now opens with six activity cards: park, cafe, workshop, market, square and home. Players walk to the correct door; observers can locate the destination on the map.
+- Live events have a prominent action to walk there or answer the riddle. The full schedule is tucked into an expandable section, and the evening banner offers things to do after events finish.
+- Favour offers have a direct shortcut to the resident's social menu. The panel supports keyboard focus, Escape and tab containment.
+- Added a localhost TCP relay for the user-requested public playable Funnel on HTTPS port 10000, preserving the existing Blacksteel endpoints. The installed LaunchAgent runs the relay from deploy/public-relay.cjs.
+- Validation: all 86 existing tests pass, ESLint passes, and browser checks confirm the activity panel, observer map navigation, Escape dismissal and focus restoration. Player login was not exercised with a real family PIN.
+
+# Version 0.19.0: persistent NPC planning and local model reasoning
+
+- Added an executive planner for all resident types. Plans contain real activities and social actions, persist across saves, learn from measured outcomes, and replan around changing circumstances.
+- Bounded episodic memory retrieval and expiring observations; NPCs only observe nearby residents in the same space. Social plans respect personal space, actual proximity, friendship rules, player control, sleep and duties.
+- Local model proposals are constrained to catalogue IDs and revalidated on arrival. No model prose is displayed or executed. Timeouts, serial inference and backoff preserve simulation responsiveness.
+- Added context-aware chat replies, previous-conversation callbacks, and a resident panel showing upcoming plans and learning.
+- Fixed conversations through walls and repeated navigation requests discarding valid routes.
+- Dedicated loopback Ollama service, resumable model installer and readiness test; local model files no longer depend on the disconnected external volume. Qwen3.5 9B targets the 24 GB M4’s practical memory budget.
+
+# Version 0.19.1: resident awareness
+
+- Residents notice rain, events, crowds, friends passing, and changed places. They show a short emote and sometimes speak in character; memories can surface later in conversation (`lib/awareness.js`, wired in server tick, mind, will, and client emote bubble).
+- Tests: `test/awareness.test.js` restored in `npm test`. Viewer, town, troupe, and integration expectations updated for the larger seed cast (`world.residentSeeds.length`) and open-ground tap clamping instead of walkway snap.

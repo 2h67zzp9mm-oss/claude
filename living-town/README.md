@@ -2,9 +2,13 @@
 
 Little Town is Sean, Olive, and Hazel's shared, persistent little world. One Node.js process on Mouse runs the canonical simulation; every browser connects to it over WebSocket and sees the same residents, positions, needs, conversations, and memories.
 
-## Honest status — 0.18.3
+## Honest status — 0.19.0
 
 Working now:
+
+- **NPC planning and learning**: persistent multi-step plans, remembered outcomes, locally observed social context, grounded replies and a visible planning panel. Optional local model planning is served by a dedicated Ollama instance.
+
+- **Things to do**: six destination cards, live-event actions and shortcuts to favour requests. Open the banner to explore, including after the day’s events end.
 
 - **Real house interiors**: every home has its own floor plan (kitchen, living room, and a bedroom each for Olive, Hazel and Sean; a shared room for Milo and Zara; Nova's room; Finn's workroom and fireside), drawn in detailed pixel art with sunlight through the windows by day and lamplight at night. Residents walk from room to room, eat at the table, sit on the sofa and sleep in their own beds. In Play mode, walk up to your front door and the view zooms inside; tap almost anything (beds, chairs, the sink, fridge, stove, windows, plants, the wardrobe, the fruit bowl…) to use it, the floor to walk, and the front door to go back out.
 - **The cafe, workshop and market inside**: Milo behind the Moonbeam Cafe counter with cakes, hot chocolate, a piano and a cozy booth; Sean's workbenches, tool wall and control panel, with Zara's art studio next door; and the Corner Market's fruit racks, sweet jars and bread corner. Staff on shift and indoor activities happen inside; others (the cafe terrace, the market stalls) stay out on the map. Players walk in through any of their front doors. Nobody is ever shown in two places: the map, every inside view and the signs all use one shared rule.
@@ -34,7 +38,7 @@ Not built yet:
 
 - Free-form generated dialogue. This is deliberately out of scope until the LLM review gate in `PROJECT_LOG.md` is passed.
 - Interiors, town editing, TV screensaver mode
-- Public internet hosting of the playable app. The main server is for Mouse and trusted family devices on Tailscale only; only the read-only visitor's window may be published (see below).
+- Public self-registration. Public play uses existing family accounts and PINs.
 
 ## Project layout
 
@@ -146,4 +150,18 @@ Nothing leaves the house: Ollama runs on Mouse and only listens locally.
 - Every control command re-checks the session, so logging out, PIN resets, and removed players take effect on open sockets immediately.
 - WebSocket connections from other sites are refused, and responses carry a strict Content-Security-Policy.
 
-This is not an internet-hardened service. Do not port-forward it, and never publish port 4310. Only the read-only visitor's window (port 4311) may be published, with Tailscale Funnel.
+The playable app is published at Sean’s request through Tailscale Funnel on HTTPS port 10000. It uses existing PIN authentication and lockouts; it has not received a comprehensive internet security audit. The separate read-only visitor window remains available on port 4311.
+
+## Public play on Mouse
+
+Public URL: https://m0u5-3.tail9b0a79.ts.net:10000/
+
+Funnel forwards to `127.0.0.1:4312`. The `com.livingtown.public-relay` LaunchAgent runs `deploy/public-relay.cjs`, forwarding TCP and WebSocket connections to the main server at `100.66.214.35:4310`. This preserves the private link and the existing Blacksteel Funnel endpoints. The Mac and Tailscale must remain running; the relay starts at user login. To stop publishing only this game: `tailscale funnel --https=10000 off`.
+
+## Dedicated local NPC AI
+
+The installed `com.livingtown.local-ai` service uses Ollama on loopback port 11435, with cloud disabled, one loaded model and one inference at a time. Model storage is `~/Library/Application Support/LittleTown/models`, independent of the older Ollama service’s disconnected external storage link.
+
+`com.livingtown.ai-bootstrap` resumes the Qwen3.5 9B download and runs a structured-planning smoke test. It retries interrupted downloads. Progress and verified readiness are recorded in `~/Library/Application Support/LittleTown/ai-status.json`; service logs are `/tmp/little-town-ai.log` and `/tmp/little-town-ai-bootstrap.log`.
+
+Enable model planning with `LIVING_TOWN_NPC_AI=on`, `LIVING_TOWN_NPC_MODEL=qwen3.5:9b` and `LIVING_TOWN_OLLAMA_URL=http://127.0.0.1:11435`. The adaptive planner works even when model planning is unavailable. `LIVING_TOWN_MRE_MODEL` can point Mr. E at the same local model. Inference uses an 8192-token context, bounded output and no cloud account or usage fees. The model is a practical fit for this 24 GB Mac; larger models and unrestricted generated dialogue are not enabled.

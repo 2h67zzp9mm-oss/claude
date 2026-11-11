@@ -650,7 +650,9 @@
         const room = ownRoomOf(plan, beds, o.id);
         if (room && mine) { result.set(o.id, { x: mine.bed.spot[0], y: mine.bed.spot[1], floor: mine.bed.floor, objectId: null }); continue; }
       }
-      if (!object) object = byId("sofa") || byId("armchair") || objects.find(obj => obj.seats);
+      if (!object) object = byId("sofa") || byId("armchair") || objects.find(obj => obj.seats) || objects.find(obj => obj.spot && !obj.hanging);
+      // Shops have no sofa: browse near the entrance rather than crash.
+      if (!object) { const e = plan.floors[0].entrance; result.set(o.id, { x: e[0] + (result.size % 3) * 10 - 10, y: e[1] - 14, floor: 0, objectId: null }); continue; }
       result.set(o.id, seatAt(object));
     }
     return result;

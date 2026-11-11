@@ -641,6 +641,12 @@ function runAutonomousExperience(state, resident, now = Date.now(), quiet = fals
 
 /** `a` learns one fact about `b` from `b`. Recent experiences are favoured. */
 function shareKnowledge(a, b, now = Date.now()) {
+  // Destination residents may arrive from an older save before the life
+  // engine has built their full profile. Conversation must stay safe.
+  if (!Array.isArray(a.knowledge)) a.knowledge = [];
+  if (!Array.isArray(b.knowledge)) b.knowledge = [];
+  if (!Array.isArray(a.memories)) a.memories = [];
+  if (!Array.isArray(b.memories)) b.memories = [];
   const known = new Set(a.knowledge.map(fact => fact.factId));
   const candidates = ownFacts(b).filter(fact => !known.has(fact.factId));
   if (candidates.length === 0) return null;

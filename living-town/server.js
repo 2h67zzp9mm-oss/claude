@@ -28,6 +28,7 @@ const { createStore } = require("./lib/persistence");
 const { createAuth } = require("./lib/auth");
 const cast = require("./lib/cast");
 const { createMrE, ollamaGenerator } = require("./lib/mre");
+const cognition = require("./lib/cognition");
 const { startViewer, readToken } = require("./lib/viewer");
 const troupe = require("./lib/troupe");
 const crowd = require("./lib/crowd");
@@ -35,13 +36,20 @@ const will = require("./lib/will");
 const social = require("./lib/social");
 const events = require("./lib/events");
 const speech = require("./lib/speech");
+const awareness = require("./lib/awareness");
 const tasks = require("./lib/tasks");
 
-const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, spotFor, route, snapToWalkable } = world;
+const { places, PLACE_RADIUS, PLAYABLE_IDS, DEFAULT_NEEDS, MAP, residentSeeds, destinationById, spotFor, route, snapToWalkable } = world;
 
 const PORT = Number(process.env.PORT) || 4310;
 const HOST = process.env.HOST || "127.0.0.1";
 const DATA_DIR = process.env.LIVING_TOWN_DATA_DIR ? path.resolve(process.env.LIVING_TOWN_DATA_DIR) : path.join(__dirname, "data");
+const PLAYABLE_SPINE_DIR = process.env.LIVING_TOWN_PLAYABLE_SPINE_DIR ? path.resolve(process.env.LIVING_TOWN_PLAYABLE_SPINE_DIR) : null;
+const PLAYABLE_SPINE_M2_DIR = process.env.LIVING_TOWN_PLAYABLE_SPINE_M2_DIR ? path.resolve(process.env.LIVING_TOWN_PLAYABLE_SPINE_M2_DIR) : null;
+const TRON_MEMORY_FILE = path.join(DATA_DIR, "tron-conversations.json");
+let tronConversations = [];
+try { tronConversations = JSON.parse(fs.readFileSync(TRON_MEMORY_FILE, "utf8")); } catch {}
+if (!Array.isArray(tronConversations)) tronConversations = [];
 const SCHEMA_VERSION = 3;
 const TICK_MS = 1000;
 const AUTOSAVE_MS = 10_000;
@@ -67,6 +75,7 @@ function makeResident(seed, others = []) {
   for (const other of others) relationships[other.id] = randomBond();
   return {
     id: seed.id, name: seed.name, color: seed.color, x: seed.x, y: seed.y, targetX: seed.x, targetY: seed.y,
+    destinationId: seed.destinationId || "little-town", homeDestinationId: seed.destinationId || "little-town", role: seed.role || null,
     place: "homes", activity: "settling in", needs: { ...DEFAULT_NEEDS }, memories: [], relationships, lastTalk: 0, path: []
   };
 }
@@ -84,8 +93,12 @@ function freshState(now) {
 function finiteOr(value, fallback) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 
 function normalizeResident(resident) {
+  if (!destinationById[resident.destinationId]) resident.destinationId = "little-town";
+  if (!destinationById[resident.homeDestinationId]) resident.homeDestinationId = resident.destinationId;
+  cognition.ensure(resident);
   will.ensure(resident);
   tasks.ensure(resident);
+  awareness.ensure(resident);
   if (!(resident.follow && typeof resident.follow.id === "string" && Number.isFinite(resident.follow.until))) resident.follow = null;
   if (!(typeof resident.visiting === "string" && world.buildings.some(b => b.id === resident.visiting))) resident.visiting = null;
   resident.speechQueue = Array.isArray(resident.speechQueue) ? resident.speechQueue.filter(l => l && typeof l.text === "string" && Number.isFinite(l.from) && Number.isFinite(l.until)).slice(0, 6) : [];
@@ -201,6 +214,9 @@ function placeAt(resident, x, y) {
 }
 
 function walkTo(resident, x, y) {
+  // Tracking a friend sends repeated destinations. Keep a valid route rather
+  // than repeatedly returning to its nearest starting waypoint.
+  if (resident.path?.length && Math.hypot(x - resident.targetX, y - resident.targetY) < 8) return;
   // Leaving the house ends whatever they were doing inside.
   resident.indoor = null;
   resident.using = null;
@@ -215,7 +231,7 @@ function walkTo(resident, x, y) {
 
 // Everyone out on the map (people inside buildings don't take up space).
 function othersOutside(resident) {
-  return state.residents.filter(o => o !== resident && !interiors.locate(o, world));
+  return state.residents.filter(o => o !== resident && o.destinationId === resident.destinationId && !interiors.locate(o, world));
 }
 
 const DOORS = world.buildings.map(b => ({ x: world.walkNodes[b.node][0], y: world.walkNodes[b.node][1] }));
@@ -294,20 +310,43 @@ function millAbout(now) {
   }
 }
 
+// When a phone locks or reloads, the socket drops. Keep that player's character
+// where they left it for a while instead of handing it straight back to the AI.
+const HOLD_MS = 30 * 60 * 1000;
+const holds = new Map(); // residentId -> time the hold ends
 function isControlled(id) {
   for (const residentId of controllers.values()) if (residentId === id) return true;
+  const until = holds.get(id);
+  if (until && Date.now() < until) return true;
+  if (until) holds.delete(id);
   return false;
 }
 
-function releaseController(ws) {
+function releaseController(ws, hold = false) {
   const residentId = controllers.get(ws);
   controllers.delete(ws);
+  if (residentId && hold) holds.set(residentId, Date.now() + HOLD_MS);
+  else if (residentId) holds.delete(residentId);
   if (!residentId || isControlled(residentId)) return;
   const resident = state.residents.find(r => r.id === residentId);
   if (resident) { resident.mind.commitUntil = 0; resident.intent = "back to their own plans"; }
 }
 
+// Friendships with players slowly fade when you haven't seen each other for a
+// day (never below "Friendly", or "Family" for family), so visits matter.
+function fadeFriendships(r, dtHours, now) {
+  for (const p of state.residents) {
+    if (p === r || !Number.isFinite(p.stars)) continue;
+    const v = Number(r.relationships[p.id]);
+    const family = (r.profile?.family || []).some(link => link.id === p.id);
+    const floor = family ? 60 : 30;
+    if (!(v > floor) || now - (r.mind?.talkedWith?.[p.id] || 0) < 24 * 3600_000) continue;
+    r.relationships[p.id] = Math.max(floor, v - 6 * dtHours / 24);
+  }
+}
+
 function updateResident(r, dtHours, elapsedSeconds, date) {
+  fadeFriendships(r, dtHours, date.getTime());
   const rates = mind.decayRates(r);
   for (const [need, rate] of Object.entries(rates)) r.needs[need] = clamp(r.needs[need] - rate * dtHours, 0, 100);
   life.tickMood(r, dtHours, mind.traitsFor(r.id).neuroticism);
@@ -390,6 +429,22 @@ let lastBirthdayCheck = 0;
 let lastShowCheck = 0;
 let lastWillCheck = 0;
 let lastProgrammeCheck = 0;
+let lastAwareCheck = 0;
+
+// What residents can notice (lib/awareness.js): rain, events, crowds, friends.
+const awareContext = {
+  mindFor: mind.mindFor,
+  random: Math.random,
+  isControlled,
+  isInside: r => Boolean(interiors.locate(r, world)),
+  weather: now => (state.effects || []).find(e => e.kind === "weather" && e.until > now)?.weather || "clear",
+  event: now => {
+    const current = state.programme?.current;
+    return current && current.end > now ? { id: current.id, name: current.name, place: current.place } : null;
+  },
+  placeName: key => places[key]?.name || "town",
+  like: (r, placeKey, amount) => will.like(r, placeKey, amount)
+};
 
 // --- Mr. E's programme, favours and rewards (lib/events.js, lib/tasks.js) ---
 
@@ -438,12 +493,14 @@ const willContext = {
   addEvent: (text, at) => addEvent(text, at),
   isControlled,
   obligation: (r, date) => mind.activeObligation(r.id, date),
-  sameSpot: (a, b) => (interiors.locate(a, world)?.id || null) === (interiors.locate(b, world)?.id || null),
+  sameSpot: (a, b) => a.destinationId === b.destinationId && (interiors.locate(a, world)?.id || null) === (interiors.locate(b, world)?.id || null),
   showOn: date => troupe.showOn(date),
   showToday: date => [0, 6].includes(date.getDay()) && date.getHours() < troupe.SHOW.from && state.residents.some(r => troupe.memberFor(r)),
   isPerformer: r => Boolean(troupe.memberFor(r)),
   go(r, placeKey, why) {
     if (isControlled(r.id) || r.asleep) return false;
+    cognition.ensure(r).plan = null;
+    r.cognition.pauseUntil = Date.now() + 40 * 60_000;
     setDestination(r, placeKey);
     r.intent = why;
     // Stick with the plan for a while rather than changing their mind at once.
@@ -459,12 +516,13 @@ function tick() {
   const date = new Date(now);
   const dtHours = elapsedSeconds / 3600;
   for (const resident of state.residents) updateResident(resident, dtHours, elapsedSeconds, date);
+  npcBrain.tick(state, now);
   millAbout(now);
   speech.tick(state, now);
 
   if (now - lastSocialCheck >= 15_000) {
     lastSocialCheck = now;
-    for (const talk of mind.socialTick(state, now, placeName)) {
+    for (const talk of mind.socialTick(state, now, placeName, willContext.sameSpot)) {
       addEvent(talk.event, now);
       will.onConversation(talk.a, talk.b, talk.kind, now);
     }
@@ -480,6 +538,7 @@ function tick() {
   mre.tick(state, now, mreHelpers);
   if (now - lastShowCheck >= 30_000) { lastShowCheck = now; troupe.tick(state, now, addEvent); }
   if (now - lastWillCheck >= 10_000) { lastWillCheck = now; will.tick(state, now, willContext); }
+  if (now - lastAwareCheck >= 4000) { lastAwareCheck = now; awareness.tick(state, now, awareContext); }
   if (now - lastProgrammeCheck >= 5000) {
     lastProgrammeCheck = now;
     programme.tick(state, now);
@@ -537,6 +596,29 @@ const mreGenerator = process.env.LIVING_TOWN_MRE_AI === "off" ? null : ollamaGen
   model: process.env.LIVING_TOWN_MRE_MODEL || "llama3.2:3b"
 });
 const mre = createMrE({ generate: mreGenerator });
+const npcGenerator = process.env.LIVING_TOWN_NPC_AI === "on" ? ollamaGenerator({
+  url: process.env.LIVING_TOWN_OLLAMA_URL || "http://127.0.0.1:11435",
+  model: process.env.LIVING_TOWN_NPC_MODEL || "qwen3.5:9b",
+  timeoutMs: 55_000, numPredict: 180, temperature: 0.35, numCtx: 8192
+}) : null;
+const npcBrain = cognition.createCognition({
+  mindFor: mind.mindFor, scorePlaces: mind.scorePlaces, activities: mind.activities,
+  isAsleepTime: mind.isAsleepTime, obligation: mind.activeObligation, isControlled,
+  sameSpot: willContext.sameSpot,
+  atPlace: (r, place) => world.inPlace(place, r.id, r.x, r.y),
+  approach: (r, target) => {
+    if (interiors.locate(r, world) || interiors.locate(target, world)) return;
+    const point = snapToWalkable(target.x + 10, target.y + 4);
+    walkTo(r, point.x, point.y);
+  },
+  social: (state, actor, target, action, now) => social.perform(state, actor, target, action, now, {
+    mindFor: mind.mindFor, random: Math.random, addEvent,
+    obligation: (r, date) => mind.activeObligation(r.id, date),
+    isFamily: (a, b) => (a.profile?.family || []).some(link => link.id === b.id),
+    startFollow: () => {}, goTo: () => {}
+  })
+}, { generate: npcGenerator });
+
 const mreHelpers = { addEvent, placeName, spotFor: (id, key) => spotFor(id, key) };
 mre.ensureState(state);
 
@@ -600,14 +682,16 @@ function publicMood(mood) { return mood ? { label: mood.label, valence: Math.rou
 function residentSummary(r) {
   return {
     id: r.id, name: r.name, color: r.color, x: r.x, y: r.y, targetX: r.targetX, targetY: r.targetY,
+    destinationId: r.destinationId, homeDestinationId: r.homeDestinationId, role: r.role || null,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs: r.needs,
     relationships: r.relationships, profile: r.profile, career: r.career, goals: r.goals, mood: publicMood(r.mood),
     lifeRevision: r.lifeRevision, speech: r.speech || null, playable: isPlayable(r.id), look: r.look || {}, custom: Boolean(r.custom),
-    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null,
+    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null, emote: r.emote && r.emote.until > Date.now() ? r.emote : null,
     experiences: (r.experiences || []).slice(0, 5), memories: (r.memories || []).slice(0, 5),
     experienceCount: (r.experiences || []).length, historyCount: (r.lifeHistory || []).length, knowledgeCount: (r.knowledge || []).length,
     ...will.publicView(r),
-    stars: r.stars || 0, keepsakes: (r.keepsakes || []).slice(-60), quests: r.quests || [], questOffers: r.questOffers || []
+    cognition: cognition.publicView(r),
+    stars: r.stars || 0, keepsakes: (r.keepsakes || []).slice(-200), quests: r.quests || [], questOffers: r.questOffers || []
   };
 }
 
@@ -616,9 +700,10 @@ function residentDynamic(r) {
   for (const [key, value] of Object.entries(r.needs)) needs[key] = Math.round(value * 10) / 10;
   return {
     id: r.id, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
+    destinationId: r.destinationId,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: publicMood(r.mood),
     speech: r.speech && r.speech.until > Date.now() ? r.speech : null, lifeRevision: r.lifeRevision,
-    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null
+    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null, emote: r.emote && r.emote.until > Date.now() ? r.emote : null
   };
 }
 
@@ -628,7 +713,7 @@ function residentDetail(r) {
 
 function townPayload({ full = false } = {}) {
   const weather = (state.effects || []).find(e => e.kind === "weather" && e.until > Date.now());
-  const town = { mre: mre.publicView(state, Date.now()), weather: weather?.weather || "clear", brain: mre.brain };
+  const town = { mre: mre.publicView(state, Date.now()), weather: weather?.weather || "clear", brain: mre.brain, npcBrain: npcBrain.status() };
   // The programme only goes out when it changes (or with the full state).
   const view = programme.publicView(state, Date.now());
   const json = JSON.stringify(view);
@@ -683,7 +768,7 @@ function visitorResident(r) {
     id: r.id, name: r.name, color: r.color, x: Math.round(r.x * 10) / 10, y: Math.round(r.y * 10) / 10, targetX: r.targetX, targetY: r.targetY,
     place: r.place, activity: r.activity, intent: r.intent, asleep: r.asleep, needs, mood: r.mood ? { label: r.mood.label } : null,
     speech, look: r.look || {}, custom: Boolean(r.custom),
-    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null, playable: false, lifeRevision: 0
+    indoor: r.indoor || null, using: r.using?.kind || null, visiting: r.visiting || null, emote: r.emote && r.emote.until > Date.now() ? r.emote : null, playable: false, lifeRevision: 0
   };
 }
 
@@ -709,9 +794,30 @@ function visitorTickPayload(events) {
 
 // --- HTTP ---
 
+function playableSpineScriptHashes(dir) {
+  if (!dir) return [];
+  try {
+    const html = fs.readFileSync(path.join(dir, "index.html"), "utf8");
+    return [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
+      .map(match => match[1])
+      .filter(source => source.trim())
+      .map(source => `'sha256-${crypto.createHash("sha256").update(source).digest("base64")}'`);
+  } catch (err) {
+    console.warn(`Milestone preview unavailable: ${err.message}`);
+    return [];
+  }
+}
+
+const PLAYABLE_SPINE_SCRIPT_HASHES = playableSpineScriptHashes(PLAYABLE_SPINE_DIR);
+const PLAYABLE_SPINE_M2_SCRIPT_HASHES = playableSpineScriptHashes(PLAYABLE_SPINE_M2_DIR);
+
 function securityHeaders(req, res, next) {
   const host = String(req.headers.host || "").replace(/[^\w.:[\]-]/g, "");
-  res.setHeader("Content-Security-Policy", `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://${host} wss://${host}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`);
+  const m2Preview = req.path === "/playable-spine-m2" || req.path.startsWith("/playable-spine-m2/") || req.path === "/playable-spine-m2b" || req.path.startsWith("/playable-spine-m2b/") || req.path === "/playable-spine-m2c" || req.path.startsWith("/playable-spine-m2c/");
+  const preview = req.path === "/playable-spine" || req.path.startsWith("/playable-spine/") || m2Preview;
+  const hashes = m2Preview ? PLAYABLE_SPINE_M2_SCRIPT_HASHES : PLAYABLE_SPINE_SCRIPT_HASHES;
+  const scripts = preview ? `'self' 'wasm-unsafe-eval' ${hashes.join(" ")}` : "'self'";
+  res.setHeader("Content-Security-Policy", `default-src 'self'; script-src ${scripts}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://${host} wss://${host}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`);
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
@@ -737,7 +843,36 @@ const assetVersion = (() => {
   }
   return hash.digest("hex").slice(0, 12);
 })();
-const swSource = fs.readFileSync(path.join(PUBLIC_DIR, "sw.js"), "utf8").replace("__ASSET_VERSION__", assetVersion);
+const swSource = fs.readFileSync(path.join(PUBLIC_DIR, "sw.js"), "utf8").replaceAll("__ASSET_VERSION__", assetVersion);
+if (PLAYABLE_SPINE_DIR && fs.existsSync(path.join(PLAYABLE_SPINE_DIR, "index.html"))) {
+  app.use("/playable-spine", (req, res, next) => {
+    const profile = auth.profileForToken(auth.tokenFromRequest(req));
+    if (!profile) {
+      if (req.path === "/" || req.path === "/index.html") {
+        return res.redirect(302, "/?next=%2Fplayable-spine%2F");
+      }
+      return res.status(401).json({ error: "Sign in to Little Town before opening the playable preview." });
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    next();
+  }, express.static(PLAYABLE_SPINE_DIR, { fallthrough: false, index: "index.html" }));
+}
+if (PLAYABLE_SPINE_M2_DIR && fs.existsSync(path.join(PLAYABLE_SPINE_M2_DIR, "index.html"))) {
+  const protectM2 = (req, res, next) => {
+    const profile = auth.profileForToken(auth.tokenFromRequest(req));
+    if (!profile) {
+      if (req.path === "/" || req.path === "/index.html") {
+        return res.redirect(302, "/?next=%2Fplayable-spine-m2%2F");
+      }
+      return res.status(401).json({ error: "Sign in to Little Town before opening the tactical preview." });
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    next();
+  };
+  app.use("/playable-spine-m2", protectM2, express.static(PLAYABLE_SPINE_M2_DIR, { fallthrough: false, index: "index.html" }));
+  app.use("/playable-spine-m2b", protectM2, express.static(PLAYABLE_SPINE_M2_DIR, { fallthrough: false, index: "index.html" }));
+  app.use("/playable-spine-m2c", protectM2, express.static(PLAYABLE_SPINE_M2_DIR, { fallthrough: false, index: "index.html" }));
+}
 app.get("/sw.js", (req, res) => { res.type("application/javascript").setHeader("Cache-Control", "no-cache"); res.send(swSource); });
 app.use("/shared", express.static(SHARED_DIR));
 app.use(express.static(PUBLIC_DIR));
@@ -939,6 +1074,15 @@ function validateClientMessage(raw) {
     return { type: "control", residentId: msg.residentId, x: msg.x, y: msg.y };
   }
   if (msg.type === "release") return { type: "release" };
+  if (msg.type === "tron-chat" && typeof msg.text === "string") {
+    // eslint-disable-next-line no-control-regex -- remove transport controls from chat input.
+    const text = msg.text.replace(/[\u0000-\u001f]/g, " ").trim();
+    return text && text.length <= 600 ? { type: "tron-chat", text } : null;
+  }
+  if (msg.type === "travel") {
+    if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId) || typeof msg.destinationId !== "string" || !destinationById[msg.destinationId]) return null;
+    return { type: "travel", residentId: msg.residentId, destinationId: msg.destinationId };
+  }
   // The programme and favours.
   if (["collect", "riddle", "quest", "pickup", "give"].includes(msg.type)) {
     if (typeof msg.residentId !== "string" || !isPlayable(msg.residentId)) return null;
@@ -1035,6 +1179,18 @@ function handleSocial(ws, msg) {
     goTo: (who, placeKey, why) => willContext.go(who, placeKey, why)
   }, { place: msg.place });
   if (!result.error) tasks.onSocial(state, actor, target, msg.action, result.accepted, now, { ...rewardContext, place: msg.place });
+  // Friendship milestones: a keepsake the first time you become friends, then best friends.
+  if (!result.error) {
+    actor.friendMarks = actor.friendMarks || {};
+    for (const [at, label, emoji] of [[50, "Friendship bracelet", "📿"], [85, "Best friends badge", "💖"]]) {
+      const key = `${target.id}:${at}`;
+      if (result.relBefore < at && result.relAfter >= at && !actor.friendMarks[key]) {
+        actor.friendMarks[key] = now;
+        reward(actor, at >= 85 ? 5 : 3, { emoji, name: `${label} from ${target.name}` }, `became ${at >= 85 ? "best friends" : "friends"} with ${target.name}`);
+      }
+    }
+    if (msg.action === "gift") result.stars = actor.stars;
+  }
   reply(result);
 }
 
@@ -1101,8 +1257,10 @@ function handleControl(ws, msg) {
   const r = state.residents.find(item => item.id === msg.residentId);
   if (!r) return reject("That resident isn't in town.");
   controllers.set(ws, msg.residentId);
-  // Players can only walk on the painted walkways.
-  const target = snapToWalkable(clamp(msg.x, MAP.margin, MAP.width - MAP.margin), clamp(msg.y, MAP.margin, MAP.height - MAP.margin));
+  // Outdoor movement should feel as direct as rooms do. Destination artwork
+  // is intentionally open-ground first; collision regions can tighten this
+  // later without bringing back the old road-only input.
+  const target = { x: clamp(msg.x, MAP.margin, MAP.width - MAP.margin), y: clamp(msg.y, MAP.margin, MAP.height - MAP.margin) };
   walkTo(r, target.x, target.y);
   // Every door leads into its own building: your home, a public building, or
   // (as a visitor) someone else's home, like the Big Top.
@@ -1111,6 +1269,58 @@ function handleControl(ws, msg) {
   else if (door) r.place = door.residents ? "homes" : door.place;
   else r.place = placeAt(r, target.x, target.y);
   r.asleep = false;
+}
+
+async function handleTronChat(ws, msg) {
+  const profile = auth.profileForToken(ws.token);
+  if (!profile) return send(ws, { type: "tron-chat", error: "Sign in to talk with Tron." });
+  const resident = state.residents.find(r => r.id === profile.residentId);
+  if (!resident) return send(ws, { type: "tron-chat", error: "Your resident is unavailable." });
+  const now = Date.now();
+  tronConversations.push({ at: now, who: "You", text: msg.text });
+  const briefing = { town: destinationById[resident.destinationId]?.name || "Little Town", people: state.residents.filter(r => r.destinationId === resident.destinationId).map(r => `${r.name}: ${r.activity}`).slice(0, 10), events: state.events.slice(0, 5).map(e => e.text), memory: tronConversations.slice(-12) };
+  let reply = `I heard you. ${briefing.town} is in view, and I am keeping your request in our shared log.`;
+  if (npcGenerator) try {
+    // A caretaker who is temporarily thinking is useful; one who keeps the
+    // player waiting on an overloaded local model feels broken. Fall back
+    // quickly while the model continues serving the town in the background.
+    const raw = await Promise.race([
+      npcGenerator("You are Tron, a wise, warm, concise caretaker of Little Town. The player is your creator. Remember the supplied conversation, explain what you know, and help make thoughtful plans. Do not claim actions you did not take. Return JSON only.", JSON.stringify({ message: msg.text, briefing }), { type: "object", additionalProperties: false, properties: { reply: { type: "string", minLength: 1, maxLength: 500 } }, required: ["reply"] }).catch(() => null),
+      new Promise(resolve => setTimeout(() => resolve(null), 10_000))
+    ]);
+    // eslint-disable-next-line no-control-regex -- remove transport controls from local model output.
+    if (typeof raw?.reply === "string" && raw.reply.trim()) reply = raw.reply.replace(/[\u0000-\u001f<>]/g, " ").trim().slice(0, 500);
+  } catch {}
+  tronConversations.push({ at: now, who: "Tron", text: reply }); tronConversations = tronConversations.slice(-100);
+  try { fs.writeFileSync(TRON_MEMORY_FILE, JSON.stringify(tronConversations, null, 2)); } catch {}
+  send(ws, { type: "tron-chat", reply, history: tronConversations.slice(-30) });
+}
+
+function handleTravel(ws, msg) {
+  const reject = reason => send(ws, { type: "travel-result", error: reason });
+  const profile = auth.profileForToken(ws.token);
+  if (!profile) return reject("Sign in to travel.");
+  if (profile.residentId !== msg.residentId) return reject("You can only travel with your own resident.");
+  const resident = state.residents.find(item => item.id === msg.residentId);
+  const destination = destinationById[msg.destinationId];
+  if (!resident || !destination) return reject("That destination is unavailable.");
+  if (resident.destinationId === destination.id) return send(ws, { type: "travel-result", destinationId: destination.id });
+  resident.destinationId = destination.id;
+  resident.indoor = null;
+  resident.using = null;
+  resident.visiting = null;
+  resident.follow = null;
+  resident.path = [];
+  resident.x = resident.targetX = destination.arrival.x;
+  resident.y = resident.targetY = destination.arrival.y;
+  resident.place = "homes";
+  resident.activity = `arriving in ${destination.name}`;
+  resident.intent = `exploring ${destination.name}`;
+  resident.asleep = false;
+  cognition.remember(resident, { at: Date.now(), text: `Travelled to ${destination.name}.`, importance: 3, place: "homes" });
+  resident.lifeRevision = (resident.lifeRevision || 0) + 1;
+  addEvent(`✦ ${resident.name} arrived in ${destination.name}.`, Date.now(), resident.id);
+  send(ws, { type: "travel-result", destinationId: destination.id });
 }
 
 wss.on("connection", (ws, req) => {
@@ -1126,6 +1336,8 @@ wss.on("connection", (ws, req) => {
     const msg = validateClientMessage(raw);
     if (!msg) return;
     if (msg.type === "control") handleControl(ws, msg);
+    else if (msg.type === "tron-chat") void handleTronChat(ws, msg);
+    else if (msg.type === "travel") handleTravel(ws, msg);
     else if (msg.type === "release") releaseController(ws);
     else if (msg.type === "use" || msg.type === "indoor-move" || msg.type === "leave-home") handleIndoor(ws, msg);
     else if (msg.type === "social") handleSocial(ws, msg);
@@ -1147,7 +1359,7 @@ wss.on("connection", (ws, req) => {
 
   // Unclean disconnects (locked phone, dropped Wi-Fi) still fire close once
   // the ping sweep below terminates the dead socket.
-  ws.on("close", () => { clearTimeout(ws.inspectTimer); releaseController(ws); });
+  ws.on("close", () => { clearTimeout(ws.inspectTimer); releaseController(ws, true); });
 });
 
 const socketHealthInterval = setInterval(() => {
@@ -1171,6 +1383,7 @@ let shuttingDown = false;
 function shutdown(exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
+  npcBrain.close();
   [socketHealthInterval, tickInterval, saveInterval, sessionInterval].forEach(clearInterval);
   if (exitCode === 0) saveState();
   store.releaseLock();
@@ -1200,4 +1413,3 @@ server.listen(PORT, HOST, () => {
   console.log(`Little Town server running — http://${HOST}:${PORT}`);
   console.log(`Schema ${SCHEMA_VERSION} · assets ${assetVersion} · autosave every ${AUTOSAVE_MS / 1000}s`);
 });
-

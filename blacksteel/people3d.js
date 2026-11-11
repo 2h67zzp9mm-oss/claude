@@ -36,7 +36,7 @@
   // Colors follow the family's paintings for Sean. Other characters follow the prologue's descriptions.
   const PALE = 0xd9d3c4, LINING = 0x7f6f58;
   const LOOKS = {
-    sean: { h: 1.86, build: 1.06, skin: 0xc8966c, hair: "bald", beard: "full", beardColor: 0x18120e, glasses: true,
+    sean: { gltf: true, h: 1.86, build: 1.06, skin: 0xc8966c, hair: "bald", beard: "full", beardColor: 0x18120e, glasses: true,
       shirt: 0x2c3038, coat: 0x1f242c, coatTrim: true, epaulettes: true, pants: 0x1a1d22, boots: 0x141312, sash: 0x6a4588 },
     // Reference: dark navy coat (not pale), flat cap with goggles on the brim, stubble, brass
     // buttons/buckles, a heavy belt. Previously a pale, plain coat and bare short hair with no
@@ -72,6 +72,7 @@
   // ---------- the body ----------
   function build(look) {
     const L = Object.assign({ build: 1 }, look);
+    if (L.gltf && window.CAPTAIN_RIG && window.CAPTAIN_RIG.ready) return window.CAPTAIN_RIG.build(L);
     const S = L.h / 1.86;           // everything is authored for a 1.86 m person, then scaled
     const B = L.build;
     const M = {

@@ -6,7 +6,7 @@ module.exports = [
   { ignores: ["node_modules/", "data/"] },
   js.configs.recommended,
   {
-    files: ["**/*.js"],
+    files: ["**/*.js", "**/*.cjs"],
     languageOptions: { ecmaVersion: 2023, sourceType: "commonjs", globals: { ...globals.node } },
     rules: { "no-empty": ["error", { allowEmptyCatch: true }], "no-unused-vars": ["error", { args: "none", caughtErrors: "none", ignoreRestSiblings: true }] }
   },

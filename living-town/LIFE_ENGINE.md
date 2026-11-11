@@ -1,8 +1,8 @@
-# Little Town Life Engine (0.5)
+# Little Town Life Engine (0.19)
 
 ## Honest model
 
-Residents are simulated people, not sentient agents. Their behavior comes from stored personality traits, needs, relationships, routines, and weighted random choices. Every outcome is written to the save, so nothing rerolls after a restart. There is no generative AI in this release.
+Residents are simulated people, not sentient agents. Their behavior comes from stored personality traits, needs, relationships, routines, and weighted random choices. Every outcome is written to the save, so nothing rerolls after a restart. Every NPC now has a persistent executive planner. A local Qwen3.5 9B model can select multi-step plans, with a deterministic planner keeping the town running during model outages. Language-model output is restricted to real action IDs; dialogue remains grounded in authored lines and actual character state.
 
 ## Minds (`lib/mind.js`)
 
@@ -74,4 +74,14 @@ Each resident has a voice. Hazel says "Guess what?! …!", Finn says "Hm. …, a
 
 - Nobody dies, and there is no romance for minors.
 - Children only receive age-appropriate events and child-safe disagreements.
-- There is no generative dialogue until the LLM review gate is passed.
+- Model-generated prose is not displayed. The model selects validated actions; player-facing reasons and contextual replies are assembled from authored text and actual game state.
+
+## Executive planning and memory (0.19)
+
+`lib/cognition.js` applies to original residents, the circus troupe, and custom residents. Each character stores a plan of up to three actions, a rolling memory of 64 outcomes, and bounded learned action preferences. Activities must actually be reached and performed before they count as complete. Measured need changes shape future choices; declined conversations trigger personal-space cooldowns. Old observations expire, and only nearby people in the same building can be observed. Retrieval ranks a character’s own memories by person, location, importance and recency.
+
+Plans yield to sleep, critical needs, work/school, accepted invitations and player control. Missing friends, expired plans and changing circumstances cause replanning. Autonomous social steps use the same friendship and consent rules as player interactions. Repeated movement requests preserve valid routes.
+
+The local model receives bounded context and a catalogue of valid choices. It returns only choice IDs. Responses are checked again against current conditions; stale, invalid, duplicate or poor-fit proposals are discarded. Inference is asynchronous, one planner request at a time, with timeouts and backoff. Regular ticks never wait on the model. A model failure cannot directly alter a relationship, invent a memory, write dialogue, control a player, or execute a command.
+
+The resident panel shows upcoming plans and recent learning. Public read-only visitors do not receive cognitive memories or plans. This is an improved game simulation, not unrestricted general intelligence or human-equivalent cognition.

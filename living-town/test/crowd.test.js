@@ -84,12 +84,12 @@ test("on a real server, nobody standing still stands on anybody else", async () 
   const server = spawnServer(dataDir, port, { LIVING_TOWN_MRE_AI: "off", LIVING_TOWN_TROUPE: "on" });
   await waitForStart(server);
   const client = await connectClient(port);
-  await until(() => client.residents.size === 13, "everyone, troupe included");
+  await until(() => client.residents.size === world.residentSeeds.length + 6, "everyone, troupe included");
   // Like a phone, learn who lives where (the troupe's home is the Big Top),
   // so people at home in bed count as indoors.
   world.setHomeAssignments(client.messages.find(m => m.type === "state").homes);
   const squashed = () => {
-    const standing = [...client.residents.values()].filter(r => Math.hypot(r.targetX - r.x, r.targetY - r.y) < 1 && !interiors.locate(r, world));
+    const standing = [...client.residents.values()].filter(r => r.destinationId === "little-town" && Math.hypot(r.targetX - r.x, r.targetY - r.y) < 1 && !interiors.locate(r, world));
     const pairs = [];
     for (const [i, a] of standing.entries()) for (const b of standing.slice(i + 1)) if (Math.hypot(a.x - b.x, a.y - b.y) < crowd.BUBBLE * 0.8) pairs.push(`${a.name}+${b.name}`);
     return pairs;

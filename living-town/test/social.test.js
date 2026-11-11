@@ -6,6 +6,7 @@ const life = require("../lib/life");
 const mind = require("../lib/mind");
 const will = require("../lib/will");
 const social = require("../lib/social");
+const world = require("../shared/world");
 const { isSafe } = require("../lib/mre");
 const { cleanup, tempDir, freePort, spawnServer, until, waitForStart, stop, connectClient, api } = require("./helpers");
 
@@ -118,7 +119,7 @@ test("on a real server: only your own character, only close by, never someone as
   await waitForStart(server);
   const owner = (await api(port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
   const sean = await connectClient(port, { cookie: owner });
-  await until(() => sean.residents.size === 7, "everyone");
+  await until(() => sean.residents.size === world.residentSeeds.length, "everyone");
   const result = () => sean.messages.filter(m => m.type === "social-result").pop();
   const count = () => sean.messages.filter(m => m.type === "social-result").length;
 

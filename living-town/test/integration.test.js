@@ -40,7 +40,7 @@ test("shared world: migration, validation, control, persistence and recovery", a
   const a = await connectClient(port);
   const b = await connectClient(port);
   await until(() => a.residents.size && b.residents.size, "initial states");
-  assert.strictEqual(a.residents.size, 8, "legacy save gains all seven core residents and keeps unknown ones");
+  assert.strictEqual(a.residents.size, require("../shared/world").residentSeeds.length + 1, "legacy save gains every seeded resident and keeps unknown ones");
   assert.strictEqual(a.residents.get("dad").name, "Sean");
   assert.ok(!("lifeHistory" in a.residents.get("olive")), "state updates omit heavy histories");
 
@@ -76,12 +76,15 @@ test("shared world: migration, validation, control, persistence and recovery", a
   sean.ws.send(JSON.stringify({ type: "control", residentId: "dad", x: 99999, y: -99999 }));
   await until(() => b.residents.get("dad").targetX !== 700, "wild coordinates still move Sean");
   const world = require("../shared/world");
-  const snapped = world.snapToWalkable(940, 20);
-  assert.ok(Math.abs(b.residents.get("dad").targetX - snapped.x) < 0.01 && Math.abs(b.residents.get("dad").targetY - snapped.y) < 0.01, "taps snap onto the walkways");
+  const { MAP } = world;
+  assert.strictEqual(b.residents.get("dad").targetX, MAP.width - MAP.margin, "wild x clamps to map edge");
+  assert.strictEqual(b.residents.get("dad").targetY, MAP.margin, "wild y clamps to map edge");
   assert.notStrictEqual(b.residents.get("milo").targetX, 10, "non-player residents cannot be steered");
 
   sean.ws.close();
-  await until(() => b.residents.get("dad").intent !== "following a player's lead", "disconnect releases control");
+  // A dropped connection (phone locked) keeps the character where the player left it.
+  await new Promise(r => setTimeout(r, 1500));
+  assert.strictEqual(b.residents.get("dad").intent, "following a player's lead", "disconnect holds control for a while");
 
   await until(() => fs.existsSync(path.join(dataDir, "town-state.json")) && JSON.parse(fs.readFileSync(path.join(dataDir, "town-state.json"))).version === 3, "autosave", 15000);
   // These folders may not exist until their first file is written.
@@ -120,7 +123,7 @@ test("shared world: migration, validation, control, persistence and recovery", a
   await waitForStart(server);
   assert.match(server.output(), /Recovered from backup: .*snapshots/);
   const recovered = await connectClient(port);
-  await until(() => recovered.residents.size === 8, "snapshot recovery state");
+  await until(() => recovered.residents.size === require("../shared/world").residentSeeds.length + 1, "snapshot recovery state");
   recovered.ws.close();
   assert.strictEqual(await stop(server), 0);
 });

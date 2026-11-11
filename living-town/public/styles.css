@@ -92,7 +92,7 @@ button {
 }
 .world-card {
   position: absolute;
-  inset: 0 0 82px;
+  inset: 0 0 calc(70px + env(safe-area-inset-bottom));
   overflow: hidden;
   touch-action: none;
 }
@@ -150,7 +150,7 @@ button {
   z-index: 15;
   left: 8px;
   right: 8px;
-  bottom: 76px;
+  bottom: calc(70px + env(safe-area-inset-bottom));
   max-height: 78dvh;
   overflow: hidden;
   padding: 8px 14px 16px;
@@ -410,10 +410,10 @@ button {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 82px;
-  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+  height: calc(70px + env(safe-area-inset-bottom));
+  padding: 7px 8px max(7px, env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   background: #0d1929f5;
   border-top: 1px solid #ffffff1c;
   backdrop-filter: blur(18px);
@@ -422,13 +422,15 @@ button {
   border: 0;
   background: transparent;
   color: #8499ac;
-  font-size: 0.64rem;
+  min-width: 0;
+  font-size: clamp(0.56rem, 2.4vw, 0.64rem);
+  white-space: nowrap;
 }
 .dock-button b {
   display: block;
   margin-bottom: 3px;
   color: inherit;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
 }
 .dock-button.active {
   color: var(--gold);

@@ -64,7 +64,7 @@ test("the troupe arrives once, keeps their looks, and can move away for good", a
   await waitForStart(server);
   const owner = (await api(port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
   let client = await connectClient(port);
-  await until(() => client.residents.size === 13, "seven residents plus six troupe members");
+  await until(() => client.residents.size === world.residentSeeds.length + 6, "seed residents plus six troupe members");
   const plum = client.residents.get("t-plum");
   assert.strictEqual(plum.name, "Plum");
   assert.strictEqual(plum.look.style, "bunny");
@@ -81,7 +81,7 @@ test("the troupe arrives once, keeps their looks, and can move away for good", a
   server = spawnServer(dataDir, port, env);
   await waitForStart(server);
   client = await connectClient(port);
-  await until(() => client.residents.size === 13, "still thirteen after a restart");
+  await until(() => client.residents.size === world.residentSeeds.length + 6, "troupe roster after a restart");
 
   // Let Rook move away; he doesn't come back on the next start.
   assert.strictEqual((await api(port, "DELETE", "/api/residents/t-rook", undefined, owner)).status, 200);
@@ -90,7 +90,7 @@ test("the troupe arrives once, keeps their looks, and can move away for good", a
   server = spawnServer(dataDir, port, env);
   await waitForStart(server);
   client = await connectClient(port);
-  await until(() => client.residents.size === 12, "Rook stays moved away");
+  await until(() => client.residents.size === world.residentSeeds.length + 5, "Rook stays moved away");
   assert.ok(!client.residents.has("t-rook"));
   client.ws.close();
   assert.strictEqual(await stop(server), 0);

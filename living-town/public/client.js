@@ -1,10 +1,12 @@
 (() => {
   "use strict";
 
-  const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, setHomeAssignments, SKIN_TONES, HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
+  const { places, MAP, buildings, homeBuildings, homeOf, walkNodes, snapToWalkable, setHomeAssignments, destinations, SKIN_TONES, HAIR_STYLES, ACCESSORIES } = window.LivingTownWorld;
   const $ = selector => document.querySelector(selector);
   // The read-only window for visiting family (see lib/viewer.js).
   const VISITOR = document.documentElement.dataset.viewer === "1";
+  // The town may be served under a sub-path (e.g. /little-town/), so server paths are page-relative.
+  const BASE = location.pathname.replace(/[^/]*$/, "");
   const canvas = $("#townCanvas");
   const ctx = canvas.getContext("2d");
   const ui = {
@@ -73,6 +75,8 @@
 
   const townMap = new Image();
   townMap.src = "assets/town-map.webp";
+  const destinationMaps = new Map((destinations || []).map(destination => { const image = new Image(); image.src = destination.map; return [destination.id, image]; }));
+  function activeDestinationId() { return me?.residentId ? residents.get(me.residentId)?.destinationId || "little-town" : "little-town"; }
 
   function nowMs() { return serverNow + (performance.now() - serverNowAt); }
   function selected() { return residents.get(selectedId); }
@@ -90,7 +94,7 @@
   function connect() {
     clearTimeout(reconnectTimer);
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    const path = VISITOR ? `${location.pathname.replace(/\/?$/, "/")}ws` : "/ws";
+    const path = VISITOR ? `${location.pathname.replace(/\/?$/, "/")}ws` : `${BASE}ws`;
     const ws = new WebSocket(`${proto}://${location.host}${path}`);
     socket = ws;
     ws.addEventListener("open", () => { reconnectDelay = 1000; ui.connectionStatus.textContent = VISITOR ? "Live · visiting" : "Live · shared world"; });
@@ -163,7 +167,10 @@
       if (r.id === selectedId) { renderedDetailKey = ""; renderSelected(); }
     } else if (msg.type === "control-rejected") {
       showToast(msg.reason);
-    }
+    } else if (msg.type === "travel-result") {
+      if (msg.error) showToast(msg.error);
+      else { $("#travelCard").classList.add("hidden"); showToast("Welcome to your new destination."); }
+    } else if (msg.type === "tron-chat") { if (msg.error) showToast(msg.error); else renderTron(msg.history || []); }
   }
 
   function maybeShowReturnCard() {
@@ -374,8 +381,10 @@
     followSocial();
     followPlay();
     if (time - lastBanner > 500) { lastBanner = time; updateBanner(); }
-    if (interior.id) drawInterior(dt);
-    else if (backing) drawTown(dt);
+    try {
+      if (interior.id) drawInterior(dt);
+      else if (backing) drawTown(dt);
+    } catch (err) { if (!frame.warned) { frame.warned = true; console.error(err); } }
     updateClock();
     requestAnimationFrame(frame);
   }
@@ -392,7 +401,8 @@
     ctx.setTransform(backing, 0, 0, backing, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.clearRect(0, 0, MAP.width, MAP.height);
-    if (townMap.complete && townMap.naturalWidth) ctx.drawImage(townMap, 0, 0, MAP.width, MAP.height);
+    const activeMap = destinationMaps.get(activeDestinationId()) || townMap;
+    if (activeMap.complete && activeMap.naturalWidth) ctx.drawImage(activeMap, 0, 0, MAP.width, MAP.height);
     else { ctx.fillStyle = "#7baa68"; ctx.fillRect(0, 0, MAP.width, MAP.height); }
     drawTents();
     // Who's up and about indoors, per building, for lit windows and chimney smoke.
@@ -401,7 +411,8 @@
       const b = !r.asleep && buildingOf(r);
       if (b) awake.set(b.id, (awake.get(b.id) || 0) + 1);
     }
-    const people = [...residents.values()].map(r => ({ name: r.name, x: r.drawX, y: r.drawY, activity: r.activity, visible: !hiddenInside(r) }));
+    const localResidents = [...residents.values()].filter(r => r.destinationId === activeDestinationId());
+    const people = localResidents.map(r => ({ name: r.name, x: r.drawX, y: r.drawY, activity: r.activity, visible: !hiddenInside(r) }));
     const sky = scenery.update(dt, nowMs(), { residents: people, awakeInside: id => awake.has(id) });
     scenery.drawBelow(ctx, sky);
 
@@ -419,7 +430,7 @@
     const mineNow = myResident();
     favourMarks.ask = new Set((mineNow?.questOffers || []).map(q => q.requesterId));
     favourMarks.give = new Set((mineNow?.quests || []).filter(q => q.kind === "find" && q.found).map(q => q.requesterId));
-    const visible = [...residents.values()].filter(r => !hiddenInside(r)).sort((a, b) => a.drawY - b.drawY);
+    const visible = localResidents.filter(r => !hiddenInside(r)).sort((a, b) => a.drawY - b.drawY);
     visible.forEach(drawResident);
     drawBursts();
     scenery.drawLighting(ctx, sky, { lit: id => awake.has(id) });
@@ -505,6 +516,20 @@
     }
 
     // Names for the selected resident, or for everyone once zoomed in.
+    // A quick reaction: pops up, floats a little, fades (💧 rain, ❗ an event, 👋 a friend...).
+    const emote = r.emote && nowMs() < r.emote.until ? r.emote : null;
+    if (emote) {
+      const left = (r.emote.until - nowMs()) / 3500;
+      const pop = Math.min(1, (1 - left) * 6);
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, left * 3);
+      ctx.font = `${screenPx(14) * (0.6 + pop * 0.4)}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      const ey = y - FEET_ROW * PX - screenPx(12) - (1 - left) * 4;
+      ctx.beginPath(); ctx.arc(x + screenPx(10), ey, screenPx(9), 0, Math.PI * 2); ctx.fill();
+      ctx.fillText(emote.emoji, x + screenPx(10), ey + 0.5);
+      ctx.restore();
+    }
     // A favour to ask you (❗), or their lost thing found (🎁).
     const mark = favourMarks.give.has(r.id) ? "🎁" : favourMarks.ask.has(r.id) ? "❗" : null;
     if (mark) {
@@ -770,6 +795,12 @@
     ui.summary.textContent = r.profile?.summary || `${r.name} is still writing their story.`;
     // Their own wishes, and how they feel and why.
     const chips = (list, empty) => (list?.length ? list : [{ emoji: "", text: empty }]).map(item => `<li>${item.emoji ? `<b>${escapeHtml(item.emoji)}</b> ` : ""}${escapeHtml(item.text)}</li>`).join("");
+    const thinking = $("#residentThinking");
+    thinking.classList.toggle("hidden", VISITOR || !r.cognition);
+    if (r.cognition && !VISITOR) {
+      const thought = r.cognition;
+      thinking.innerHTML = `<strong>Planning ahead</strong><ol>${thought.plan.map(text => `<li>${escapeHtml(text)}</li>`).join("") || "<li>Taking care of the moment.</li>"}</ol>${thought.reflection ? `<p>${escapeHtml(thought.reflection)}</p>` : ""}<small>${thought.completed} plans completed · ${thought.memoryCount} recent learning moments · ${escapeHtml(thought.source)}</small>`;
+    }
     $("#residentWishes").innerHTML = chips(r.wishes, "Thinking about what to do next");
     $("#residentFeelings").innerHTML = chips(r.feelings, "Just fine");
     const newest = r.experiences?.[0]?.text || r.memories?.[0]?.text;
@@ -1217,7 +1248,10 @@
     const target = residents.get(msg.targetId);
     const action = socialActions.find(a => a.id === msg.action);
     const name = target?.name || "They";
-    showToast(`${action?.emoji || "💬"} ${msg.accepted ? `${name} liked that!` : `${name} wasn't keen this time.`} · ${msg.relationship}`);
+    const d = Math.round((msg.relAfter ?? 0) - (msg.relBefore ?? 0));
+    const change = d > 0 ? ` 💗+${d}` : d < 0 ? ` 💔${d}` : "";
+    const how = msg.accepted ? `${name} liked that!` : msg.repeats >= 2 ? `${name} wants to do something different.` : msg.action === "wish" ? `${name} hasn't decided yet.` : `${name} wasn't keen this time.`;
+    showToast(`${action?.emoji || "💬"} ${how}${change} · ${msg.relationship}`);
   }
 
   // --- Mr. E's programme, favours and rewards ---
@@ -1237,7 +1271,7 @@
 
   function updateBanner() {
     const pg = programme();
-    if (!pg) return banner.classList.add("hidden");
+    if (!pg) { banner.textContent = "✨ Things to do · Explore Little Town"; banner.classList.remove("hidden"); return; }
     const now = nowMs();
     const event = currentEvent();
     const mine = myResident();
@@ -1250,10 +1284,51 @@
       text = `${event.emoji} ${event.name} · ${event.placeName} · ${Math.max(1, Math.round((event.end - now) / 60000))} min left${extra}`;
     } else {
       const next = pg.today.find(e => e.start > now);
-      text = next ? `Next: ${next.emoji} ${next.name} at ${timeLabel(next.start)}` : "That's all for today. More tomorrow!";
+      text = next ? `Next: ${next.emoji} ${next.name} at ${timeLabel(next.start)}` : "🌙 A quiet evening · Find something to do";
     }
     if (banner.textContent !== text) banner.textContent = text;
     banner.classList.remove("hidden");
+  }
+
+  const outings = [
+    { place: "park", emoji: "🦆", title: "Visit the ducks", detail: "Fresh air, flowers and a little fun." },
+    { place: "cafe", emoji: "☕", title: "Take a cafe break", detail: "Head inside for a snack or the piano." },
+    { place: "workshop", emoji: "🎨", title: "Make something", detail: "Explore the workshop and art studio." },
+    { place: "market", emoji: "🍎", title: "Browse the market", detail: "Fruit, treats and familiar faces." },
+    { place: "square", emoji: "⛲", title: "Meet in the square", detail: "A good place to watch town life." },
+    { place: "homes", emoji: "🏡", title: "A moment at home", detail: "Rest, play or spend time with family." }
+  ];
+
+  function visitPlace(key) {
+    const place = places[key];
+    if (!place) return;
+    const building = key === "homes" ? homeOf(me?.residentId || selectedId) : buildings.find(b => b.place === key);
+    const door = building && walkNodes[building.node];
+    const point = door ? { x: door[0], y: door[1] } : snapToWalkable(place.x, place.y);
+    closeToday();
+    if (!me || VISITOR) {
+      centerOn(point.x, point.y, Math.max(camera.z, defaultZoom()));
+      showToast(`${building?.name || place.name} · ${VISITOR ? "Enjoy watching the town." : "Sign in to walk here."}`);
+      return;
+    }
+    setMode("play");
+    social.pending = null;
+    pendingPlay = null;
+    send({ type: "control", residentId: me.residentId, x: point.x, y: point.y });
+    tapMarker = { ...point, at: performance.now() };
+    showToast(`Walking to ${building?.name || place.name}…`);
+  }
+
+  let todayFocus = null;
+  function revealToday() {
+    if (!todayEl.contains(document.activeElement)) todayFocus = document.activeElement;
+    todayEl.classList.remove("hidden");
+    todayEl.querySelector(".today-close")?.focus();
+  }
+  function closeToday() {
+    todayEl.classList.add("hidden");
+    if (todayFocus?.isConnected) todayFocus.focus();
+    else banner.focus();
   }
 
   function openToday() {
@@ -1262,13 +1337,22 @@
     const mine = myResident();
     const rows = (pg?.today || []).map(e => `<li class="${e.end < now ? "past" : e.start <= now ? "now" : ""}"><time>${timeLabel(e.start)}</time><b>${e.emoji}</b><span>${escapeHtml(e.name)} <small>${escapeHtml(e.place)}</small></span></li>`).join("");
     const quests = (mine?.quests || []).map(q => `<li><b>${q.emoji}</b><span>${escapeHtml(q.text)}${q.kind === "find" && q.found ? " <em>· found! Take it back</em>" : ""} <small>+${q.stars}⭐</small></span></li>`).join("");
-    const offers = (mine?.questOffers || []).map(q => `<li><b>❗</b><span>${escapeHtml(q.requesterName)} has a favour to ask. Find them in town!</span></li>`).join("");
-    const stickers = (mine?.keepsakes || []).slice().reverse().map(k => `<span title="${escapeHtml(k.name)}">${escapeHtml(k.emoji)}</span>`).join("");
+    const offers = (mine?.questOffers || []).map(q => `<li><b>❗</b><span>${escapeHtml(q.requesterName)} has a favour to ask.<button class="favour-shortcut" data-resident="${escapeHtml(q.requesterId)}">Find ${escapeHtml(q.requesterName)}</button></span></li>`).join("");
+    const live = currentEvent();
+    const activities = outings.map(o => `<button class="outing" data-outing="${o.place}"><b>${o.emoji}</b><span><strong>${o.title}</strong><small>${o.detail}</small></span><i aria-hidden="true">→</i></button>`).join("");
+    const eventAction = live ? `<div class="today-highlight"><small>HAPPENING NOW</small><h3>${escapeHtml(live.emoji)} ${escapeHtml(live.name)}</h3><p>${escapeHtml(live.placeName)} · ${Math.max(1, Math.ceil((live.end - now) / 60000))} minutes left</p><button data-${live.kind === "riddle" && mine && !live.answered.includes(mine.id) ? 'riddle="1"' : `outing="${escapeHtml(live.place)}"`}>${live.kind === "riddle" && mine && !live.answered.includes(mine.id) ? "Answer the riddle" : me ? "Walk to the event" : "Show on map"}</button></div>` : "";
+    const groups = new Map();
+    for (const k of (mine?.keepsakes || []).slice().reverse()) {
+      const g = groups.get(k.name) || { emoji: k.emoji, name: k.name, n: 0 }; g.n++; groups.set(k.name, g);
+    }
+    const stickers = [...groups.values()].map(g => `<span class="sticker"><b>${escapeHtml(g.emoji)}</b><small>${escapeHtml(g.name)}</small>${g.n > 1 ? `<i>×${g.n}</i>` : ""}</span>`).join("");
     todayEl.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button>
-      <h2>Today in Little Town</h2><ol class="today-list">${rows}</ol>
+      <h2>Things to do</h2><p class="today-intro">${me ? "Pick a little adventure. Your character will walk there." : "Explore the town, or sign in to join in."}</p>
+      ${eventAction}<div class="outing-grid">${activities}</div>
       ${mine ? `<h3>Favours</h3><ul class="today-list">${quests + offers || "<li><b>❗</b><span>Look for a ❗ over someone in town. They might need your help!</span></li>"}</ul>
-      <h3>⭐ ${mine.stars || 0} Town Stars · Sticker book</h3><div class="sticker-book">${stickers || "<em>Earn stickers from events and favours!</em>"}</div>` : ""}</div>`;
-    todayEl.classList.remove("hidden");
+      <h3>⭐ ${mine.stars || 0} Town Stars</h3><p class="today-intro">Spend them on 🎁 gifts for friends (5⭐ each). Tap someone, then “Give a gift”. Friends you don't visit for a day slowly drift apart.</p>
+      <h3>Sticker book · ${groups.size} different</h3><div class="sticker-book">${stickers || "<em>Earn stickers from events, favours and new friendships!</em>"}</div>` : ""}<details class="today-schedule"><summary>Today’s event schedule</summary><ol class="today-list">${rows || "<li>The next programme is on its way.</li>"}</ol></details></div>`;
+    revealToday();
   }
 
   function openRiddle() {
@@ -1276,14 +1360,35 @@
     if (!event) return openToday();
     todayEl.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><h2>🔮 Mr. E's riddle</h2>
       <p class="riddle-q">${escapeHtml(event.riddle.q)}</p><div class="riddle-options">${event.riddle.options.map((o, i) => `<button data-choice="${i}">${escapeHtml(o)}</button>`).join("")}</div></div>`;
-    todayEl.classList.remove("hidden");
+    revealToday();
   }
 
   banner.addEventListener("click", () => (mode === "play" && riddleForMe() ? openRiddle() : openToday()));
+  todayEl.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); closeToday(); }
+    if (event.key !== "Tab") return;
+    const controls = [...todayEl.querySelectorAll("button, summary")].filter(el => el.getClientRects().length);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
   todayEl.addEventListener("click", event => {
+    const person = event.target.closest("button[data-resident]");
+    if (person) {
+      const resident = residents.get(person.dataset.resident);
+      if (!resident) return;
+      closeToday();
+      select(resident.id, false);
+      centerOn(resident.drawX, resident.drawY, Math.max(camera.z, defaultZoom()));
+      if (me && !VISITOR) { setMode("play"); select(resident.id, false); openSocial(resident); }
+      return;
+    }
+    const outing = event.target.closest("button[data-outing]");
+    if (outing) return visitPlace(outing.dataset.outing);
+    if (event.target.closest("button[data-riddle]")) return openRiddle();
     const choice = event.target.closest("button[data-choice]");
-    if (choice) { send({ type: "riddle", residentId: me.residentId, choice: Number(choice.dataset.choice) }); todayEl.classList.add("hidden"); return; }
-    if (event.target.closest(".today-close") || event.target === todayEl) todayEl.classList.add("hidden");
+    if (choice) { send({ type: "riddle", residentId: me.residentId, choice: Number(choice.dataset.choice) }); closeToday(); return; }
+    if (event.target.closest(".today-close") || event.target === todayEl) closeToday();
   });
 
   // Hunt items (everyone can find every one) and lost things for your favours.
@@ -1295,11 +1400,11 @@
     for (const q of mine?.quests || []) if (q.kind === "find" && !q.found) findables.push({ x: q.x, y: q.y, emoji: q.item.emoji, request: { type: "pickup", residentId: me.residentId, questId: q.id } });
     const t = performance.now() / 1000;
     ctx.save();
-    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "10px system-ui";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = `${Math.max(10, screenPx(20)).toFixed(1)}px system-ui`;
     for (const it of findables) {
       const bob = Math.sin(t * 3 + it.x) * 1.2;
       ctx.globalAlpha = 0.35; ctx.fillStyle = "#fff6c2";
-      ctx.beginPath(); ctx.arc(it.x, it.y - 4 + bob, 6 + Math.sin(t * 4 + it.y), 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(it.x, it.y - 4 + bob, Math.max(6, screenPx(14)) + Math.sin(t * 4 + it.y), 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1; ctx.fillText(it.emoji, it.x, it.y - 4 + bob);
     }
     ctx.restore();
@@ -1383,6 +1488,8 @@
 
   function handleTap(event) {
     if (!residents.size) return;
+    const who = document.getElementById("whoPicker");
+    if (who && !who.classList.contains("hidden")) { who.classList.add("hidden"); return; }
     // A tap outside the social menu just closes it.
     if (!socialEl.classList.contains("hidden")) return closeSocial();
     const p = mapPoint(event);
@@ -1393,12 +1500,19 @@
     if (playing && tappedMrE(p) && riddleForMe()) return openRiddle();
     if (speaking && tappedMrE(p)) return showToast(mreTapText(nowMs()));
     // Hunt items and lost things for favours: tap to collect (walking over if needed).
-    const findable = playing && findables.find(it => Math.hypot(it.x - p.x, it.y - (p.y + 4)) < 10);
+    // At least 24 screen px around each item, nearest one wins.
+    const reach = Math.max(10, screenPx(24));
+    const findable = playing && findables
+      .map(it => ({ it, d: Math.hypot(it.x - p.x, it.y - 4 - p.y) }))
+      .filter(f => f.d < reach).sort((a, b) => a.d - b.d)[0]?.it;
     if (findable) return goAndDo(findable.request, findable.x, findable.y);
-    const hit = [...residents.values()]
+    const hits = [...residents.values()]
       .filter(r => !hiddenInside(r) && r.id !== (playing ? me.residentId : null))
-      .sort((a, b) => b.drawY - a.drawY)
-      .find(r => Math.abs(r.drawX - p.x) < screenPx(playing ? 12 : 18) + 6 && p.y > r.drawY - FEET_ROW * PX - 4 && p.y < r.drawY + screenPx(14));
+      .filter(r => Math.abs(r.drawX - p.x) < screenPx(playing ? 12 : 18) + 6 && p.y > r.drawY - FEET_ROW * PX - 4 && p.y < r.drawY + screenPx(14))
+      .sort((a, b) => Math.hypot(a.drawX - p.x, a.drawY - 8 - p.y) - Math.hypot(b.drawX - p.x, b.drawY - 8 - p.y));
+    // Two people under one finger: ask who you meant.
+    if (hits.length > 1) return showWho(hits.slice(0, 4), playing);
+    const hit = hits[0];
     if (hit && playing) { select(hit.id, false); return openSocial(hit); }
     if (hit) return select(hit.id);
     if (!speaking && tappedMrE(p)) return showToast(mreTapText(nowMs()));
@@ -1421,6 +1535,29 @@
     select(me.residentId, false);
   }
 
+  function showWho(list, playing) {
+    let el = document.getElementById("whoPicker");
+    if (!el) {
+      el = document.createElement("div"); el.id = "whoPicker"; el.className = "who-picker";
+      document.querySelector(".world-card").appendChild(el);
+      el.addEventListener("click", ev => {
+        const b = ev.target.closest("button[data-id]"); el.classList.add("hidden");
+        const r = b && residents.get(b.dataset.id); if (!r) return;
+        if (el.dataset.play === "1") { select(r.id, false); openSocial(r); } else select(r.id);
+      });
+    }
+    el.dataset.play = playing ? "1" : "";
+    el.innerHTML = "<strong>Who?</strong>";
+    for (const r of list) {
+      const b = document.createElement("button"); b.dataset.id = r.id;
+      const img = document.createElement("img"); img.src = spriteFor(r, 0).toDataURL(); img.alt = "";
+      const name = document.createElement("span"); name.textContent = r.name;
+      b.append(img, name); el.appendChild(b);
+    }
+    const x = document.createElement("button"); x.textContent = "✕"; x.className = "who-x"; el.appendChild(x);
+    el.classList.remove("hidden");
+  }
+
   function setMode(next) {
     if (next === "play" && !me) { showToast("Sign in to play."); return showProfileMenu(); }
     if (next === "play" && residents.get(me.residentId)?.playable === false) return showToast("Your player isn't linked to a resident.");
@@ -1436,6 +1573,20 @@
   }
 
   document.querySelectorAll(".dock-button[data-mode]").forEach(button => button.addEventListener("click", () => setMode(button.dataset.mode)));
+
+  function showTravelMenu() {
+    if (!me) { showToast("Sign in to travel."); return showProfileMenu(); }
+    const here = activeDestinationId();
+    const card = $("#travelCard");
+    card.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><p class="eyebrow">TRAVEL</p><h2>Choose a town</h2><p class="today-intro">Your memories, friendships, and needs travel with you. Each place has residents living their own lives.</p><div class="outing-grid">${(destinations || []).map(destination => `<button class="outing" data-destination="${escapeHtml(destination.id)}" ${destination.id === here ? "disabled" : ""}><b>${destination.id === "riverlight" ? "⌇" : destination.id === "patchwork-commons" ? "✦" : destination.id === "copper-clover" ? "♧" : "⌂"}</b><span><strong>${escapeHtml(destination.name)}</strong><small>${escapeHtml(destination.subtitle)}</small>${destination.id === here ? "<i>Here now</i>" : ""}</span></button>`).join("")}</div></div>`;
+    card.classList.remove("hidden");
+    card.querySelector(".today-close").addEventListener("click", () => card.classList.add("hidden"));
+    card.querySelectorAll("[data-destination]").forEach(button => button.addEventListener("click", () => send({ type: "travel", residentId: me.residentId, destinationId: button.dataset.destination })));
+  }
+  $("#travelButton").addEventListener("click", showTravelMenu);
+  function renderTron(history) { const log = $("#tronLog"); if (log) { log.innerHTML = history.map(m => `<p class="tron-message"><b>${escapeHtml(m.who)}</b>${escapeHtml(m.text)}</p>`).join(""); log.scrollTop = log.scrollHeight; } }
+  function showTron() { if (!me) return showProfileMenu(); const card = $("#tronCard"); card.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><p class="eyebrow">CARETAKER</p><h2>Talk to Tron</h2><p class="today-intro">Tron watches this town, remembers your conversations, and helps you decide what to improve.</p><div id="tronLog" class="tron-log"><p class="tron-message"><b>Tron</b>I am here. What should we understand or build together?</p></div><form id="tronForm" class="tron-form"><input maxlength="600" placeholder="Talk to Tron…" aria-label="Message Tron" /><button>Send</button></form></div>`; card.classList.remove("hidden"); card.querySelector(".today-close").onclick = () => card.classList.add("hidden"); card.querySelector("#tronForm").onsubmit = e => { e.preventDefault(); const input = e.currentTarget.querySelector("input"); const text = input.value.trim(); if (text) { const log = card.querySelector("#tronLog"); input.value = ""; input.disabled = true; log.insertAdjacentHTML("beforeend", `<p class="tron-message"><b>You</b>${escapeHtml(text)}</p><p class="tron-message tron-thinking"><b>Tron</b>Thinking…</p>`); log.scrollTop = log.scrollHeight; send({ type: "tron-chat", text }); window.setTimeout(() => { input.disabled = false; input.focus(); }, 10_500); } }; }
+  $("#tronButton").addEventListener("click", showTron);
 
   const pointers = new Map();
   let pinch = null;
@@ -1519,7 +1670,7 @@
 
   // --- Accounts ---
   async function api(path, options = {}) {
-    const response = await fetch(path, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...options });
+    const response = await fetch(path.startsWith("/") ? BASE + path.slice(1) : path, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...options });
     let body = {};
     try { body = await response.json(); } catch {}
     if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
@@ -1543,6 +1694,11 @@
     me = profile;
     updatePlayerUi();
     $("#playerGate")?.remove();
+    const next = new URLSearchParams(location.search).get("next");
+    if (next === "/playable-spine/") {
+      location.assign(next);
+      return;
+    }
     if (freshLogin) reconnect();
     setMode("play");
     showToast(`Playing as ${profile.name}`);
@@ -1595,7 +1751,7 @@
     const claimed = new Set(status.profiles.map(profile => profile.residentId));
     const canCreate = owner && status.playable.some(id => !claimed.has(id));
     const others = owner ? status.profiles.filter(p => p.id !== me.id).map(p => `<li><b>${escapeHtml(p.name)}</b> · ${escapeHtml(residentName(p.residentId))}<span><button class="text-button" data-reset="${escapeHtml(p.id)}">Reset PIN</button><button class="text-button danger" data-remove="${escapeHtml(p.id)}">Remove</button></span></li>`).join("") : "";
-    const ownerTools = owner ? `<button id="addResident" class="wide-button">Add a new resident</button><button id="askMrE" class="soft-button">✦ Ask Mr. E for a surprise</button><p class="gate-copy small">Mr. E's brain: ${escapeHtml(mreBrain || "starting up")}</p>` : "";
+    const ownerTools = owner ? `<button id="addResident" class="wide-button">Add a new resident</button><button id="askMrE" class="soft-button">✦ Ask Mr. E for a surprise</button><p class="gate-copy small">Mr. E's brain: ${escapeHtml(mreBrain || "starting up")}</p><p class="gate-copy small">NPC planning: ${escapeHtml(town.npcBrain?.mode || "adaptive planner")} · ${town.npcBrain?.accepted || 0} model plans accepted this session</p>` : "";
     const gate = gateShell(`<div class="login-avatar">${escapeHtml(me.name.charAt(0))}</div><h3>${escapeHtml(me.name)}</h3><p class="gate-copy">Plays as ${escapeHtml(residentName(me.residentId))}</p><button id="editLook" class="soft-button">Customize my character</button>${ownerTools}${canCreate ? '<button id="createPlayer" class="soft-button">Create another player</button>' : ""}${others ? `<ul class="player-admin">${others}</ul>` : ""}<button id="backToTown" class="soft-button">Back to town</button><button id="logoutPlayer" class="text-button">Switch player</button>`);
     gate.querySelector("#backToTown").addEventListener("click", () => gate.remove());
     gate.querySelector("#editLook").addEventListener("click", () => {
@@ -1735,7 +1891,7 @@
   centerOn(places.square.x, places.square.y - 20);
   if (!VISITOR) {
     initializePlayers().catch(error => showToast(error.message));
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register(`${BASE}sw.js`).catch(() => {});
   }
   connect();
   requestAnimationFrame(frame);

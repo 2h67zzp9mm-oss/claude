@@ -13,6 +13,8 @@ const { places } = require("../shared/world");
 const { shareKnowledge } = require("./life");
 const will = require("./will");
 const speech = require("./speech");
+const awareness = require("./awareness");
+const cognition = require("./cognition");
 
 let random = Math.random;
 function setRandom(fn) { random = typeof fn === "function" ? fn : Math.random; }
@@ -333,6 +335,8 @@ function scorePlaces(state, resident, date) {
 
 function pickActivity(resident, placeKey, obligation) {
   if (obligation && obligation.place === placeKey) return obligation.activity;
+  const planned = cognition.current(resident);
+  if (planned?.kind === "activity" && planned.place === placeKey) return planned.activity;
   // Came here for something they wished for? Do that.
   const wished = (resident.wishes || []).find(wish => wish.type === "do" && wish.place === placeKey);
   if (wished && random() < 0.85) return wished.activity;
@@ -360,6 +364,11 @@ function decide(state, resident, date) {
   const obligation = activeObligation(resident.id, date);
   const obligationKey = obligation ? `${obligation.place}:${obligation.from}` : "";
   const critical = Object.values(resident.needs).some(value => value < 15);
+  const planned = cognition.current(resident);
+  if (planned && !obligation && !critical && resident.cognition.plan.expiresAt > now) {
+    resident.intent = planned.reason;
+    return planned.place === resident.place ? null : planned.place;
+  }
   const due = now >= resident.mind.commitUntil || obligationKey !== resident.mind.obligationKey || critical;
   if (!due) return null;
 
@@ -435,7 +444,13 @@ function converse(a, b, now, placeName) {
   let topic = null;
   let learned = null;
 
-  if (random() < frictionChance) {
+  const sharedMemory = cognition.retrieve(a, { targetId: b.id, now }, 12).find(m => m.about === b.id && now - m.at > 10 * 60_000 && now - m.at < 7 * 24 * 3_600_000);
+  if (sharedMemory && random() < 0.35 && !a.mind.recentTopics.includes("catching-up")) {
+    kind = "interest";
+    topic = "catching-up";
+    line = "It is good to see you again. I was thinking about our last chat.";
+    reply = howAreYou(b);
+  } else if (random() < frictionChance) {
     kind = "friction";
     topic = pick(frictionSubjects);
     line = `I still say you're wrong about ${topic}.`;
@@ -444,6 +459,11 @@ function converse(a, b, now, placeName) {
     kind = "interest";
     topic = pick(shared);
     line = voiceLine(a.id, "share", pick(topicLines[topic] || ["it's a nice day"]));
+    reply = voiceLine(b.id, "reply");
+  } else if (awareness.recentNotice(a, now) && random() < 0.5) {
+    // Something they noticed recently makes good small talk.
+    kind = "smalltalk";
+    line = voiceLine(a.id, "share", awareness.recentNotice(a, now).text);
     reply = voiceLine(b.id, "reply");
   } else {
     learned = shareKnowledge(b, a, now);
@@ -511,14 +531,14 @@ function converse(a, b, now, placeName) {
 }
 
 /** Try conversations between nearby, awake residents. */
-function socialTick(state, now, placeName) {
+function socialTick(state, now, placeName, sameSpot = () => true) {
   const results = [];
   const busy = new Set();
   const awake = state.residents.filter(r => !r.asleep);
   for (let i = 0; i < awake.length; i++) {
     for (let j = i + 1; j < awake.length; j++) {
       const a = awake[i], b = awake[j];
-      if (busy.has(a.id) || busy.has(b.id)) continue;
+      if (busy.has(a.id) || busy.has(b.id) || !sameSpot(a, b)) continue;
       if (Math.hypot(a.x - b.x, a.y - b.y) >= 60) continue;
       if (now - (Number(a.mind.talkedWith[b.id]) || 0) < 20 * 60_000) continue;
       if (now - (Number(a.lastTalk) || 0) < 4 * 60_000 || now - (Number(b.lastTalk) || 0) < 4 * 60_000) continue;

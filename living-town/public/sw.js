@@ -2,7 +2,9 @@
 // The server replaces __ASSET_VERSION__ with a hash of the client files, so
 // any change to the app automatically retires old caches.
 const CACHE = "living-town-__ASSET_VERSION__";
-const PRECACHE = ["/", "/styles.css", "/map.css", "/accounts.css", "/client.js", "/shared/world.js", "/shared/interiors.js", "/rooms.js", "/scenery.js", "/manifest.webmanifest", "/assets/town-map.webp", "/icon.svg"];
+// Paths are relative to where the town is served (it may live under a sub-path).
+const PRECACHE = ["./", "styles.css", "map.css", "accounts.css", "client.js", "shared/world.js", "shared/interiors.js", "rooms.js", "scenery.js", "manifest.webmanifest", "assets/town-map.webp", "icon.svg"];
+const SCOPE = new URL(self.registration.scope).pathname;
 const CACHE_FIRST = /\.(webp|png|svg)$/;
 
 self.addEventListener("install", event => {
@@ -28,7 +30,8 @@ function store(request, response) {
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.origin !== location.origin) return;
-  if (url.pathname.startsWith("/api/") || url.pathname === "/ws" || url.pathname === "/sw.js") return;
+  const rel = "/" + url.pathname.slice(SCOPE.length);
+  if (rel.startsWith("/api/") || rel.startsWith("/playable-spine/") || rel.startsWith("/playable-spine-m2/") || rel === "/ws" || rel === "/sw.js") return;
 
   if (CACHE_FIRST.test(url.pathname)) {
     event.respondWith(caches.match(event.request).then(hit => hit || fetch(event.request).then(response => store(event.request, response))));
