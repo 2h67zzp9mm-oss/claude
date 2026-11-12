@@ -36,7 +36,7 @@ for name, im, px, py, ax, ay in place:
     atlas.alpha_composite(im, (px, py)); art['sprites'][name] = {'x': px, 'y': py, 'w': im.width, 'h': im.height, 'ax': round(ax, 1), 'ay': round(ay, 1)}
 atlas.save(os.path.join(OUT, 'sprites.webp'), quality=92, method=6)
 
-# walkers: 8 rows (S, SW, W, NW, N, NE, E, SE) x 4 frames, at 0.8 of the render (= the ground's pixels per metre)
+# walkers: 8 rows (S, SW, W, NW, N, NE, E, SE) x 4 walk frames + 1 standing frame, at 0.8 of the render (= the ground's pixels per metre)
 CW, CH, SC = 192, 256, 0.8
 X0, Y0, OW, OH = 16, 20, 160, 200
 WALK = ('space', 'space_kid') if WORLD == 'scifi' else ('clay', 'clay_kid')   # sci-fi: space suits
@@ -44,9 +44,9 @@ for folder, kinds in ((WALK[0], ('male', 'female')), (WALK[1], ('male', 'female'
     meta = json.load(open(os.path.join(WD, folder, 'anchors.json')))
     for sex in kinds:
         key = ('kid_' if folder == WALK[1] else '') + sex
-        ow, oh = round(OW * SC), round(OH * SC); sheet = Image.new('RGBA', (ow * 4, oh * 8))
+        ow, oh = round(OW * SC), round(OH * SC); sheet = Image.new('RGBA', (ow * 5, oh * 8))
         for d in range(8):
-            for f in range(4):
+            for f in range(5):
                 im = Image.open(os.path.join(WD, folder, sex, 'd%d_f%d.png' % (d, f))).convert('RGBA')
                 sheet.alpha_composite(im.crop((X0, Y0, X0 + OW, Y0 + OH)).resize((ow, oh), Image.LANCZOS), (f * ow, d * oh))
         sheet.save(os.path.join(OUT, 'walk_%s.webp' % key), quality=92, method=6)

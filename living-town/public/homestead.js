@@ -127,9 +127,46 @@
 
   // --- the bar of buttons along the bottom (thumbs) ---
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  function setBar(title, buttons) {
+  let setBar = function (title, buttons) {
     bar.innerHTML = `${title ? `<p class="home-title">${title}</p>` : ""}<div class="home-actions">${buttons.map((b, i) => `<button data-i="${i}" ${b.off ? "disabled" : ""} class="${b.big ? "big" : ""}">${b.label}</button>`).join("")}</div>`;
     bar.querySelectorAll("button").forEach(btn => { btn.onclick = () => buttons[Number(btn.dataset.i)].go(); });
+  };
+
+  // --- the pop-up menu right at your finger: tap a thing, it lights up, pick what to do ---
+  let pop = null, popAt = null, highlight = null;
+  const CLOSERS = /^(Done|OK|Stay|Back)$/;
+  function near(t) { return Math.hypot(me.x - t.x, me.y - t.y) < 0.6 && !me.path.length; }
+  function showPop(t, at) {
+    const menu = menuFor(t); if (!menu) return;
+    highlight = t; popAt = at; me.popTarget = t;
+    const buttons = menu.buttons.map(b => ({ ...b, go: CLOSERS.test(b.label) ? hidePop : () => {
+      hidePop(true);
+      if (near(t)) b.go(); else { me.pending = b.go; walkTo(t, true); }
+    } }));
+    pop.innerHTML = `${menu.title ? `<p class="home-title">${menu.title}</p>` : ""}<div class="home-actions">${buttons.map((b, i) => `<button data-i="${i}" ${b.off ? "disabled" : ""} class="${b.big ? "big" : ""}">${b.label}</button>`).join("")}</div>`;
+    pop.querySelectorAll("button").forEach(btn => { btn.onclick = e => { e.stopPropagation(); buttons[Number(btn.dataset.i)].go(); }; });
+    pop.classList.remove("hidden");
+    const W = el.clientWidth, H = el.clientHeight, w = pop.offsetWidth, h = pop.offsetHeight;
+    const x = Math.max(8, Math.min(W - w - 8, at.x - w / 2));
+    const y = at.y - h - 24 > 60 ? at.y - h - 24 : Math.min(H - h - 90, at.y + 24);
+    pop.style.left = x + "px"; pop.style.top = y + "px";
+  }
+  function hidePop(keepHighlight) { pop?.classList.add("hidden"); if (!keepHighlight) { highlight = null; popAt = null; } }
+  function drawHighlight(t) {
+    if (!highlight) return;
+    const pulse = 0.55 + 0.45 * Math.sin(t / 180);
+    ctx.save(); ctx.lineWidth = 3; ctx.strokeStyle = `rgba(255,236,120,${0.6 + 0.4 * pulse})`; ctx.shadowColor = "#ffe27a"; ctx.shadowBlur = 14;
+    ctx.beginPath();
+    if (highlight.kind === "plot") {
+      const r = plotRect(highlight.plot);
+      [[r.x0 - 0.06, r.y0 - 0.06], [r.x1 + 0.06, r.y0 - 0.06], [r.x1 + 0.06, r.y1 + 0.06], [r.x0 - 0.06, r.y1 + 0.06]].forEach(([x, y], i) => { const [sx, sy] = toScreen(...P(x, y, 0.25)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+      ctx.closePath();
+    } else {
+      const c = highlight.kind === "pond" ? [L.pond.x, L.pond.y, Math.max(L.pond.rx, L.pond.ry) + 0.3] : highlight.kind === "mailbox" ? [L.mailbox[0], L.mailbox[1], 0.6]
+        : highlight.kind === "crate" ? [L.crate[0], L.crate[1], 0.8] : highlight.kind === "door" ? [L.house.door[0] + 0.3, L.house.door[1], 1.0] : [highlight.x, highlight.y, 0.8];
+      for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2; const [sx, sy] = toScreen(...P(c[0] + Math.cos(a) * c[2], c[1] + Math.sin(a) * c[2])); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }
+    }
+    ctx.stroke(); ctx.restore();
   }
   function idleBar() {
     setBar("", [{ label: "🎒 Bag", go: showBag }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
@@ -143,7 +180,15 @@
     load().then(() => Object.assign(me, keep)).catch(err => console.error(err));
   }
   function act(action, extra = {}) { opts.send({ type: "home", action, ...extra }); }
-  function contextBar(t) {
+  // The menu for a thing, as { title, buttons } (captured from what contextBar would show).
+  function menuFor(t) {
+    let menu = null; const real = setBar;
+    setBar = (title, buttons) => { menu = { title, buttons }; };
+    try { contextBarInner(t); } finally { setBar = real; }
+    return menu;
+  }
+  function contextBar(t) { contextBarInner(t); }
+  function contextBarInner(t) {
     if (!view) return idleBar();
     const C = view.crops;
     if (t.kind === "plot") {
@@ -189,10 +234,10 @@
     }
     ctx.drawImage(space, 0, 0);
   }
-  function walkTo(t) {
-    fishing = null;
+  function walkTo(t, keepPending) {
+    fishing = null; if (!keepPending) me.pending = null;
     me.target = t; me.path = route(t.x, t.y); marker = { x: t.x, y: t.y, at: performance.now() };
-    if (t.kind !== "walk") setBar("", [{ label: "…", off: true, go() {} }]); else idleBar();
+    idleBar();
   }
 
   // --- fishing: wait for the bobber to dip, then tap Reel! in time ---
@@ -244,7 +289,7 @@
       return setBar(`✉️ From ${esc(r.letter.from)}: “${esc(r.letter.text)}”<br>🎁 ${esc(r.letter.gift)}`, [{ label: "Thanks!", big: true, go: idleBar }]);
     }
     if (r.fish) { fishing = null; return setBar(`${sprIcon("fish_" + r.fish, 64)} ${esc(view.fish[r.fish].name)}${r.first ? " · new!" : ""}`, [{ label: "🎣 Again", big: true, go: () => startFishing(me.target) }, { label: "Done", go: idleBar }]); }
-    if (me.target && me.target.kind !== "walk" && !me.path.length) contextBar(me.target);
+    if (popAt && me.popTarget && me.target === me.popTarget && !me.path.length && !fishing) showPop(me.popTarget, popAt);
   }
 
   // --- drawing ---
@@ -256,9 +301,9 @@
   }
   function walkerFor(id) {
     const r = opts.resident(id); const s = r?.look?.style || "";
-    if (id === "hazel" || (r && Number(r.profile?.age) > 0 && Number(r.profile.age) < 11)) return "kid_female";
+    if (id === "hazel" || id === "olive" || (r && Number(r.profile?.age) > 0 && Number(r.profile.age) < 13)) return /long|pigtails|buns|bunny|ribbons|curls/.test(s) || id === "hazel" || id === "olive" ? "kid_female" : "kid_male";
     if (id === "dad") return "male";
-    return /long|pigtails|buns|bunny|ribbons|curls/.test(s) || id === "olive" ? "female" : "male";
+    return /long|pigtails|buns|bunny|ribbons|curls/.test(s) ? "female" : "male";
   }
   function drawSprite(name, x, y) {
     const s = A.sprites[name]; if (!s) return; const [px, py] = P(x, y); const [sx, sy] = toScreen(px - s.ax, py - s.ay);
@@ -266,11 +311,11 @@
   }
   function drawWalker(id, p) {
     const key = walkerFor(id), w = A.walkers[key], img = imgs["walk_" + key]; if (!w || !img) return;
-    const [px, py] = P(p.x, p.y), f = p.moving ? Math.floor(p.step * 2.2) % 4 : 0;
-    const [sx, sy] = toScreen(px - w.ax, py - w.ay);
+    const [px, py] = P(p.x, p.y), f = p.moving ? Math.floor(p.step * 2.2) % 4 : 4;   // frame 4: standing, feet together
+    const k = id === "olive" ? 1.18 : 1;   // Olive is a bit older and taller than Hazel
     ctx.fillStyle = "rgba(0,0,0,0.16)"; ctx.beginPath(); const [cx, cy] = toScreen(px, py); ctx.ellipse(cx, cy, 15 * cam.z * 1.6, 6 * cam.z * 1.6, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.drawImage(img, f * w.cw, p.dir * w.ch, w.cw, w.ch, sx, sy, w.cw * cam.z, w.ch * cam.z);
-    if (p.name) { const tall = (key.startsWith("kid") ? 92 : 135) * cam.z; ctx.font = `600 ${Math.max(11, 13 * cam.z * 1.4)}px system-ui`; ctx.textAlign = "center"; ctx.fillStyle = "rgba(20,30,50,0.75)"; ctx.fillText(p.name, cx, cy - tall); }
+    ctx.drawImage(img, f * w.cw, p.dir * w.ch, w.cw, w.ch, cx - w.ax * cam.z * k, cy - w.ay * cam.z * k, w.cw * cam.z * k, w.ch * cam.z * k);
+    if (p.name) { const tall = (key.startsWith("kid") ? 92 * k : 135) * cam.z; ctx.font = `600 ${Math.max(11, 13 * cam.z * 1.4)}px system-ui`; ctx.textAlign = "center"; ctx.fillStyle = "rgba(20,30,50,0.75)"; ctx.fillText(p.name, cx, cy - tall); }
   }
   function stepWalker(p, dt) {
     let budget = SPEED * dt; p.moving = false;
@@ -290,7 +335,9 @@
       stepWalker(me, dt);
       if (wasMoving && !me.path.length && me.target) {
         if (me.target.kind === "pond") faceToward(me.target.cast.x, me.target.cast.y);
-        if (me.target.kind !== "walk") contextBar(me.target);
+        highlight = null;
+        if (me.pending) { const go = me.pending; me.pending = null; go(); }
+        else if (me.target.kind === "exit") close();
       }
       for (const o of others.values()) {
         const gap = Math.hypot(o.tx - o.x, o.ty - o.y);
@@ -337,6 +384,7 @@
     let drawnHouse = false;
     for (const it of items) { if (!drawnHouse && inFront(it)) { house.draw(); drawnHouse = true; } it.draw(); }
     if (!drawnHouse) house.draw();
+    drawHighlight(t);
     // tap marker, splash, fishing bobber
     if (marker && t - marker.at < 700) { const [sx, sy] = toScreen(...P(marker.x, marker.y)); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(sx, sy, 16 * (1 - (t - marker.at) / 900), 7 * (1 - (t - marker.at) / 900), 0, 0, Math.PI * 2); ctx.stroke(); }
     if (splash && t - splash.at < 900) { const r = plotRect(splash.plot); const [sx, sy] = toScreen(...P(r.cx, r.cy)); ctx.font = "26px system-ui"; ctx.textAlign = "center"; ctx.fillText("💧", sx, sy - 30 - (t - splash.at) / 30); }
@@ -358,7 +406,9 @@
     const rect = canvas.getBoundingClientRect(), [px, py] = fromScreen(e.clientX - rect.left, e.clientY - rect.top);
     // Tap another family member: wave.
     for (const o of others.values()) { const [ox, oy] = P(o.x, o.y); if (Math.abs(px - ox) < 30 && py > oy - 140 && py < oy + 10) { opts.toast(`👋 You waved at ${o.name}!`); return; } }
-    walkTo(targetAt(px, py));
+    const t = targetAt(px, py);
+    if (t.kind === "walk") { hidePop(); walkTo(t); return; }
+    showPop(t, { x: e.clientX - rect.left, y: e.clientY - rect.top });
   }
   function open() {
     if (!opts.me()) return opts.toast("Sign in to visit your home.");
@@ -368,18 +418,18 @@
       act("enter"); idleBar(); cam.ready = false; requestAnimationFrame(frame);
     }).catch(err => { console.error(err); opts.toast("The home plot couldn't load."); close(); });
   }
-  function close() { if (!isOpen) return; isOpen = false; fishing = null; el.classList.add("hidden"); act("leave"); me.placed = false; opts.onClose?.(); }
+  function close() { if (!isOpen) return; isOpen = false; fishing = null; hidePop(); el.classList.add("hidden"); act("leave"); me.placed = false; opts.onClose?.(); }
 
   window.LivingTownHome = {
     init(o) {
       opts = o;
       el = document.createElement("div"); el.id = "homestead"; el.className = "homestead hidden";
-      el.innerHTML = `<canvas></canvas><div class="home-top"></div><div class="home-bar"></div>`;
+      el.innerHTML = `<canvas></canvas><div class="home-top"></div><div class="home-bar"></div><div class="home-pop hidden"></div>`;
       document.body.appendChild(el);
-      canvas = el.querySelector("canvas"); ctx = canvas.getContext("2d"); top = el.querySelector(".home-top"); bar = el.querySelector(".home-bar");
+      canvas = el.querySelector("canvas"); ctx = canvas.getContext("2d"); top = el.querySelector(".home-top"); bar = el.querySelector(".home-bar"); pop = el.querySelector(".home-pop");
       canvas.addEventListener("click", onTap);
     },
     open, close, onState, get isOpen() { return isOpen; },
-    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, me }
+    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me }
   };
 })();

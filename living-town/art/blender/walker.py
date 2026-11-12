@@ -76,9 +76,11 @@ OUTFITS = {  # colours per body region; 'clay' is the plain white template
                hat=None, hair=(0.55, 0.34, 0.18), eye=(0.06, 0.04, 0.03), beard=None, sex='female', hairk='long', bow=(1.0, 0.45, 0.65), scale=0.66, kid=True),
 }
 def build(sex, O):
-    F = sex == 'female'; lin = (lambda c: c) if O.get('name', '').startswith('clay') else (lambda c: tuple(x ** 2.2 for x in c))  # outfit colours are sRGB
+    F = sex == 'female' and not O.get('kid');   # children get a plain child's body
+    G = sex == 'female'                          # (still used for hair / trim colour)
+    BUFF = sex == 'male' and not O.get('kid'); lin = (lambda c: c) if O.get('name', '').startswith('clay') else (lambda c: tuple(x ** 2.2 for x in c))  # outfit colours are sRGB
     if O.get('space'):  # trim colour for this walker: gloves, boots, belt
-        acc = O['accent_f' if F else 'accent_m']; O = dict(O, skin=acc, boots=acc, belt=acc, bald=True)
+        acc = O['accent_f' if G else 'accent_m']; O = dict(O, skin=acc, boots=acc, belt=acc, bald=True)
     M = {k: mat(lin(v), 0.75 if k in ('shirt', 'pants', 'hat') else 0.55) for k, v in O.items() if isinstance(v, tuple)}
     skin, shirt, pants, boots, belt, hair, eye = (M[k] for k in ('skin', 'shirt', 'pants', 'boots', 'belt', 'hair', 'eye'))
     s = O.get('scale', 0.95 if F else 1.0)  # overall scale
@@ -90,10 +92,12 @@ def build(sex, O):
     spine = empty('spine', hips, (0, 0, 0.08)); J['spine'] = spine
     blob(spine, (0, 0, 0.12), (0.12 if F else 0.16, 0.10 if F else 0.12, 0.14), shirt)  # waist
     if 'clay' not in O.get('name', ''): blob(spine, (0, 0, 0.02), (0.165 if not F else 0.13, 0.125 if not F else 0.105, 0.03), belt)  # belt
-    blob(spine, (0, 0, 0.33), (0.18 if F else 0.22, 0.14, 0.18), shirt)                         # chest
+    blob(spine, (0, 0, 0.33), (0.18 if F else (0.27 if BUFF else 0.22), 0.14 if not BUFF else 0.17, 0.18 if not BUFF else 0.2), shirt)  # chest (broad for grown men)
+    if BUFF:
+        for sx in (-1, 1): blob(spine, (sx * 0.2, 0, 0.42), (0.1, 0.1, 0.09), shirt)             # shoulders
     if F:
         for sx in (-1, 1): blob(spine, (sx * 0.07, -0.1, 0.33), (0.08, 0.075, 0.075), shirt)
-    blob(spine, (0, 0, 0.53), (0.05, 0.05, 0.07), skin)                                         # neck
+    blob(spine, (0, 0, 0.53), (0.065 if BUFF else 0.05, 0.065 if BUFF else 0.05, 0.07), skin)   # neck
     head = empty('head', spine, (0, 0, 0.66)); J['head'] = head
     if O.get('kid'): head.scale = (1.3, 1.3, 1.3)
     blob(head, (0, 0, 0.05), (0.13, 0.14, 0.155), skin)                                        # skull
@@ -111,7 +115,7 @@ def build(sex, O):
     elif O.get('hairk') == 'long':
         blob(head, (0, 0.03, 0.1), (0.145, 0.15, 0.125), hair); blob(head, (0, 0.09, -0.1), (0.13, 0.08, 0.18), hair)  # long down the back
         if O.get('bow'): blob(head, (0.09, 0.05, 0.17), (0.06, 0.03, 0.04), M['bow']); blob(head, (0.09, 0.05, 0.17), (0.02, 0.035, 0.02), M['bow'])
-    elif F:
+    elif G:
         blob(head, (0, 0.03, 0.1), (0.14, 0.145, 0.125), hair)                                  # hair cap
         blob(head, (0, 0.15, 0.07), (0.08, 0.075, 0.08), hair)                                 # bun
         blob(head, (0, 0.17, -0.1), (0.05, 0.05, 0.13), hair)                                   # ponytail
@@ -141,12 +145,12 @@ def build(sex, O):
         for sx in (-1, 1): blob(spine, (sx * 0.08, 0.25, 0.38), (0.025, 0.012, 0.025), mat(acc, 0.3, 1.5))
         blob(spine, (0, -0.15, 0.36), (0.05, 0.02, 0.04), mat(acc, 0.3, 1.8))                   # chest light
         for sx in (-1, 1): blob(spine, (sx * 0.1, -0.13, 0.12), (0.035, 0.02, 0.1), mat(acc, 0.4))  # suit stripes
-    sw = 0.175 if F else 0.22; rolled = O.get('sleeves') == 'rolled'
+    sw = 0.175 if F else (0.26 if BUFF else 0.22); rolled = O.get('sleeves') == 'rolled'
     for side, sx in (('L', 1), ('R', -1)):
         sh = empty('sh' + side, spine, (sx * sw, 0, 0.42)); J['sh' + side] = sh
-        limb(sh, 0.27, 0.055 if F else 0.065, 0.045, M.get('coat', shirt))
+        limb(sh, 0.27, 0.055 if F else (0.085 if BUFF else 0.065), 0.058 if BUFF else 0.045, M.get('coat', shirt))
         el = empty('el' + side, sh, (0, 0, -0.28)); J['el' + side] = el
-        limb(el, 0.25, 0.045, 0.038, skin if rolled else M.get('coat', shirt)); blob(el, (0, -0.01, -0.29), (0.04, 0.045, 0.055), skin)  # forearm + hand
+        limb(el, 0.25, 0.056 if BUFF else 0.045, 0.045 if BUFF else 0.038, skin if rolled else M.get('coat', shirt)); blob(el, (0, -0.01, -0.29), (0.04, 0.045, 0.055), skin)  # forearm + hand
         if rolled: blob(el, (0, 0, -0.02), (0.068, 0.068, 0.045), shirt)                        # rolled cuff
         hp = empty('hp' + side, hips, (sx * (0.11 if F else 0.09), 0, -0.04)); J['hp' + side] = hp
         limb(hp, 0.42, 0.095 if F else 0.08, 0.06, pants)
@@ -167,6 +171,12 @@ def pose(J, t):
     J['spine'].rotation_euler = (R(-3), 0, R(5 * c)); J['hips'].rotation_euler.z = R(-6 * c)
     J['head'].rotation_euler.x = R(3)
 
+def stand(J):
+    for k in ('hpL', 'hpR', 'knL', 'knR', 'anL', 'anR'): J[k].rotation_euler.x = 0
+    J['shL'].rotation_euler.x = J['shR'].rotation_euler.x = 0; J['shL'].rotation_euler.y = R(-4); J['shR'].rotation_euler.y = R(4)
+    J['elL'].rotation_euler.x = J['elR'].rotation_euler.x = R(-8)
+    J['spine'].rotation_euler = (0, 0, 0); J['hips'].rotation_euler.z = 0; J['head'].rotation_euler.x = R(2)
+
 def ground(J):  # drop the body so the lowest foot touches the ground
     bpy.context.view_layer.update(); J['root'].location.z = 0; bpy.context.view_layer.update()
     low = min((o.matrix_world @ Vector(v)).z for o in bpy.context.scene.objects if o.type == 'MESH' for v in o.bound_box)
@@ -183,6 +193,9 @@ for sex in (('male', 'female') if O['sex'] == 'both' else (O['sex'],)):
         for f in range(FRAMES):
             pose(J, f / FRAMES); ground(J)
             sc.render.filepath = os.path.join(OUT, sex, 'd%d_f%d.png' % (d, f)); bpy.ops.render.render(write_still=True)
+        stand(J); ground(J)
+        sc.render.filepath = os.path.join(OUT, sex, 'd%d_f%d.png' % (d, FRAMES)); bpy.ops.render.render(write_still=True)
+        J['shL'].rotation_euler.y = J['shR'].rotation_euler.y = 0
     J['root'].rotation_euler.z = R(45)  # save with the walk cycle keyframed (frames 1-25 loop, one key every 6 frames)
     sc.frame_start, sc.frame_end = 1, 24
     for k in range(5):

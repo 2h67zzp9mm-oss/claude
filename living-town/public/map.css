@@ -257,3 +257,10 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .fish-card.unknown .home-icon { filter: brightness(0) opacity(0.45); }
 .home-icon { display: inline-flex; align-items: center; justify-content: center; }
 .home-icon i { display: block; background-repeat: no-repeat; }
+
+/* home plot: the menu that pops up right where you tapped */
+.home-pop { position: absolute; z-index: 5; width: min(270px, calc(100% - 16px)); padding: 10px; border-radius: 18px; background: rgba(22, 26, 44, 0.94);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45), 0 0 0 2px rgba(255,226,122,0.55); color: #fff; animation: home-pop-in 0.14s ease-out; }
+.home-pop.hidden { display: none; }
+.home-pop .home-actions button { flex: 1 1 45%; min-height: 46px; }
+@keyframes home-pop-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
