@@ -24,9 +24,11 @@ def reset():
     so.rotation_euler = (R(50), 0, R(-20))
     return sc, co
 
-def mat(col, rough=0.55):
+def mat(col, rough=0.55, glow=0):
     m = bpy.data.materials.new('clay'); m.use_nodes = True; p = m.node_tree.nodes['Principled BSDF']
-    p.inputs['Base Color'].default_value = (*col, 1); p.inputs['Roughness'].default_value = rough; return m
+    p.inputs['Base Color'].default_value = (*col, 1); p.inputs['Roughness'].default_value = rough
+    if glow: p.inputs['Base Color'].default_value = (*[c * 0.2 for c in col], 1); p.inputs['Emission Color'].default_value = (*col, 1); p.inputs['Emission Strength'].default_value = glow
+    return m
 
 def empty(name, parent, loc):
     e = bpy.data.objects.new(name, None); bpy.context.scene.collection.objects.link(e); e.parent = parent; e.location = loc; return e
@@ -58,6 +60,13 @@ OUTFITS = {  # colours per body region; 'clay' is the plain white template
                hat=(0.40, 0.12, 0.30), hair=(0.55, 0.55, 0.55), eye=(0.06, 0.04, 0.03), beard=(0.60, 0.60, 0.60), sex='male', hatk='tricorn', coat=(0.40, 0.12, 0.30)),
   'clay_kid': dict(skin=(0.82, 0.80, 0.76), shirt=(0.82, 0.80, 0.76), pants=(0.82, 0.80, 0.76), boots=(0.82, 0.80, 0.76), belt=(0.82, 0.80, 0.76),
                hat=None, hair=(0.42, 0.40, 0.38), eye=(0.42, 0.40, 0.38), beard=None, sex='both', scale=0.66, kid=True),
+  # Sci-fi world space suits (accent colour per walker: dad, mum, kids)
+  'space': dict(skin=(0.30, 0.85, 0.85), shirt=(0.92, 0.88, 0.80), pants=(0.92, 0.88, 0.80), boots=(0.30, 0.85, 0.85), belt=(0.30, 0.85, 0.85),
+               hat=None, hair=(0.2, 0.2, 0.2), eye=(0.1, 0.1, 0.1), beard=None, sex='both', space=True,
+               accent_m=(0.15, 0.80, 0.85), accent_f=(0.95, 0.35, 0.70)),
+  'space_kid': dict(skin=(1.0, 0.55, 0.15), shirt=(0.92, 0.88, 0.80), pants=(0.92, 0.88, 0.80), boots=(1.0, 0.55, 0.15), belt=(1.0, 0.55, 0.15),
+               hat=None, hair=(0.2, 0.2, 0.2), eye=(0.1, 0.1, 0.1), beard=None, sex='both', space=True, scale=0.66, kid=True,
+               accent_m=(1.0, 0.55, 0.15), accent_f=(0.70, 0.40, 1.0)),
   # Little Town's family (colours from their in-game looks)
   'sean': dict(skin=(0.93, 0.78, 0.66), shirt=(0.05, 0.20, 0.48), pants=(0.30, 0.30, 0.34), boots=(0.20, 0.14, 0.10), belt=(0.25, 0.17, 0.10),
                hat=None, hair=(0.30, 0.20, 0.13), eye=(0.06, 0.04, 0.03), beard=(0.36, 0.24, 0.15), sex='male', bald=True),
@@ -68,6 +77,8 @@ OUTFITS = {  # colours per body region; 'clay' is the plain white template
 }
 def build(sex, O):
     F = sex == 'female'; lin = (lambda c: c) if O.get('name', '').startswith('clay') else (lambda c: tuple(x ** 2.2 for x in c))  # outfit colours are sRGB
+    if O.get('space'):  # trim colour for this walker: gloves, boots, belt
+        acc = O['accent_f' if F else 'accent_m']; O = dict(O, skin=acc, boots=acc, belt=acc, bald=True)
     M = {k: mat(lin(v), 0.75 if k in ('shirt', 'pants', 'hat') else 0.55) for k, v in O.items() if isinstance(v, tuple)}
     skin, shirt, pants, boots, belt, hair, eye = (M[k] for k in ('skin', 'shirt', 'pants', 'boots', 'belt', 'hair', 'eye'))
     s = O.get('scale', 0.95 if F else 1.0)  # overall scale
@@ -120,6 +131,16 @@ def build(sex, O):
     elif O.get('hat'):  # bandana: snug cap plus a knot and two tails at the back
         h = M['hat']; blob(head, (0, 0.01, 0.12), (0.142, 0.15, 0.1), h); blob(head, (0, 0.15, 0.1), (0.045, 0.04, 0.04), h)
         for sx in (-1, 1): blob(head, (sx * 0.03, 0.17, 0.03), (0.025, 0.02, 0.07), h, (R(-25), R(sx * 15), 0))
+    if O.get('space'):  # round helmet with a glowing visor, backpack and a chest light
+        acc = lin(O['skin'])
+        blob(head, (0, 0, 0.05), (0.2, 0.2, 0.2), mat(lin((0.94, 0.91, 0.85)), 0.3))
+        blob(head, (0, -0.1, 0.06), (0.16, 0.12, 0.13), mat(lin((0.10, 0.55, 0.75)), 0.15, 0.6))
+        blob(head, (0, 0, -0.13), (0.15, 0.15, 0.04), mat(acc, 0.4))                            # helmet collar
+        blob(head, (0.1, 0.05, 0.25), (0.012, 0.012, 0.06), mat(acc, 0.4)); blob(head, (0.1, 0.05, 0.32), (0.025, 0.025, 0.025), mat(acc, 0.3, 1.5))  # antenna
+        blob(spine, (0, 0.17, 0.3), (0.16, 0.08, 0.19), mat(lin((0.80, 0.76, 0.70)), 0.4))     # backpack
+        for sx in (-1, 1): blob(spine, (sx * 0.08, 0.25, 0.38), (0.025, 0.012, 0.025), mat(acc, 0.3, 1.5))
+        blob(spine, (0, -0.15, 0.36), (0.05, 0.02, 0.04), mat(acc, 0.3, 1.8))                   # chest light
+        for sx in (-1, 1): blob(spine, (sx * 0.1, -0.13, 0.12), (0.035, 0.02, 0.1), mat(acc, 0.4))  # suit stripes
     sw = 0.175 if F else 0.22; rolled = O.get('sleeves') == 'rolled'
     for side, sx in (('L', 1), ('R', -1)):
         sh = empty('sh' + side, spine, (sx * sw, 0, 0.42)); J['sh' + side] = sh

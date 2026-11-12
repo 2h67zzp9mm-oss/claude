@@ -33,7 +33,7 @@ SCIFI = {
     'c_carrot': ((1.0, 0.45, 0.1), 2.4, 0), 'c_strawberry': ((1.0, 0.2, 0.45), 2.4, 0), 'c_tomato': ((1.0, 0.25, 0.15), 2.4, 0),
     'c_blueberry': ((0.3, 0.45, 1.0), 2.4, 0), 'c_corn': ((1.0, 0.85, 0.2), 2.4, 0), 'c_sunflower': ((1.0, 0.75, 0.1), 2.4, 0),
     'r0': ((1.0, 0.25, 0.7), 2.2, 0), 'r1': ((0.1, 0.85, 1.0), 2.2, 0), 'r2': ((0.6, 0.3, 1.0), 2.2, 0), 'r3': ((1.0, 0.8, 0.15), 2.2, 0), 'r4': ((0.4, 1.0, 0.3), 2.2, 0),
-    'lampglow': ((1.0, 0.85, 0.55), 3.5, 0),
+    'lampglow': ((1.0, 0.85, 0.55), 3.5, 0), 'paving': ((0.26, 0.18, 0.28), 0, 0),
     'c_watermelon': ((0.3, 1.0, 0.4), 2.4, 0), 'c_pumpkin': ((1.0, 0.5, 0.05), 2.4, 0), 'leaf': ((0.12, 0.55, 0.40), 0.15, 0),
 }
 SKY = {'clay': (0.62, 0.68, 0.78), 'scifi': (0.42, 0.30, 0.62)}[THEME]
@@ -138,6 +138,7 @@ def ground_scene():
     # garden beds (raised soil) and a low picket fence with a gate
     G = L['garden']; ps = G['plot']
     gx, gy, gw = G['gate']
+    garden_paths(G)
     def fence(ax, ay, bx, by):
         n = max(1, int(math.hypot(bx - ax, by - ay) / 0.5))
         for k in range(n + 1):
@@ -148,6 +149,19 @@ def ground_scene():
     x0, y0, x1, y1 = G['x0'], G['y0'], G['x1'], G['y1']
     fence(x0, y0, x1, y0); fence(x0, y1, x1, y1); fence(x0, y0, x0, y1)
     fence(x1, y0, x1, gy - gw / 2); fence(x1, gy + gw / 2, x1, y1)
+
+def garden_paths(G):
+    # paving slabs over the whole garden floor; the beds sit on top, the gaps are the paths
+    col = 'paving' if THEME == 'scifi' else (0.74, 0.72, 0.69)
+    k = 0; y = G['y0'] + 0.05
+    while y < G['y1'] - 0.1:
+        x = G['x0'] + 0.05 + (0.25 if k % 2 else 0)
+        while x < G['x1'] - 0.1:
+            x2 = min(x + 0.5, G['x1'] - 0.05); y2 = min(y + 0.42, G['y1'] - 0.05)
+            box(x + 0.02, y + 0.02, -0.01, x2 - 0.02, y2 - 0.02, 0.025, col); x += 0.5
+        y += 0.45; k += 1
+    gx, gy, gw = G['gate']
+    for t in range(3): box(G['x1'] - 0.1 + t * 0.45, gy - 0.5, -0.01, G['x1'] + 0.3 + t * 0.45, gy + 0.5, 0.025, col)   # step out of the gate
 
 # ---------- house ----------
 def house_scene():
@@ -232,6 +246,7 @@ def ground_scifi():
     # wooden garden beds of dark soil, cream fence with posts
     G = L['garden']; ps = G['plot']
     gx, gy, gw = G['gate']
+    garden_paths(G)
     def fence(ax, ay, bx, by):
         n = max(1, int(math.hypot(bx - ax, by - ay) / 0.7))
         for k in range(n + 1):
@@ -369,7 +384,9 @@ def alien_crop(c, st):
             a = k * 1.3 + 0.4; d = 0 if k == 0 else 0.18; hgt = (0.22 if st == 1 else 0.34) - 0.05 * (k > 0)
             bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.06 + 0.03 * (st == 2), depth=hgt, location=(d * math.cos(a), d * math.sin(a), 0.3 + hgt / 2), rotation=(R(12) * math.cos(a) * (k > 0), R(12) * math.sin(a) * (k > 0), 0))
             put(bpy.context.object, 'c_' + c)
-def wet(): box(-0.55, -0.55, 0.22, 0.55, 0.55, 0.235, WET) if THEME == 'scifi' else box(-0.62, -0.62, 0.15, 0.62, 0.62, 0.21, WET)
+def wet():
+    h = L['garden']['plot'] / 2 - 0.1
+    box(-h, -h, 0.22, h, h, 0.235, WET) if THEME == 'scifi' else box(-h, -h, 0.15, h, h, 0.21, WET)
 CROPS = {
     'carrot':     lambda st: [ball(0.2 * (k - 1), 0, 0.3 + 0.1 * st, 0.06, 0.06, 0.18 + 0.08 * st) for k in range(3)] + ([cone(0.2 * (k - 1), 0, 0.1, 0.08, 0.2) for k in range(3)] if st == 2 else []),
     'strawberry': lambda st: [ball(0.18 * math.cos(k * 2.1), 0.18 * math.sin(k * 2.1), 0.25, 0.14 + 0.06 * st, 0.12 + 0.06 * st, 0.08 + 0.03 * st) for k in range(3)] + ([ball(0.25 * math.cos(k * 2.1 + 1), 0.25 * math.sin(k * 2.1 + 1), 0.2, 0.06, 0.06, 0.08) for k in range(4)] if st == 2 else []),

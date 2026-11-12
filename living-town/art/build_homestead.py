@@ -39,10 +39,11 @@ atlas.save(os.path.join(OUT, 'sprites.webp'), quality=92, method=6)
 # walkers: 8 rows (S, SW, W, NW, N, NE, E, SE) x 4 frames, at 0.8 of the render (= the ground's pixels per metre)
 CW, CH, SC = 192, 256, 0.8
 X0, Y0, OW, OH = 16, 20, 160, 200
-for folder, kinds in (('clay', ('male', 'female')), ('clay_kid', ('male', 'female'))):
+WALK = ('space', 'space_kid') if WORLD == 'scifi' else ('clay', 'clay_kid')   # sci-fi: space suits
+for folder, kinds in ((WALK[0], ('male', 'female')), (WALK[1], ('male', 'female'))):
     meta = json.load(open(os.path.join(WD, folder, 'anchors.json')))
     for sex in kinds:
-        key = ('kid_' if folder == 'clay_kid' else '') + sex
+        key = ('kid_' if folder == WALK[1] else '') + sex
         ow, oh = round(OW * SC), round(OH * SC); sheet = Image.new('RGBA', (ow * 4, oh * 8))
         for d in range(8):
             for f in range(4):

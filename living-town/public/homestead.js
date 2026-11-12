@@ -49,6 +49,8 @@
     const nearH = (ly, x0, x1) => Math.abs(y - ly) < t && x > x0 - t && x < x1 + t;
     if (nearH(g.y0, g.x0, g.x1) || nearH(g.y1, g.x0, g.x1) || nearV(g.x0, g.y0, g.y1)) return true;
     if (nearV(g.x1, g.y0, g.y1) && Math.abs(y - gy) > gw / 2) return true;
+    // garden beds: walk the paths between them, never over the plants
+    for (const [px, py] of g.plots) if (x > px - 0.05 && x < px + g.plot + 0.05 && y > py - 0.05 && y < py + g.plot + 0.05) return true;
     for (const [tx, ty] of L.trees) if (Math.hypot(x - tx, y - ty) < 0.55) return true;
     for (const [bx, by] of L.bushes) if (Math.hypot(x - bx, y - by) < 0.6) return true;
     if (Math.hypot(x - L.mailbox[0], y - L.mailbox[1]) < 0.4) return true;
@@ -377,6 +379,7 @@
       canvas = el.querySelector("canvas"); ctx = canvas.getContext("2d"); top = el.querySelector(".home-top"); bar = el.querySelector(".home-bar");
       canvas.addEventListener("click", onTap);
     },
-    open, close, onState, get isOpen() { return isOpen; }
+    open, close, onState, get isOpen() { return isOpen; },
+    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, me }
   };
 })();
