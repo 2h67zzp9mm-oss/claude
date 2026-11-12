@@ -171,7 +171,7 @@
     ctx.stroke(); ctx.restore();
   }
   function idleBar() {
-    setBar("", [{ label: "🎒 Bag", go: showBag }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
+    setBar("", [{ label: "🎒 Bag", go: showBag }, { label: "🎨 Look", go: () => opts.editLook?.() }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
   }
   function worldBar() {
     setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); idleBar(); } })), { label: "Back", go: idleBar }]);
@@ -310,9 +310,17 @@
     const s = A.sprites[name]; if (!s) return; const [px, py] = P(x, y); const [sx, sy] = toScreen(px - s.ax, py - s.ay);
     ctx.drawImage(imgs.sprites, s.x, s.y, s.w, s.h, sx, sy, s.w * cam.z, s.h * cam.z);
   }
+  // Each person's own look (character creator), painted onto the 3D walker; falls back to the plain sheet while it loads.
+  function avatarFor(id) {
+    const r = opts.resident(id), AV = window.LivingTownAvatar; if (!AV) return null;
+    const kid = id === "hazel" || id === "olive" || (Number(r?.profile?.age) > 0 && Number(r.profile.age) < 13);
+    const look = opts.look?.(id) || r?.look;
+    return AV.sheet(world, kid ? "kid" : AV.bodyFor(look, 30), look);
+  }
   function drawWalker(id, p) {
-    const key = walkerFor(id), w = A.walkers[key], img = imgs["walk_" + key]; if (!w || !img) return;
-    const [px, py] = P(p.x, p.y), f = p.moving ? Math.floor(p.step * 2.2) % 4 : 4;   // frame 4: standing, feet together
+    const key = walkerFor(id), av = avatarFor(id);
+    const w = av || A.walkers[key], img = av ? av.canvas : imgs["walk_" + key]; if (!w || !img) return;
+    const [px, py] = P(p.x, p.y), f = p.moving ? Math.floor(p.step * 2.2) % 4 : (img.width >= w.cw * 5 ? 4 : 0);   // frame 4: standing, feet together
     const k = id === "olive" ? 1.18 : 1;   // Olive is a bit older and taller than Hazel
     ctx.fillStyle = "rgba(0,0,0,0.16)"; ctx.beginPath(); const [cx, cy] = toScreen(px, py); ctx.ellipse(cx, cy, 15 * cam.z * 1.6, 6 * cam.z * 1.6, 0, 0, Math.PI * 2); ctx.fill();
     ctx.drawImage(img, f * w.cw, p.dir * w.ch, w.cw, w.ch, cx - w.ax * cam.z * k, cy - w.ay * cam.z * k, w.cw * cam.z * k, w.ch * cam.z * k);

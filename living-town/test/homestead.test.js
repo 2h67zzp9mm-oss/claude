@@ -107,3 +107,10 @@ test("town walking: everyone follows the walkway lines, even on short trips", ()
   const there = w.route(400, 600, 487, 600), back = w.route(487, 600, 400, 600);
   assert.ok(Math.abs(there[0].y - back[0].y) >= 10, "people going opposite ways pass side by side");
 });
+
+test("character creator: a grown-up's body choice is kept, junk is dropped", () => {
+  const cast = require("../lib/cast");
+  assert.equal(cast.sanitizeLook({ body: "fem", shirt: "#E53935" }).body, "fem");
+  assert.equal(cast.sanitizeLook({ body: "fem", shirt: "#E53935" }).shirt, "#e53935");
+  assert.equal(cast.sanitizeLook({ body: "robot" }).body, undefined);
+});

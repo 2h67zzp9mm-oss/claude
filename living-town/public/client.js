@@ -1736,6 +1736,8 @@
   // The home plot: your family's garden, pond and mailbox (public/homestead.js).
   window.LivingTownHome?.init({
     send, toast: showToast, me: () => me?.residentId || null, resident: id => residents.get(id),
+    look: id => { const r = residents.get(id); return r ? lookFor(r) : null; },
+    editLook: () => { const r = me && residents.get(me.residentId); if (r) showCharacterEditor(r); },
     openHouse: () => { window.LivingTownHome.close(); visitPlace("homes"); }
   });
   $("#homeButton").addEventListener("click", () => window.LivingTownHome?.open());
@@ -1918,35 +1920,53 @@
     const details = editDetails ? `<label>Name<input name="name" maxlength="20" required value="${escapeHtml(isNew ? "" : resident.name)}"></label>
       <label>Age<input name="age" type="number" min="3" max="95" required value="${escapeHtml(isNew ? 10 : resident.profile?.age ?? 30)}"></label>
       <label>Home<select name="homeId">${homeBuildings.map(b => option(b.id, currentHome, b.name)).join("")}</select></label>` : "";
-    const swatches = SKIN_TONES.map(tone => `<button type="button" class="swatch${tone === look.skin ? " active" : ""}" data-skin="${tone}" style="background:${tone}" aria-label="Skin tone"></button>`).join("");
+    // Thumb-friendly picker: big live 3D preview, then rows of swatches and chips.
+    const HAIR_COLORS = ["#1f1510", "#3b2416", "#5a3825", "#8a5a2b", "#c48a3f", "#e8c46a", "#b9452a", "#9a9a9a", "#eeeeee", "#7a4ad8", "#3a8ad8", "#e05a9a"];
+    const CLOTHES = ["#e53935", "#fb8c00", "#fdd835", "#7cb342", "#26a69a", "#29b6f6", "#3949ab", "#8e24aa", "#ec407a", "#f1eee4", "#9e9e9e", "#3f4d79", "#212121", "#6d4c41"];
+    const kidAge = Number(isNew ? 10 : resident.profile?.age ?? 30) < 13 || (!isNew && (resident.id === "hazel" || resident.id === "olive"));
+    const chips = (name, values, current, label = v => LOOK_LABELS[v] || v) => `<input type="hidden" name="${name}" value="${escapeHtml(current)}"><div class="chip-row" data-for="${name}">${values.map(v => `<button type="button" class="chip${v === current ? " active" : ""}" data-v="${escapeHtml(v)}">${escapeHtml(label(v))}</button>`).join("")}</div>`;
+    const swatchRow = (name, colors, current) => `<input type="hidden" name="${name}" value="${escapeHtml(current)}"><div class="swatch-row" data-for="${name}">${colors.map(c => `<button type="button" class="swatch${c.toLowerCase() === String(current).toLowerCase() ? " active" : ""}" data-v="${c}" style="background:${c}" aria-label="${name} colour"></button>`).join("")}</div>`;
     const title = isNew ? "New resident" : `Customize ${resident.name}`;
     const gate = gateShell(`<button id="backMenu" class="back-button">‹ Back</button><h3>${escapeHtml(title)}</h3>
-      <canvas id="lookPreview" class="look-preview" width="16" height="24"></canvas>
+      <div class="look-stage"><canvas id="lookAvatar" class="look-avatar" width="128" height="160"></canvas><canvas id="lookPreview" class="look-preview" width="16" height="24"></canvas>
+        <div class="look-stage-buttons"><button type="button" id="spinLook" class="chip">↻ Turn</button><button type="button" id="worldLook" class="chip">🚀 Sci-fi</button></div></div>
       <form id="characterForm" class="creator-form">${details}
-        <input type="hidden" name="skin" value="${escapeHtml(look.skin)}">
-        <div class="swatch-row">${swatches}</div>
-        <label>Hair<select name="style">${HAIR_STYLES.map(v => option(v, look.style, LOOK_LABELS[v] || v)).join("")}</select></label>
-        <label>Hair color<input name="hair" type="color" value="${escapeHtml(look.hair)}"></label>
-        <label>Accessory<select name="accessory">${ACCESSORIES.map(v => option(v, look.accessory, LOOK_LABELS[v] || v)).join("")}</select></label>
-        <label>Shirt<input name="shirt" type="color" value="${escapeHtml(look.shirt)}"></label>
-        <label>Pants<input name="pants" type="color" value="${escapeHtml(look.pants)}"></label>
-        <label>Shoes<input name="shoes" type="color" value="${escapeHtml(look.shoes)}"></label>
+        ${kidAge ? '<input type="hidden" name="body" value="">' : `<p class="look-label">Body</p>${chips("body", ["masc", "fem"], look.body || (/long|pigtails|buns|bunny|ribbons|curls/.test(look.style) ? "fem" : "masc"), v => v === "masc" ? "💪 Man" : "👩 Woman")}`}
+        <p class="look-label">Skin</p>${swatchRow("skin", SKIN_TONES, look.skin)}
+        <p class="look-label">Hair</p>${chips("style", HAIR_STYLES, look.style)}
+        <p class="look-label">Hair colour</p>${swatchRow("hair", HAIR_COLORS, look.hair)}
+        <p class="look-label">Shirt</p>${swatchRow("shirt", CLOTHES, look.shirt)}
+        <p class="look-label">Pants</p>${swatchRow("pants", CLOTHES, look.pants)}
+        <p class="look-label">Shoes</p>${swatchRow("shoes", CLOTHES, look.shoes)}
+        <p class="look-label">Extras</p>${chips("accessory", ACCESSORIES, look.accessory)}
         <button class="wide-button">${isNew ? "Welcome them to town" : "Save"}</button>
       </form>${editDetails && !isNew ? '<button id="moveAway" class="text-button danger">Move away from town</button>' : ""}`, false, "");
     const form = gate.querySelector("#characterForm");
     const preview = gate.querySelector("#lookPreview").getContext("2d");
+    const avatarCtx = gate.querySelector("#lookAvatar").getContext("2d");
+    let facing = 0, lookWorld = "clay";
     const lookFromForm = () => {
       const data = new FormData(form);
-      return Object.fromEntries(["skin", "hair", "style", "accessory", "shirt", "pants", "shoes"].map(key => [key, data.get(key)]));
+      const out = Object.fromEntries(["skin", "hair", "style", "accessory", "shirt", "pants", "shoes"].map(key => [key, data.get(key)]));
+      if (data.get("body")) out.body = data.get("body");
+      return out;
     };
-    const redraw = () => { preview.clearRect(0, 0, 16, 24); preview.drawImage(buildSprite(lookFromForm(), 0), 0, 0); };
-    form.addEventListener("input", redraw);
-    form.addEventListener("change", redraw);
-    gate.querySelectorAll("[data-skin]").forEach(button => button.addEventListener("click", () => {
-      form.elements.skin.value = button.dataset.skin;
-      gate.querySelectorAll("[data-skin]").forEach(b => b.classList.toggle("active", b === button));
+    const drawAvatar = () => {
+      const AV = window.LivingTownAvatar; if (!AV || !gate.isConnected) return;
+      const l = lookFromForm(), sh = AV.sheet(lookWorld, kidAge ? "kid" : AV.bodyFor(l, 30), l);
+      avatarCtx.clearRect(0, 0, 128, 160);
+      if (!sh) return setTimeout(drawAvatar, 120);
+      avatarCtx.drawImage(sh.canvas, 4 * sh.cw, facing * sh.ch, sh.cw, sh.ch, 0, 0, 128, 160);
+    };
+    const redraw = () => { preview.clearRect(0, 0, 16, 24); preview.drawImage(buildSprite(lookFromForm(), 0), 0, 0); drawAvatar(); };
+    gate.querySelectorAll(".chip-row, .swatch-row").forEach(row => row.addEventListener("click", e => {
+      const b = e.target.closest("button[data-v]"); if (!b) return;
+      form.elements[row.dataset.for].value = b.dataset.v;
+      row.querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
       redraw();
     }));
+    gate.querySelector("#spinLook").addEventListener("click", () => { facing = (facing + 1) % 8; drawAvatar(); });
+    gate.querySelector("#worldLook").addEventListener("click", e => { lookWorld = lookWorld === "clay" ? "scifi" : "clay"; e.target.textContent = lookWorld === "clay" ? "🚀 Sci-fi" : "🤍 Clay"; drawAvatar(); });
     redraw();
     gate.querySelector("#backMenu").addEventListener("click", showProfileMenu);
     gate.querySelector("#moveAway")?.addEventListener("click", async () => {

@@ -487,3 +487,16 @@ button {
 }
 
 .dock-button.hidden { display: none; }
+
+/* character creator: big live 3D preview and thumb-sized chips */
+.look-stage { display: flex; align-items: flex-end; justify-content: center; gap: 12px; padding: 8px; margin: 6px 0 4px; border-radius: 18px; background: radial-gradient(circle at 50% 70%, #ffffff22, #00000022); }
+.look-avatar { width: 128px; height: 160px; image-rendering: auto; }
+.look-stage .look-preview { width: 32px; height: 48px; }
+.look-stage-buttons { display: flex; flex-direction: column; gap: 6px; }
+.look-label { margin: 10px 0 4px; font-weight: 700; font-size: 0.85rem; opacity: 0.8; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { min-height: 38px; padding: 0 12px; border: 0; border-radius: 999px; background: #ffffff1f; color: inherit; font: 600 0.85rem system-ui; }
+.chip.active { background: #4fc3a1; color: #06231a; }
+.swatch-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch-row .swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #ffffff33; }
+.swatch-row .swatch.active { outline: 3px solid #4fc3a1; outline-offset: 2px; }

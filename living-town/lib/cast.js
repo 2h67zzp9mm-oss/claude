@@ -75,6 +75,7 @@ function sanitizeLook(look = {}) {
   for (const key of ["skin", "hair", "shirt", "pants", "shoes"]) if (HEX.test(look?.[key] || "")) out[key] = look[key].toLowerCase();
   if (world.HAIR_STYLES.includes(look?.style)) out.style = look.style;
   if (world.ACCESSORIES.includes(look?.accessory)) out.accessory = look.accessory;
+  if (["masc", "fem"].includes(look?.body)) out.body = look.body;   // grown-ups' 3D body (character creator)
   return out;
 }
 

@@ -1,0 +1,53 @@
+{
+ "version": 1794463618,
+ "cw": 128,
+ "ch": 160,
+ "bodies": {
+  "kid": {
+   "ax": 64.0,
+   "ay": 148.8,
+   "layers": [
+    "hair_buzz",
+    "hair_short",
+    "hair_long",
+    "hair_ponytail",
+    "hair_pigtails",
+    "hair_buns",
+    "hair_curls",
+    "acc_glasses",
+    "acc_bow"
+   ]
+  },
+  "man": {
+   "ax": 64.0,
+   "ay": 148.8,
+   "layers": [
+    "hair_buzz",
+    "hair_short",
+    "hair_long",
+    "hair_ponytail",
+    "hair_pigtails",
+    "hair_buns",
+    "hair_curls",
+    "acc_glasses",
+    "acc_bow",
+    "acc_beard"
+   ]
+  },
+  "woman": {
+   "ax": 64.0,
+   "ay": 148.8,
+   "layers": [
+    "hair_buzz",
+    "hair_short",
+    "hair_long",
+    "hair_ponytail",
+    "hair_pigtails",
+    "hair_buns",
+    "hair_curls",
+    "acc_glasses",
+    "acc_bow"
+   ]
+  }
+ }
+}

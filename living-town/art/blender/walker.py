@@ -24,8 +24,9 @@ def reset():
     so.rotation_euler = (R(50), 0, R(-20))
     return sc, co
 
-def mat(col, rough=0.55, glow=0):
+def mat(col, rough=0.55, glow=0, region=None):
     m = bpy.data.materials.new('clay'); m.use_nodes = True; p = m.node_tree.nodes['Principled BSDF']
+    if region: m['region'] = region
     p.inputs['Base Color'].default_value = (*col, 1); p.inputs['Roughness'].default_value = rough
     if glow: p.inputs['Base Color'].default_value = (*[c * 0.2 for c in col], 1); p.inputs['Emission Color'].default_value = (*col, 1); p.inputs['Emission Strength'].default_value = glow
     return m
@@ -81,7 +82,8 @@ def build(sex, O):
     BUFF = sex == 'male' and not O.get('kid'); lin = (lambda c: c) if O.get('name', '').startswith('clay') else (lambda c: tuple(x ** 2.2 for x in c))  # outfit colours are sRGB
     if O.get('space'):  # trim colour for this walker: gloves, boots, belt
         acc = O['accent_f' if G else 'accent_m']; O = dict(O, skin=acc, boots=acc, belt=acc, bald=True)
-    M = {k: mat(lin(v), 0.75 if k in ('shirt', 'pants', 'hat') else 0.55) for k, v in O.items() if isinstance(v, tuple)}
+    REG = {'skin': 'skin', 'shirt': 'shirt', 'coat': 'shirt', 'vest': 'shirt', 'pants': 'pants', 'skirt': 'pants', 'boots': 'shoes', 'hair': 'hair', 'beard': 'beard', 'glasses': 'glasses', 'bow': 'bow'}
+    M = {k: mat(lin(v), 0.75 if k in ('shirt', 'pants', 'hat') else 0.55, region=REG.get(k)) for k, v in O.items() if isinstance(v, tuple)}
     skin, shirt, pants, boots, belt, hair, eye = (M[k] for k in ('skin', 'shirt', 'pants', 'boots', 'belt', 'hair', 'eye'))
     s = O.get('scale', 0.95 if F else 1.0)  # overall scale
     root = empty('root', None, (0, 0, 0)); root.scale = (s, s, s)
@@ -109,7 +111,22 @@ def build(sex, O):
         g = M['glasses']
         for sx in (-1, 1): blob(head, (sx * 0.05, -0.128, 0.08), (0.034, 0.008, 0.03), g)       # lenses' rims
         blob(head, (0, -0.135, 0.085), (0.02, 0.006, 0.006), g)
-    if O.get('bald'): pass
+    if O.get('bald') or O.get('hairk') == 'none': pass
+    elif O.get('hairk') == 'buzz':
+        blob(head, (0, 0.025, 0.1), (0.135, 0.14, 0.1), hair)                                   # short hair
+    elif O.get('hairk') == 'pigtails':
+        blob(head, (0, 0.03, 0.1), (0.142, 0.148, 0.125), hair)
+        for sx in (-1, 1): blob(head, (sx * 0.15, 0.04, 0.02), (0.05, 0.05, 0.12), hair, (0, R(sx * 20), 0))
+    elif O.get('hairk') == 'buns':
+        blob(head, (0, 0.03, 0.1), (0.142, 0.148, 0.125), hair)
+        for sx in (-1, 1): blob(head, (sx * 0.1, 0.03, 0.2), (0.065, 0.065, 0.06), hair)
+    elif O.get('hairk') == 'curls':
+        for k in range(14):   # curls round the top, sides and back only, never over the face
+            a = R(-10) + R(200) * k / 13; z = 0.08 + 0.1 * ((k * 0.37) % 1)
+            blob(head, (0.13 * math.cos(a), 0.03 + 0.12 * math.sin(a), z + 0.04), (0.06, 0.06, 0.06), hair)
+        blob(head, (0, 0.03, 0.12), (0.13, 0.135, 0.11), hair)
+    elif O.get('hairk') == 'ponytail':
+        blob(head, (0, 0.03, 0.1), (0.14, 0.145, 0.125), hair); blob(head, (0, 0.15, 0.07), (0.08, 0.075, 0.08), hair); blob(head, (0, 0.17, -0.1), (0.05, 0.05, 0.13), hair)
     elif O.get('hairk') == 'short':
         blob(head, (0, 0.03, 0.09), (0.145, 0.15, 0.13), hair); blob(head, (0, 0.06, -0.01), (0.14, 0.11, 0.1), hair)  # bob
     elif O.get('hairk') == 'long':
@@ -121,6 +138,8 @@ def build(sex, O):
         blob(head, (0, 0.17, -0.1), (0.05, 0.05, 0.13), hair)                                   # ponytail
     elif not O.get('bald'):
         blob(head, (0, 0.025, 0.1), (0.135, 0.14, 0.1), hair)                                   # short hair
+    if O.get('bowonly') and O.get('bow'):   # a bow on its own (creator layer)
+        blob(head, (0.09, 0.05, 0.17), (0.06, 0.03, 0.04), M['bow']); blob(head, (0.09, 0.05, 0.17), (0.02, 0.035, 0.02), M['bow'])
     if O.get('skirt'):  # long skirt from the waist to the shins
         blob(hips, (0, 0.01, -0.22), (0.25, 0.22, 0.34), M['skirt']); blob(hips, (0, 0.01, -0.48), (0.27, 0.24, 0.12), M['skirt'])
     if O.get('vest'):
@@ -137,14 +156,15 @@ def build(sex, O):
         for sx in (-1, 1): blob(head, (sx * 0.03, 0.17, 0.03), (0.025, 0.02, 0.07), h, (R(-25), R(sx * 15), 0))
     if O.get('space'):  # round helmet with a glowing visor, backpack and a chest light
         acc = lin(O['skin'])
+        trim = lambda r=0.4, g=0: mat(acc, r, g, region='trim')
         blob(head, (0, 0, 0.05), (0.2, 0.2, 0.2), mat(lin((0.94, 0.91, 0.85)), 0.3))
         blob(head, (0, -0.1, 0.06), (0.16, 0.12, 0.13), mat(lin((0.10, 0.55, 0.75)), 0.15, 0.6))
-        blob(head, (0, 0, -0.13), (0.15, 0.15, 0.04), mat(acc, 0.4))                            # helmet collar
-        blob(head, (0.1, 0.05, 0.25), (0.012, 0.012, 0.06), mat(acc, 0.4)); blob(head, (0.1, 0.05, 0.32), (0.025, 0.025, 0.025), mat(acc, 0.3, 1.5))  # antenna
+        blob(head, (0, 0, -0.13), (0.15, 0.15, 0.04), trim())                            # helmet collar
+        blob(head, (0.1, 0.05, 0.25), (0.012, 0.012, 0.06), trim()); blob(head, (0.1, 0.05, 0.32), (0.025, 0.025, 0.025), trim(0.3, 1.5))  # antenna
         blob(spine, (0, 0.17, 0.3), (0.16, 0.08, 0.19), mat(lin((0.80, 0.76, 0.70)), 0.4))     # backpack
-        for sx in (-1, 1): blob(spine, (sx * 0.08, 0.25, 0.38), (0.025, 0.012, 0.025), mat(acc, 0.3, 1.5))
-        blob(spine, (0, -0.15, 0.36), (0.05, 0.02, 0.04), mat(acc, 0.3, 1.8))                   # chest light
-        for sx in (-1, 1): blob(spine, (sx * 0.1, -0.13, 0.12), (0.035, 0.02, 0.1), mat(acc, 0.4))  # suit stripes
+        for sx in (-1, 1): blob(spine, (sx * 0.08, 0.25, 0.38), (0.025, 0.012, 0.025), trim(0.3, 1.5))
+        blob(spine, (0, -0.15, 0.36), (0.05, 0.02, 0.04), trim(0.3, 1.8))                   # chest light
+        for sx in (-1, 1): blob(spine, (sx * 0.1, -0.13, 0.12), (0.035, 0.02, 0.1), trim())  # suit stripes
     sw = 0.175 if F else (0.26 if BUFF else 0.22); rolled = O.get('sleeves') == 'rolled'
     for side, sx in (('L', 1), ('R', -1)):
         sh = empty('sh' + side, spine, (sx * sw, 0, 0.42)); J['sh' + side] = sh
@@ -183,9 +203,10 @@ def ground(J):  # drop the body so the lowest foot touches the ground
     J['root'].location.z = -low; bpy.context.view_layer.update()
 
 meta = {'cell': [CW, CH], 'dirs': ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'], 'frames': FRAMES}
-OUT_NAME = sys.argv[sys.argv.index('--') + 2] if len(sys.argv) > sys.argv.index('--') + 2 else 'clay'
-O = dict(OUTFITS[OUT_NAME], name=OUT_NAME)
-for sex in (('male', 'female') if O['sex'] == 'both' else (O['sex'],)):
+def main():
+  OUT_NAME = sys.argv[sys.argv.index('--') + 2] if len(sys.argv) > sys.argv.index('--') + 2 else 'clay'
+  O = dict(OUTFITS[OUT_NAME], name=OUT_NAME)
+  for sex in (('male', 'female') if O['sex'] == 'both' else (O['sex'],)):
     sc, cam = reset(); J = build(sex, O); os.makedirs(os.path.join(OUT, sex), exist_ok=True)
     v = world_to_camera_view(sc, cam, Vector((0, 0, 0))); meta[sex] = {'ax': round(v.x * CW, 1), 'ay': round((1 - v.y) * CH, 1)}
     for d in range(DIRS):
@@ -204,4 +225,6 @@ for sex in (('male', 'female') if O['sex'] == 'both' else (O['sex'],)):
         J['root'].keyframe_insert('location', frame=1 + k * 6)
     sc.frame_set(1)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'walker_%s_%s.blend' % (OUT_NAME, sex)))
-json.dump(meta, open(os.path.join(OUT, 'anchors.json'), 'w'), indent=1)
+  json.dump(meta, open(os.path.join(OUT, 'anchors.json'), 'w'), indent=1)
+
+if __name__ == '__main__': main()
