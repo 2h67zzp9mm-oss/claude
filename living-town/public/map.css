@@ -264,3 +264,18 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .home-pop.hidden { display: none; }
 .home-pop .home-actions button { flex: 1 1 45%; min-height: 46px; }
 @keyframes home-pop-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* home plot: daily goals, banners and flying stars */
+.home-right { display: flex; gap: 10px; align-items: center; }
+.home-stars, .home-streak { display: inline-block; padding: 3px 9px; border-radius: 999px; background: #0d192999; }
+.home-goals { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.home-goal { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-radius: 12px; background: #ffffff12; font-size: 0.95rem; }
+.home-goal small { margin-left: auto; opacity: 0.7; }
+.home-goal.done { background: #4fc3a133; }
+.home-flystar { position: absolute; z-index: 8; font-size: 22px; pointer-events: none; }
+.home-banner { position: absolute; z-index: 7; left: 50%; top: calc(56px + env(safe-area-inset-top)); transform: translateX(-50%); max-width: calc(100% - 32px);
+  padding: 10px 16px; border-radius: 16px; background: #fff8dc; color: #2a1d00; font: 600 0.95rem/1.35 system-ui; text-align: center; pointer-events: none;
+  box-shadow: 0 6px 24px #0006; animation: home-banner 2.6s ease-in-out forwards; }
+.home-banner.big { background: linear-gradient(135deg, #ffe27a, #ff9ad5); font-size: 1.05rem; }
+@keyframes home-banner { 0% { transform: translate(-50%, -20px) scale(0.8); opacity: 0; } 10% { transform: translate(-50%, 0) scale(1.05); opacity: 1; }
+  16% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { transform: translate(-50%, -10px); opacity: 0; } }

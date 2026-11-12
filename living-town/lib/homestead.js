@@ -42,6 +42,17 @@ const LEVELS = [
   { beds: 12, crops: ["sunflower", "watermelon"], cost: 60 },
   { beds: 16, crops: ["pumpkin"], cost: 120 }
 ];
+// Daily goals: three little jobs each day, a few ⭐ each, a bonus for all three and a streak for days in a row.
+const GOALS = {
+  plant: { icon: "🌱", n: [2, 3], text: n => `Plant ${n} seeds` },
+  water: { icon: "💧", n: [3, 5], text: n => `Water ${n} times` },
+  harvest: { icon: "🧺", n: [2, 3], text: n => `Pick ${n} crops` },
+  fish: { icon: "🎣", n: [1, 2], text: n => `Catch ${n} fish` },
+  sell: { icon: "📦", n: [1, 1], text: () => "Sell at the crate" },
+  mail: { icon: "✉️", n: [1, 1], text: () => "Check the mailbox" }
+};
+const GOAL_STARS = 3, ALL_BONUS = 5;
+
 function levelOf(h) { return Math.min(LEVELS.length - 1, Math.max(0, Number(h.level) || 0)); }
 function bedsOf(h) { return LEVELS[levelOf(h)].beds; }
 function cropsOf(h) { return LEVELS.slice(0, levelOf(h) + 1).flatMap(l => l.crops); }
@@ -83,6 +94,38 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     }
   }
 
+  function seeded(str) { let x = 2166136261; for (const c of str) x = Math.imul(x ^ c.charCodeAt(0), 16777619); return () => ((x = Math.imul(x ^ (x >>> 15), 2246822507) ^ Math.imul(x ^ (x >>> 13), 3266489909)) >>> 0) / 4294967296; }
+  function daily(h, id, now) {
+    const day = dayKey(now);
+    if (h.daily?.day === day) return h.daily;
+    const rnd = seeded(id + day), kinds = Object.keys(GOALS);
+    const goals = [];
+    while (goals.length < 3) { const k = kinds.splice(Math.floor(rnd() * kinds.length), 1)[0]; const [a, b] = GOALS[k].n; goals.push({ k, n: a + Math.floor(rnd() * (b - a + 1)), have: 0 }); }
+    return (h.daily = { day, goals, done: false });
+  }
+  function streakOf(h, now) {
+    const today = dayKey(now), yesterday = dayKey(now - 86400_000);
+    return h.streakDay === today || h.streakDay === yesterday ? Number(h.streak) || 0 : 0;
+  }
+  // Count a finished job toward today's goals. Returns what just got finished.
+  function bump(h, id, r, kind, amount, now) {
+    const d = daily(h, id, now), done = [];
+    for (const g of d.goals) {
+      if (g.k !== kind || g.have >= g.n) continue;
+      g.have = Math.min(g.n, g.have + amount);
+      if (g.have >= g.n) { r.stars = (Number(r.stars) || 0) + GOAL_STARS; done.push({ icon: GOALS[g.k].icon, text: GOALS[g.k].text(g.n), stars: GOAL_STARS }); }
+    }
+    let all = null;
+    if (!d.done && d.goals.every(g => g.have >= g.n)) {
+      d.done = true;
+      h.streak = streakOf(h, now) + 1; h.streakDay = dayKey(now);
+      const bonus = ALL_BONUS + Math.min(5, h.streak - 1);
+      r.stars = (Number(r.stars) || 0) + bonus;
+      all = { bonus, streak: h.streak };
+    }
+    return { done, all };
+  }
+
   function view(state, id, me, now) {
     const h = home(state, id);
     grow(h, now);
@@ -96,6 +139,8 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       world: WORLDS.includes(h.world) ? h.world : "clay",
       seeds: h.seeds, bag: h.bag, caught: h.caught, stars: me?.stars || 0,
       mail: h.mailDay !== dayKey(now), others,
+      goals: daily(h, id, now).goals.map(g => ({ icon: GOALS[g.k].icon, text: GOALS[g.k].text(g.n), have: g.have, n: g.n })),
+      streak: streakOf(h, now), streakToday: h.streakDay === dayKey(now), goalStars: GOAL_STARS, allBonus: ALL_BONUS,
       crops: CROPS, fish: Object.fromEntries(Object.entries(FISH).map(([k, f]) => [k, { name: f.name, sell: f.sell, biting: inWindow(f.hours, hour) }]))
     };
   }
@@ -112,6 +157,14 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
 
   /** Do something on the home plot. Returns { ok, toast, ... } (the caller sends the new view). */
   function act(state, id, r, msg, now) {
+    const res = doAct(state, id, r, msg, now);
+    if (!res.ok || res.quiet) return res;
+    const h = home(state, id);
+    const kind = { plant: "plant", water: "water", harvest: "harvest", fish: "fish", sell: "sell", mail: "mail" }[msg.action];
+    if (kind) { const g = bump(h, id, r, kind, 1, now); if (g.done.length) res.goals = g.done; if (g.all) res.allGoals = g.all; }
+    return res;
+  }
+  function doAct(state, id, r, msg, now) {
     const h = home(state, id);
     grow(h, now);
     const plot = Number.isInteger(msg.plot) && msg.plot >= 0 && msg.plot < PLOTS ? h.plots[msg.plot] : null;
@@ -129,7 +182,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         if (plot.crop) return { ok: false, toast: "Something's already growing there." };
         if (!(h.seeds[crop] > 0)) return { ok: false, toast: `No ${CROPS[crop].name.toLowerCase()} seeds left. The crate sells them.` };
         h.seeds[crop]--; Object.assign(plot, { crop, growth: 0, grewAt: now, wateredAt: 0, by: r.id });
-        return { ok: true, toast: `${CROPS[crop].emoji} Planted ${CROPS[crop].name.toLowerCase()} seeds. Water them to help them grow!` };
+        return { ok: true, planted: msg.plot, toast: `${CROPS[crop].emoji} Planted ${CROPS[crop].name.toLowerCase()} seeds. Water them to help them grow!` };
       }
       case "water": {
         if (!plot?.crop) return { ok: false, toast: "Plant something first." };
@@ -143,7 +196,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         const c = plot.crop, n = { strawberry: 3, blueberry: 3, carrot: 2, tomato: 2 }[c] || 1;
         h.bag[c] = (h.bag[c] || 0) + n;
         Object.assign(plot, { crop: null, growth: 0, wateredAt: 0 });
-        return { ok: true, toast: `${CROPS[c].emoji} Picked ${n} ${CROPS[c].name.toLowerCase()}${n > 1 ? "s" : ""}!`, harvested: c };
+        return { ok: true, toast: `${CROPS[c].emoji} Picked ${n} ${CROPS[c].name.toLowerCase()}${n > 1 ? "s" : ""}!`, harvested: c, plot: msg.plot, count: n };
       }
       case "fish": {
         // The phone runs the timing game; this records the catch.
@@ -164,7 +217,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         }
         if (!count) return { ok: false, toast: "The crate is empty. Grow or catch something to sell!" };
         r.stars = (Number(r.stars) || 0) + stars;
-        return { ok: true, toast: `📦 Sold ${count} thing${count > 1 ? "s" : ""} for ${stars} ⭐` };
+        return { ok: true, sold: stars, toast: `📦 Sold ${count} thing${count > 1 ? "s" : ""} for ${stars} ⭐` };
       }
       case "buy": {
         const crop = CROPS[msg.crop] ? msg.crop : null;
@@ -201,7 +254,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     }
   }
 
-  return { view, act, home, CROPS, FISH, LEVELS };
+  return { view, act, home, CROPS, FISH, LEVELS, GOALS };
 }
 
 module.exports = { createHomestead, CROPS, FISH };

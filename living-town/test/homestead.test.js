@@ -17,7 +17,7 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   hs.act(state, "home-1", me, { action: "plant", plot: 1, crop: "carrot" }, t0);
   assert.ok(hs.view(state, "home-1", me, t0 + 21 * 60_000).plots[1].growth < 0.5);
   const sold = hs.act(state, "home-1", me, { action: "sell" }, t0 + 22 * 60_000);
-  assert.equal(sold.ok, true); assert.equal(me.stars, 6);
+  assert.equal(sold.ok, true); assert.equal(me.stars - (sold.goals || []).reduce((t, g) => t + g.stars, 0) - (sold.allGoals?.bonus || 0), 6, "6 stars for 2 carrots (plus any goal stars)");
   assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "pumpkin" }, t0).ok, false, "pumpkins need a bigger garden");
   assert.equal(hs.act(state, "home-1", me, { action: "plant", plot: 5, crop: "carrot" }, t0).ok, false, "start with 4 beds");
   assert.equal(hs.act(state, "home-1", me, { action: "upgrade" }, t0).ok, false, "upgrades cost stars");
@@ -38,6 +38,38 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   assert.equal(hs.view(state, "home-1", me, t0).others[0].id, "hazel");
   assert.equal(hs.view(state, "home-2", me, t0).others.length, 0, "other families can't see in");
   roll = 0.99; assert.ok(hs.act(state, "home-1", me, { action: "fish" }, t0 + 4000).fish);
+});
+
+test("home plot: daily goals pay stars, all three pay a bonus, and days in a row make a streak", () => {
+  const hs = createHomestead(); const state = { residents: [] }; const me = { id: "dad", stars: 0 };
+  const day1 = Date.parse("2026-11-11T10:00:00");
+  const goals = hs.view(state, "h", me, day1).goals;
+  assert.equal(goals.length, 3); assert.equal(new Set(goals.map(g => g.text)).size, 3);
+  assert.deepEqual(hs.view(state, "h", me, day1 + 3600_000).goals, goals, "same goals all day");
+  // Do every goal for the day by acting on the raw state.
+  function finishDay(t) {
+    hs.view(state, "h", me, t); const h = hs.home(state, "h"); h.seeds.carrot = 20; const out = [];
+    for (let i = 0; i < 6; i++) {
+      for (const goal of h.daily.goals) {
+        if (goal.have >= goal.n) continue;
+        const k = goal.k, plot = i % 4;
+        if (k === "plant") { h.plots[plot].crop = null; out.push(hs.act(state, "h", me, { action: "plant", plot, crop: "carrot" }, t)); }
+        if (k === "water") { Object.assign(h.plots[plot], { crop: "carrot", growth: 0.1 }); out.push(hs.act(state, "h", me, { action: "water", plot }, t)); }
+        if (k === "harvest") { Object.assign(h.plots[plot], { crop: "carrot", growth: 1 }); out.push(hs.act(state, "h", me, { action: "harvest", plot }, t)); }
+        if (k === "fish") out.push(hs.act(state, "h", me, { action: "fish" }, t + i * 4000));
+        if (k === "sell") { h.bag.carrot = 1; out.push(hs.act(state, "h", me, { action: "sell" }, t)); }
+        if (k === "mail") out.push(hs.act(state, "h", me, { action: "mail" }, t));
+      }
+    }
+    return out;
+  }
+  const out1 = finishDay(day1);
+  assert.equal(out1.flatMap(r => r.goals || []).length, 3, "three goals finished");
+  assert.equal(out1.filter(r => r.allGoals).length, 1, "one all-done bonus");
+  assert.equal(hs.view(state, "h", me, day1).streak, 1);
+  const out2 = finishDay(day1 + 86400_000);
+  assert.equal(out2.find(r => r.allGoals).allGoals.streak, 2, "two days in a row");
+  assert.equal(hs.view(state, "h", me, day1 + 4 * 86400_000).streak, 0, "missing days resets the streak");
 });
 
 test("home plot: the family can switch worlds", () => {
@@ -72,6 +104,7 @@ test("on a real server: the playtest bot plays the whole home plot", async () =>
     const ok = (m, label) => assert.equal(m.result?.ok, true, `${label}: ${m.result?.toast}`);
     const first = await play({ action: "enter" }, null, "enter");
     assert.equal(first.home.beds, 4); assert.equal(first.home.world, "clay");
+    assert.equal(first.home.goals.length, 3, "three daily goals on the phone");
     await play({ action: "plant", plot: 0, crop: "carrot" }, ok, "plant");
     await play({ action: "water", plot: 0 }, ok, "water");
     await play({ action: "plant", plot: 7, crop: "carrot" }, (m, l) => assert.equal(m.result.ok, false, l), "locked bed refused");
@@ -82,6 +115,9 @@ test("on a real server: the playtest bot plays the whole home plot", async () =>
     await play({ action: "buy", crop: "carrot" }, ok, "buy");
     // a lucky golden fish can pay for it; otherwise it's refused for lack of stars
     await play({ action: "upgrade" }, (m, l) => assert.equal(m.result.ok, m.home.beds === 8, l), "upgrade needs stars");
+    // Every job but picking was done once, so each of those goals moved on.
+    const after = await play({ action: "view" }, null, "goals");
+    after.home.goals.filter(g => !/^Pick/.test(g.text)).forEach(g => assert.ok(g.have >= 1, `goal "${g.text}" counted`));
     const sci = await play({ action: "world", world: "scifi" }, ok, "world");
     assert.equal(sci.home.world, "scifi");
     phone.ws.send(JSON.stringify({ type: "home", action: "pos", x: 9, y: 12, dir: 2 }));

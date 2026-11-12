@@ -134,6 +134,80 @@
     bar.querySelectorAll("button").forEach(btn => { btn.onclick = () => buttons[Number(btn.dataset.i)].go(); });
   };
 
+  // --- juice: sparkles, flying stars and little sounds, so every job feels good ---
+  let fx = [], audio = null;
+  let soundOn = (() => { try { return localStorage.getItem("lt-sound") !== "off"; } catch { return true; } })();
+  function tone(freqs, { type = "sine", len = 0.12, gap = 0.07, vol = 0.12 } = {}) {
+    if (!soundOn) return;
+    try {
+      audio ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+      freqs.forEach((f, i) => {
+        const t0 = audio.currentTime + i * gap, o = audio.createOscillator(), g = audio.createGain();
+        o.type = type; o.frequency.setValueAtTime(f, t0);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+        o.connect(g).connect(audio.destination); o.start(t0); o.stop(t0 + len + 0.03);
+      });
+    } catch { /* no sound on this phone */ }
+  }
+  const SFX = {
+    pop: () => tone([660, 990, 1320], { type: "triangle", len: 0.1, gap: 0.05 }),
+    water: () => tone([1400, 1000, 1600], { len: 0.06, gap: 0.05, vol: 0.06 }),
+    plant: () => tone([280, 400], { type: "triangle", len: 0.09, gap: 0.06, vol: 0.09 }),
+    coin: () => tone([988, 1319], { type: "square", len: 0.08, gap: 0.08, vol: 0.04 }),
+    goal: () => tone([523, 659, 784, 1047], { type: "triangle", len: 0.2, gap: 0.09 }),
+    fish: () => tone([420, 840, 630], { len: 0.09, gap: 0.06, vol: 0.08 })
+  };
+  // Particles live in picture pixels, so they stay put while the camera moves.
+  function burst(x, y, z, { n = 10, emoji = null, color = "#ffe27a", speed = 90, up = 120, life = 800, size = 5, gravity = 300 } = {}) {
+    const [px, py] = P(x, y, z), born = performance.now();
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = speed * (0.4 + Math.random() * 0.6);
+      fx.push({ x: px, y: py, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.5 - up * (0.6 + Math.random() * 0.6), g: gravity, born,
+        life: life * (0.7 + Math.random() * 0.5), emoji, color: Array.isArray(color) ? color[i % color.length] : color, size });
+    }
+  }
+  function floatText(x, y, z, text, color = "#fff") { const [px, py] = P(x, y, z); fx.push({ x: px, y: py, vx: 0, vy: -70, g: 0, born: performance.now(), life: 1300, text, color, size: 20 }); }
+  function drawFx(t) {
+    fx = fx.filter(p => t - p.born < p.life);
+    for (const p of fx) {
+      const sec = (t - p.born) / 1000, k = 1 - (t - p.born) / p.life;
+      const [sx, sy] = toScreen(p.x + p.vx * sec, p.y + p.vy * sec + p.g * sec * sec / 2);
+      ctx.globalAlpha = Math.min(1, k * 1.8); ctx.textAlign = "center";
+      if (p.text) { ctx.font = `800 ${p.size}px system-ui`; ctx.lineWidth = 4; ctx.strokeStyle = "#000a"; ctx.strokeText(p.text, sx, sy); ctx.fillStyle = p.color; ctx.fillText(p.text, sx, sy); }
+      else if (p.emoji) { ctx.font = `${Math.round(p.size * 4 * (0.8 + 0.4 * Math.min(1, sec * 4)))}px system-ui`; ctx.fillText(p.emoji, sx, sy); }
+      else { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(sx, sy, Math.max(1, p.size * (0.4 + k * 0.6)), 0, Math.PI * 2); ctx.fill(); }
+    }
+    ctx.globalAlpha = 1;
+  }
+  // Stars fly from where you earned them up to your star counter.
+  function flyStars(x, y, z, n) {
+    const goal = top.querySelector(".home-stars"); if (!goal) return;
+    const [sx, sy] = toScreen(...P(x, y, z)), g = goal.getBoundingClientRect(), box = el.getBoundingClientRect();
+    const tx = g.left - box.left + g.width / 2, ty = g.top - box.top + g.height / 2;
+    for (let i = 0; i < Math.min(8, Math.max(1, n)); i++) {
+      const st = document.createElement("span"); st.className = "home-flystar"; st.textContent = "⭐";
+      st.style.left = sx + "px"; st.style.top = sy + "px"; el.appendChild(st);
+      const dx = (Math.random() - 0.5) * 80;
+      const anim = st.animate([
+        { transform: "translate(-50%,-50%) scale(0.5)", opacity: 0.4 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% - 50px)) scale(1.25)`, opacity: 1, offset: 0.3 },
+        { transform: `translate(calc(-50% + ${tx - sx}px), calc(-50% + ${ty - sy}px)) scale(0.7)`, opacity: 1 }
+      ], { duration: 800 + i * 80, easing: "ease-in", fill: "forwards" });
+      anim.onfinish = () => { st.remove(); goal.animate([{ transform: "scale(1)" }, { transform: "scale(1.4)" }, { transform: "scale(1)" }], { duration: 260 }); if (i === 0) SFX.coin(); };
+    }
+  }
+  let bannerAt = 0;
+  function banner(html, cls = "") {
+    const wait = Math.max(0, bannerAt - performance.now()); bannerAt = performance.now() + wait + 1500;
+    setTimeout(() => {
+      if (!isOpen) return;
+      const b = document.createElement("div"); b.className = `home-banner ${cls}`; b.innerHTML = html; el.appendChild(b);
+      setTimeout(() => b.remove(), 2600);
+    }, wait);
+  }
+  const CONFETTI = ["#ff6b6b", "#ffd84a", "#4fc3a1", "#64b5f6", "#c38bff", "#ff9ad5"];
+
   // --- the pop-up menu right at your finger: tap a thing, it lights up, pick what to do ---
   let pop = null, popAt = null, highlight = null;
   const CLOSERS = /^(Done|OK|Stay|Back)$/;
@@ -171,7 +245,15 @@
     ctx.stroke(); ctx.restore();
   }
   function idleBar() {
-    setBar("", [{ label: "🎒 Bag", go: showBag }, { label: "🎨 Look", go: () => opts.editLook?.() }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
+    const g = view?.goals || [], left = g.filter(x => x.have < x.n).length;
+    setBar("", [{ label: g.length ? (left ? `🎯 Goals ${g.length - left}/${g.length}` : "🎯 All done!") : "🎯 Goals", big: g.length > 0 && left > 0 && left === g.length, go: goalsBar }, { label: "🎒 Bag", go: showBag }, { label: "🎨 Look", go: () => opts.editLook?.() }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
+  }
+  function goalsBar() {
+    const g = view?.goals || [];
+    const rows = g.map(x => `<span class="home-goal ${x.have >= x.n ? "done" : ""}">${x.have >= x.n ? "✅" : x.icon} ${esc(x.text)} <small>${x.have}/${x.n} · +${view.goalStars}⭐</small></span>`).join("");
+    const streak = view?.streak ? `🔥 ${view.streak} day${view.streak > 1 ? "s" : ""} in a row${view.streakToday ? "" : ". Finish today to keep it going!"}` : "Finish all three to start a 🔥 streak!";
+    setBar(`<span class="home-goals"><b>Today’s goals</b>${rows}<span>🎉 All three: +${view?.allBonus ?? 5}⭐ bonus (more for a streak)</span><span>${streak}</span></span>`,
+      [{ label: soundOn ? "🔊 Sound on" : "🔈 Sound off", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "Back", big: true, go: idleBar }]);
   }
   function worldBar() {
     setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); idleBar(); } })), { label: "Back", go: idleBar }]);
@@ -283,10 +365,29 @@
       Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, seen: performance.now() }); others.set(o.id, cur);
     }
     for (const [id, o] of others) if (performance.now() - o.seen > 6000) others.delete(id);
+    if (bar.querySelector("button")?.textContent.startsWith("🎯")) idleBar();   // keep the goals count fresh
     const r = msg.result;
     if (!r) return;
     if (r.toast) opts.toast(r.toast);
-    if (r.splash != null) splash = { plot: r.splash, at: performance.now() };
+    if (r.splash != null) {
+      splash = { plot: r.splash, at: performance.now() }; const pr = plotRect(r.splash);
+      burst(pr.cx, pr.cy, 0.9, { n: 14, color: ["#7cc8ff", "#b5e3ff", "#4aa3e8"], speed: 60, up: 60, gravity: 420, life: 700, size: 3 }); SFX.water();
+    }
+    if (r.planted != null) { const pr = plotRect(r.planted); burst(pr.cx, pr.cy, 0.2, { n: 10, color: ["#8a5a35", "#a8754a", "#6b4426"], speed: 70, up: 70, life: 550, size: 3 }); SFX.plant(); }
+    if (r.harvested) {
+      const pr = plotRect(r.plot ?? 0), em = view.crops[r.harvested]?.emoji || "✨";
+      burst(pr.cx, pr.cy, 0.5, { n: 16, color: ["#fff6b0", "#ffe27a", "#ffffff"], speed: 110, up: 140, life: 900, size: 3 });
+      burst(pr.cx, pr.cy, 0.5, { n: r.count || 1, emoji: em, speed: 40, up: 220, life: 1000, size: 6 });
+      floatText(pr.cx, pr.cy, 1.4, `+${r.count || 1} ${em}`); SFX.pop(); navigator.vibrate?.(25);
+    }
+    if (r.fish && me.target?.cast) { burst(me.target.cast.x, me.target.cast.y, 0, { n: 16, color: ["#7cc8ff", "#ffffff"], speed: 80, up: 150, life: 800, size: 3 }); SFX.fish(); }
+    if (r.sold) { flyStars(L.crate[0], L.crate[1], 1, Math.ceil(r.sold / 3)); floatText(L.crate[0], L.crate[1], 1.6, `+${r.sold} ⭐`, "#ffe27a"); }
+    for (const gl of r.goals || []) {
+      banner(`🎯 Goal done! ${gl.icon} ${esc(gl.text)} <b>+${gl.stars}⭐</b>`);
+      setTimeout(() => { if (!isOpen) return; SFX.goal(); burst(me.x, me.y, 1.6, { n: 26, color: CONFETTI, speed: 150, up: 160, life: 1300, size: 4 }); flyStars(me.x, me.y, 1.4, gl.stars); }, 200);
+    }
+    if (r.allGoals) banner(`🎉 All done today! <b>+${r.allGoals.bonus}⭐</b><br>🔥 ${r.allGoals.streak} day${r.allGoals.streak > 1 ? "s" : ""} in a row`, "big");
+    if (r.goals || r.allGoals) { if (!bar.querySelector(".home-goals") && !r.letter && !r.fish) idleBar(); else if (bar.querySelector(".home-goals")) goalsBar(); }
     if (r.letter) {
       return setBar(`✉️ From ${esc(r.letter.from)}: “${esc(r.letter.text)}”<br>🎁 ${esc(r.letter.gift)}`, [{ label: "Thanks!", big: true, go: idleBar }]);
     }
@@ -394,6 +495,7 @@
     for (const it of items) { if (!drawnHouse && inFront(it)) { house.draw(); drawnHouse = true; } it.draw(); }
     if (!drawnHouse) house.draw();
     drawHighlight(t);
+    drawFx(t);
     // tap marker, splash, fishing bobber
     if (marker && t - marker.at < 700) { const [sx, sy] = toScreen(...P(marker.x, marker.y)); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(sx, sy, 16 * (1 - (t - marker.at) / 900), 7 * (1 - (t - marker.at) / 900), 0, 0, Math.PI * 2); ctx.stroke(); }
     if (splash && t - splash.at < 900) { const r = plotRect(splash.plot); const [sx, sy] = toScreen(...P(r.cx, r.cy)); ctx.font = "26px system-ui"; ctx.textAlign = "center"; ctx.fillText("💧", sx, sy - 30 - (t - splash.at) / 30); }
@@ -406,7 +508,8 @@
       if (bite) { ctx.font = "700 34px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#e5484d"; ctx.fillText("!", sx, sy - 18); if (fishing.phase === "wait") { fishing.phase = "bite"; navigator.vibrate?.(80); bar.querySelector("button.big")?.classList.add("pulse"); } }
       if (t > fishing.biteAt + 1000 && fishing.phase !== "caught") { fishing = null; opts.toast("It got away! Try again."); idleBar(); }
     }
-    top.innerHTML = `<b>🏡 Home</b><span>⭐ ${view?.stars ?? 0}</span>`;
+    const topHtml = `<b>🏡 Home</b><span class="home-right">${view?.streak ? `<span class="home-streak">🔥 ${view.streak}</span>` : ""}<span class="home-stars">⭐ ${view?.stars ?? 0}</span></span>`;
+    if (top.dataset.html !== topHtml) { top.innerHTML = topHtml; top.dataset.html = topHtml; }
   }
 
   // --- open / close ---
@@ -439,6 +542,6 @@
       canvas.addEventListener("click", onTap);
     },
     open, close, onState, get isOpen() { return isOpen; },
-    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me }
+    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me, view: () => view, L: () => L }
   };
 })();
