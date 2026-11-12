@@ -1139,6 +1139,15 @@ function validateClientMessage(raw) {
     if (typeof msg.residentId !== "string" || msg.residentId.length > 64) return null;
     return { type: "inspect", residentId: msg.residentId };
   }
+  if (msg.type === "home") {
+    // The home plot (lib/homestead.js): only known actions and plain fields get through.
+    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world"];
+    if (!HOME.includes(msg.action)) return null;
+    const word = v => typeof v === "string" && v.length <= 32 ? v : undefined;
+    const num = v => Number.isFinite(v) ? v : undefined;
+    return { type: "home", action: msg.action, plot: Number.isInteger(msg.plot) ? msg.plot : undefined, crop: word(msg.crop), world: word(msg.world),
+      x: num(msg.x), y: num(msg.y), dir: num(msg.dir), moving: msg.moving === true };
+  }
   return null;
 }
 

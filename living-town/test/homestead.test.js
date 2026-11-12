@@ -48,3 +48,42 @@ test("home plot: the family can switch worlds", () => {
   assert.equal(hs.view(state, "h", me, 0).world, "scifi");
   assert.equal(hs.act(state, "h", me, { action: "world", world: "nope" }, 0).ok, false);
 });
+
+// Playtest bot: a real server, a signed-in phone, every home plot action over the real connection.
+test("on a real server: the playtest bot plays the whole home plot", async () => {
+  const { tempDir, freePort, spawnServer, waitForStart, api, connectClient, until, stop } = require("./helpers");
+  const dataDir = tempDir("living-town-home-");
+  const port = await freePort();
+  const server = spawnServer(dataDir, port, { LIVING_TOWN_MRE_AI: "off" });
+  try {
+    await waitForStart(server);
+    const owner = (await api(port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
+    const phone = await connectClient(port, { cookie: owner });
+    const results = () => phone.messages.filter(m => m.type === "home-state");
+    const play = async (msg, check, label) => {
+      const n = results().length;
+      phone.ws.send(JSON.stringify({ type: "home", ...msg }));
+      await until(() => results().length > n, label);
+      const last = results().at(-1);
+      assert.ok(!last.error, `${label}: ${last.error}`);
+      if (check) check(last, label);
+      return last;
+    };
+    const ok = (m, label) => assert.equal(m.result?.ok, true, `${label}: ${m.result?.toast}`);
+    const first = await play({ action: "enter" }, null, "enter");
+    assert.equal(first.home.beds, 4); assert.equal(first.home.world, "clay");
+    await play({ action: "plant", plot: 0, crop: "carrot" }, ok, "plant");
+    await play({ action: "water", plot: 0 }, ok, "water");
+    await play({ action: "plant", plot: 7, crop: "carrot" }, (m, l) => assert.equal(m.result.ok, false, l), "locked bed refused");
+    const fished = await play({ action: "fish" }, ok, "fish");
+    assert.ok(fished.home.bag[fished.result.fish] >= 1);
+    await play({ action: "sell" }, ok, "sell");
+    await play({ action: "mail" }, (m, l) => assert.ok(m.result.letter, l), "mail");
+    await play({ action: "buy", crop: "carrot" }, ok, "buy");
+    await play({ action: "upgrade" }, (m, l) => assert.equal(m.result.ok, false, l), "upgrade needs stars");
+    const sci = await play({ action: "world", world: "scifi" }, ok, "world");
+    assert.equal(sci.home.world, "scifi");
+    phone.ws.send(JSON.stringify({ type: "home", action: "pos", x: 9, y: 12, dir: 2 }));
+    await play({ action: "view" }, null, "view");
+  } finally { await stop(server); }
+});
