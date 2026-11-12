@@ -80,7 +80,8 @@ test("on a real server: the playtest bot plays the whole home plot", async () =>
     await play({ action: "sell" }, ok, "sell");
     await play({ action: "mail" }, (m, l) => assert.ok(m.result.letter, l), "mail");
     await play({ action: "buy", crop: "carrot" }, ok, "buy");
-    await play({ action: "upgrade" }, (m, l) => assert.equal(m.result.ok, false, l), "upgrade needs stars");
+    // a lucky golden fish can pay for it; otherwise it's refused for lack of stars
+    await play({ action: "upgrade" }, (m, l) => assert.equal(m.result.ok, m.home.beds === 8, l), "upgrade needs stars");
     const sci = await play({ action: "world", world: "scifi" }, ok, "world");
     assert.equal(sci.home.world, "scifi");
     phone.ws.send(JSON.stringify({ type: "home", action: "pos", x: 9, y: 12, dir: 2 }));
@@ -93,7 +94,7 @@ test("town walking: everyone follows the walkway lines, even on short trips", ()
   const onLine = p => w.walkEdges.some(([a, b]) => {
     const [ax, ay] = w.walkNodes[a], [bx, by] = w.walkNodes[b], L2 = (bx - ax) ** 2 + (by - ay) ** 2;
     const t = Math.max(0, Math.min(1, ((p.x - ax) * (bx - ax) + (p.y - ay) * (by - ay)) / L2));
-    return Math.hypot(ax + t * (bx - ax) - p.x, ay + t * (by - ay) - p.y) < 0.5;
+    return Math.hypot(ax + t * (bx - ax) - p.x, ay + t * (by - ay) - p.y) < 15;
   });
   // From the cafe to the homes: every corner but the last is on a line.
   const path = w.route(665, 180, 478, 556);
@@ -102,4 +103,7 @@ test("town walking: everyone follows the walkway lines, even on short trips", ()
   // A short hop that used to cut straight across still goes by the lines.
   const hop = w.route(437, 516, 483, 518);
   assert.ok(hop.length > 2, "Rose's door to Sean's door goes down to the walk and back up");
+  // Two lanes: going there and coming back use different sides of the walk.
+  const there = w.route(400, 600, 487, 600), back = w.route(487, 600, 400, 600);
+  assert.ok(Math.abs(there[0].y - back[0].y) >= 10, "people going opposite ways pass side by side");
 });

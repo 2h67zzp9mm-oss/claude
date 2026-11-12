@@ -125,7 +125,8 @@ test("walkway routes stay on the paths and every family has its own door", () =>
   const path = world.route(world.places.park.x, world.places.park.y, world.places.market.x, world.places.market.y);
   assert.ok(path.length > 3, "long trips follow several walkway segments");
   for (const point of path.slice(0, -1)) {
-    assert.ok(Object.values(world.walkNodes).some(([x, y]) => x === point.x && y === point.y), "intermediate points are walkway nodes");
+    // each corner is a walkway node, shifted into the right-hand lane
+    assert.ok(Object.values(world.walkNodes).some(([x, y]) => Math.hypot(x - point.x, y - point.y) <= 15), "intermediate points are walkway nodes");
   }
   assert.notDeepStrictEqual(world.spotFor("finn", "homes"), world.spotFor("dad", "homes"));
   assert.deepStrictEqual(world.spotFor("olive", "homes"), world.spotFor("hazel", "homes"));

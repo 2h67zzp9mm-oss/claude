@@ -218,6 +218,22 @@
     return best;
   }
 
+  // Two lanes: walk a little to the right of the line, so people going opposite
+  // ways pass each other instead of bumping into each other.
+  const LANE = 7;
+  function keepRight(from, points, target) {
+    const all = [from, ...points, target];
+    const unit = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1; return { x: dx / l, y: dy / l }; };
+    for (let i = 1; i <= points.length; i++) {
+      const din = unit(all[i - 1], all[i]), dout = unit(all[i], all[i + 1]);
+      const nin = { x: -din.y, y: din.x }, nout = { x: -dout.y, y: dout.x };   // right-hand side (y points down)
+      let nx = nin.x + nout.x, ny = nin.y + nout.y; const l = Math.hypot(nx, ny);
+      if (l < 0.2) { nx = nout.x; ny = nout.y; } else { nx /= l; ny /= l; }
+      const k = LANE / Math.max(0.5, nx * nin.x + ny * nin.y);              // keep the lane width round corners
+      points[i - 1] = { x: points[i - 1].x + nx * k, y: points[i - 1].y + ny * k };
+    }
+  }
+
   /**
    * Waypoints from (fx, fy) to (tx, ty). The walkway lines are the rule: step
    * onto the nearest line, follow the lines, and only leave them for the last
@@ -249,7 +265,9 @@
     const add = p => { const last = points[points.length - 1] || { x: fx, y: fy }; if (Math.hypot(p.x - last.x, p.y - last.y) > 1) points.push({ x: p.x, y: p.y }); };
     if (s.dist > 1) add(s);
     middle.forEach(add);
-    add(e); add(target);
+    add(e);
+    keepRight({ x: fx, y: fy }, points, target);
+    add(target);
     if (!points.length) points.push(target);
     return points;
   }
