@@ -7,7 +7,7 @@
   // Worlds: same plot and gameplay, different paint. Art for each lives in homestead/worlds/<id>/.
   const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/", cover: "rgba(206,203,197,0.92)" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/", cover: "rgba(138,122,154,0.94)" } };
   let world = "clay";
-  const SPEED = 2.6;          // metres per second
+  const SPEED = 5;            // metres per second (2.6 felt far too slow on a phone)
   const CELL = 0.25;          // walk grid
   const DIRS = 8;
   let L = null, A = null, imgs = {}, ready = null;
@@ -287,7 +287,7 @@
     } catch (err) { console.error(err); }
   }
   function draw(t) {
-    const dpr = window.devicePixelRatio || 1, cw = canvas.clientWidth, ch = canvas.clientHeight;
+    const dpr = Math.min(2, window.devicePixelRatio || 1), cw = canvas.clientWidth, ch = canvas.clientHeight;
     if (canvas.width !== Math.round(cw * dpr)) { canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     cam.z = Math.max(0.42, Math.min(1, cw / 760));
