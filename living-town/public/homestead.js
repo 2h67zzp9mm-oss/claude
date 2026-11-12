@@ -18,8 +18,10 @@
 
   function load() {
     if (ready) return ready;
-    const img = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = BASE + src; });
-    ready = Promise.all([fetch("homestead/layout.json").then(r => r.json()), fetch(BASE + "art.json").then(r => r.json())]).then(async ([layout, art]) => {
+    let ver = "";
+    const img = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = BASE + src + ver; });
+    ready = Promise.all([fetch("homestead/layout.json", { cache: "no-cache" }).then(r => r.json()), fetch(BASE + "art.json", { cache: "no-cache" }).then(r => r.json())]).then(async ([layout, art]) => {
+      ver = "?v=" + (art.version || Date.now());   // new art = new URLs, so phones never mix old pictures with new
       const names = ["ground", "house", "sprites", ...Object.keys(art.walkers).map(k => "walk_" + k)];
       const loaded = await Promise.all(names.map(n => img(n + ".webp")));
       L = layout; A = art; names.forEach((n, i) => { imgs[n] = loaded[i]; });
@@ -289,7 +291,6 @@
       return setBar(`✉️ From ${esc(r.letter.from)}: “${esc(r.letter.text)}”<br>🎁 ${esc(r.letter.gift)}`, [{ label: "Thanks!", big: true, go: idleBar }]);
     }
     if (r.fish) { fishing = null; return setBar(`${sprIcon("fish_" + r.fish, 64)} ${esc(view.fish[r.fish].name)}${r.first ? " · new!" : ""}`, [{ label: "🎣 Again", big: true, go: () => startFishing(me.target) }, { label: "Done", go: idleBar }]); }
-    if (popAt && me.popTarget && me.target === me.popTarget && !me.path.length && !fishing) showPop(me.popTarget, popAt);
   }
 
   // --- drawing ---
@@ -336,7 +337,7 @@
       if (wasMoving && !me.path.length && me.target) {
         if (me.target.kind === "pond") faceToward(me.target.cast.x, me.target.cast.y);
         highlight = null;
-        if (me.pending) { const go = me.pending; me.pending = null; go(); }
+        if (me.pending) { const go = me.pending; me.pending = null; popAt = null; go(); }
         else if (me.target.kind === "exit") close();
       }
       for (const o of others.values()) {

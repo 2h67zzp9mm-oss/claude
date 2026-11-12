@@ -51,5 +51,6 @@ for folder, kinds in ((WALK[0], ('male', 'female')), (WALK[1], ('male', 'female'
                 sheet.alpha_composite(im.crop((X0, Y0, X0 + OW, Y0 + OH)).resize((ow, oh), Image.LANCZOS), (f * ow, d * oh))
         sheet.save(os.path.join(OUT, 'walk_%s.webp' % key), quality=92, method=6)
         a = meta[sex]; art['walkers'][key] = {'cw': ow, 'ch': oh, 'ax': round((a['ax'] - X0) * SC, 1), 'ay': round((a['ay'] - Y0) * SC, 1)}
+import time; art['version'] = int(time.time())
 json.dump(art, open(os.path.join(OUT, 'art.json'), 'w'), indent=1)
 print('ok', {k: v for k, v in art['walkers'].items()})
