@@ -20,21 +20,21 @@ THEME = os.environ.get('THEME', 'clay')
 TINT = [None]   # while set, plain clay parts take this colour (e.g. plants)
 # clay colour -> (colour, glow, metallic)
 SCIFI = {
-    CLAY: ((0.80, 0.74, 0.64), 0, 0.1), DARK: ((0.10, 0.75, 0.95), 2.5, 0), WET: ((0.12, 0.14, 0.22), 0, 0),
+    CLAY: ((0.62, 0.57, 0.50), 0, 0.1), DARK: ((0.10, 0.75, 0.95), 2.5, 0), WET: ((0.12, 0.14, 0.22), 0, 0),
     (0.72, 0.70, 0.67): ((0.32, 0.35, 0.44), 0, 0.6), (0.74, 0.72, 0.69): ((0.25, 0.80, 0.95), 0.8, 0),
     (0.42, 0.44, 0.46): ((0.05, 0.85, 0.75), 1.6, 0), (0.70, 0.68, 0.65): ((0.16, 0.13, 0.22), 0, 0),
-    'ground': ((0.15, 0.07, 0.22), 0, 0), 'plant': ((0.25, 0.85, 0.55), 0.5, 0), 'crystal': ((0.85, 0.25, 0.75), 2.0, 0),
+    'ground': ((0.15, 0.075, 0.19), 0, 0), 'plant': ((0.25, 0.85, 0.55), 0.5, 0), 'crystal': ((0.85, 0.25, 0.75), 2.0, 0),
     'beacon': ((0.3, 1.0, 0.45), 3.0, 0), 'off': ((0.2, 0.22, 0.28), 0, 0.4), 'accent': ((1.0, 0.55, 0.15), 1.2, 0),
-    'panel': ((0.55, 0.52, 0.48), 0, 0.2), 'glow': ((0.02, 0.65, 1.0), 2.2, 0), 'wood': ((0.40, 0.22, 0.12), 0, 0),
-    'soil': ((0.16, 0.09, 0.10), 0, 0), 'trunk': ((0.16, 0.07, 0.05), 0, 0), 'cap': ((0.07, 0.36, 0.22), 0, 0),
-    'capdot': ((0.30, 0.62, 0.45), 0, 0), 'rock': ((0.12, 0.07, 0.17), 0, 0), 'cliff': ((0.09, 0.04, 0.13), 0, 0),
-    'water': ((0.02, 0.62, 0.55), 0.9, 0), 'pad': ((0.30, 0.65, 0.35), 0.2, 0), 'tile': ((0.08, 0.60, 0.85), 0.9, 0),
-    'shrub': ((0.06, 0.32, 0.26), 0.1, 0), 'dark': ((0.12, 0.10, 0.16), 0, 0.3), 'moss': ((0.42, 0.30, 0.50), 0, 0),
+    'panel': ((0.55, 0.52, 0.48), 0, 0.2), 'glow': ((0.0, 0.9, 1.0), 2.2, 0), 'wood': ((0.38, 0.18, 0.08), 0, 0),
+    'soil': ((0.16, 0.09, 0.10), 0, 0), 'trunk': ((0.20, 0.09, 0.06), 0, 0), 'cap': ((0.13, 0.36, 0.28), 0, 0),
+    'capdot': ((0.30, 0.55, 0.45), 0, 0), 'rock': ((0.17, 0.09, 0.22), 0, 0), 'cliff': ((0.13, 0.06, 0.17), 0, 0),
+    'water': ((0.05, 0.9, 0.75), 1.1, 0), 'pad': ((0.30, 0.65, 0.35), 0.2, 0), 'tile': ((0.25, 0.85, 0.95), 0.8, 0),
+    'shrub': ((0.10, 0.38, 0.33), 0, 0), 'dark': ((0.12, 0.10, 0.16), 0, 0.3), 'moss': ((0.42, 0.30, 0.50), 0, 0),
     'c_carrot': ((1.0, 0.45, 0.1), 2.4, 0), 'c_strawberry': ((1.0, 0.2, 0.45), 2.4, 0), 'c_tomato': ((1.0, 0.25, 0.15), 2.4, 0),
     'c_blueberry': ((0.3, 0.45, 1.0), 2.4, 0), 'c_corn': ((1.0, 0.85, 0.2), 2.4, 0), 'c_sunflower': ((1.0, 0.75, 0.1), 2.4, 0),
     'r0': ((1.0, 0.25, 0.7), 2.2, 0), 'r1': ((0.1, 0.85, 1.0), 2.2, 0), 'r2': ((0.6, 0.3, 1.0), 2.2, 0), 'r3': ((1.0, 0.8, 0.15), 2.2, 0), 'r4': ((0.4, 1.0, 0.3), 2.2, 0),
     'lampglow': ((1.0, 0.85, 0.55), 3.5, 0),
-    'c_watermelon': ((0.3, 1.0, 0.4), 2.4, 0), 'c_pumpkin': ((1.0, 0.5, 0.05), 2.4, 0), 'leaf': ((0.1, 0.8, 0.55), 1.2, 0),
+    'c_watermelon': ((0.3, 1.0, 0.4), 2.4, 0), 'c_pumpkin': ((1.0, 0.5, 0.05), 2.4, 0), 'leaf': ((0.12, 0.55, 0.40), 0.15, 0),
 }
 SKY = {'clay': (0.62, 0.68, 0.78), 'scifi': (0.42, 0.30, 0.62)}[THEME]
 
@@ -52,7 +52,9 @@ def reset(w, h, scale, centre):
     cam.clip_end = 200
     sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 3.2; sun.angle = R(10); so = bpy.data.objects.new('sun', sun); sc.collection.objects.link(so)
     so.rotation_euler = (R(50), 0, R(-20))
-    if THEME == 'scifi':   # bloom, so glowing things bleed light like the concept art
+    if THEME == 'scifi':
+        sun.color = (1.0, 0.86, 0.78); sun.energy = 2.7
+        rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 1.2; rim.color = (0.55, 0.6, 1.0); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))   # bloom, so glowing things bleed light like the concept art
         nt = bpy.data.node_groups.new('comp', 'CompositorNodeTree'); sc.compositing_node_group = nt
         nt.interface.new_socket('Image', in_out='OUTPUT', socket_type='NodeSocketColor')
         rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
@@ -70,10 +72,10 @@ def mat(col, rough=0.6):
     p.inputs['Metallic'].default_value = metal
     if glow:   # dark base + coloured light, so glowing things stay saturated instead of clipping to white
         p.inputs['Base Color'].default_value = (*[c * 0.2 for c in base], 1)
-        p.inputs['Emission Color'].default_value = (*base, 1); p.inputs['Emission Strength'].default_value = min(glow, 1.4)
+        p.inputs['Emission Color'].default_value = (*base, 1); p.inputs['Emission Strength'].default_value = 0.85 if (isinstance(col, str) and (col.startswith('c_') or col[:1] == 'r' and col[1:].isdigit())) else min(glow, 1.4)
     if THEME == 'scifi' and col in ('ground', 'rock', 'cliff', 'moss'):   # speckled, like rough alien soil
-        nt = m.node_tree; n = nt.nodes.new('ShaderNodeTexNoise'); n.inputs['Scale'].default_value = 9; n.inputs['Detail'].default_value = 6
-        ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].color = (*[c * 0.72 for c in base], 1); ramp.color_ramp.elements[1].color = ((min(1, base[0] * 1.9), base[1] * 1.1, min(1, base[2] * 1.6), 1) if col == 'ground' else (*[min(1, c * 1.25) for c in base], 1))
+        nt = m.node_tree; n = nt.nodes.new('ShaderNodeTexNoise'); n.inputs['Scale'].default_value = 14; n.inputs['Detail'].default_value = 8
+        ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].color = (*[c * 0.72 for c in base], 1); ramp.color_ramp.elements[1].color = ((min(1, base[0] * 1.5), base[1] * 1.15, min(1, base[2] * 1.35), 1) if col == 'ground' else (*[min(1, c * 1.25) for c in base], 1))
         nt.links.new(n.outputs['Fac'], ramp.inputs['Fac']); nt.links.new(ramp.outputs['Color'], p.inputs['Base Color'])
     _mats[col] = m; return m
 
@@ -135,9 +137,6 @@ def ground_scene():
             put(bpy.context.object, (0.74, 0.72, 0.69))
     # garden beds (raised soil) and a low picket fence with a gate
     G = L['garden']; ps = G['plot']
-    for (x, y) in G['plots']:
-        box(x, y, -0.02, x + ps, y + ps, 0.14, (0.70, 0.68, 0.65))
-        for r in range(3): box(x + 0.1, y + 0.12 + r * 0.4, 0.14, x + ps - 0.1, y + 0.3 + r * 0.4, 0.2, (0.70, 0.68, 0.65))  # furrows
     gx, gy, gw = G['gate']
     def fence(ax, ay, bx, by):
         n = max(1, int(math.hypot(bx - ax, by - ay) / 0.5))
@@ -232,9 +231,6 @@ def ground_scifi():
             o = rbox(x - 0.3, y - 0.24, -0.01, x + 0.3, y + 0.24, 0.05, 'tile', 0.08); o.rotation_euler = (0, 0, ang)
     # wooden garden beds of dark soil, cream fence with posts
     G = L['garden']; ps = G['plot']
-    for (x, y) in G['plots']:
-        rbox(x, y, -0.02, x + ps, y + ps, 0.2, 'wood', 0.04)
-        box(x + 0.09, y + 0.09, 0.2, x + ps - 0.09, y + ps - 0.09, 0.22, 'soil')
     gx, gy, gw = G['gate']
     def fence(ax, ay, bx, by):
         n = max(1, int(math.hypot(bx - ax, by - ay) / 0.7))
@@ -247,6 +243,18 @@ def ground_scifi():
     x0, y0, x1, y1 = G['x0'], G['y0'], G['x1'], G['y1']
     fence(x0, y0, x1, y0); fence(x0, y1, x1, y1); fence(x0, y0, x0, y1)
     fence(x1, y0, x1, gy - gw / 2); fence(x1, gy + gw / 2, x1, y1)
+    # lots of flat pebbles everywhere (low enough to walk over), clustered like the concept's ground
+    import random as _r; rr = _r.Random(3)
+    def clear(x, y):
+        h = L['house']; P = L['pond']; G = L['garden']
+        if h['x0'] - 0.3 < x < h['x1'] + 0.7 and h['y0'] - 0.3 < y < h['y1'] + 0.3: return False
+        if ((x - P['x']) / P['rx']) ** 2 + ((y - P['y']) / P['ry']) ** 2 < 1.05: return False
+        if G['x0'] < x < G['x1'] and G['y0'] < y < G['y1']: return False
+        return True
+    for k in range(420):
+        x, y = rr.uniform(0.2, S - 0.2), rr.uniform(0.2, S - 0.2)
+        if not clear(x, y): continue
+        r = rr.uniform(0.05, 0.16); ball(x, y, 0.0, r * 1.3, r, r * 0.35, 'rock' if k % 3 else 'moss')
     # scattered pebbles and shrubs only where nobody walks (the margins)
     for k in range(26):
         t = (k * 0.81) % S
@@ -344,6 +352,23 @@ def crate():
     box(-0.45, -0.45, 0, 0.45, 0.45, 0.7)
     for z in (0.18, 0.45): box(-0.47, -0.47, z, 0.47, 0.47, z + 0.06)
     box(-0.5, -0.5, 0.7, 0.5, 0.5, 0.8)
+def bed():
+    ps = L['garden']['plot']; h = ps / 2
+    if THEME == 'scifi':
+        rbox(-h, -h, -0.02, h, h, 0.2, 'wood', 0.04); box(-h + 0.09, -h + 0.09, 0.2, h - 0.09, h - 0.09, 0.22, 'soil')
+    else:
+        box(-h, -h, -0.02, h, h, 0.14, (0.70, 0.68, 0.65))
+        for r in range(3): box(-h + 0.1, -h + 0.12 + r * 0.4, 0.14, h - 0.1, -h + 0.3 + r * 0.4, 0.2, (0.70, 0.68, 0.65))
+def alien_crop(c, st):
+    # leafy rosette that grows, then glowing crystal buds in the crop's own colour
+    n = (4, 7, 9)[st]; L0 = (0.18, 0.32, 0.42)[st]
+    for k in range(n):
+        a = k * 2.4; bpy.ops.mesh.primitive_cone_add(vertices=8, radius1=0.07 + 0.02 * st, depth=L0, location=(0.08 * math.cos(a), 0.08 * math.sin(a), 0.22 + L0 / 2), rotation=(R(35) * math.cos(a), R(35) * math.sin(a), 0)); put(bpy.context.object, 'leaf', True)
+    if st >= 1:
+        for k in range(1 if st == 1 else 5):
+            a = k * 1.3 + 0.4; d = 0 if k == 0 else 0.18; hgt = (0.22 if st == 1 else 0.34) - 0.05 * (k > 0)
+            bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.06 + 0.03 * (st == 2), depth=hgt, location=(d * math.cos(a), d * math.sin(a), 0.3 + hgt / 2), rotation=(R(12) * math.cos(a) * (k > 0), R(12) * math.sin(a) * (k > 0), 0))
+            put(bpy.context.object, 'c_' + c)
 def wet(): box(-0.55, -0.55, 0.22, 0.55, 0.55, 0.235, WET) if THEME == 'scifi' else box(-0.62, -0.62, 0.15, 0.62, 0.62, 0.21, WET)
 CROPS = {
     'carrot':     lambda st: [ball(0.2 * (k - 1), 0, 0.3 + 0.1 * st, 0.06, 0.06, 0.18 + 0.08 * st) for k in range(3)] + ([cone(0.2 * (k - 1), 0, 0.1, 0.08, 0.2) for k in range(3)] if st == 2 else []),
@@ -392,13 +417,14 @@ if mode in ('all', 'sprites'):
     anchors['mailbox'] = sprite('mailbox', lambda: beacon(False) if sf else mailbox(False), 2.4)
     anchors['crate'] = sprite('crate', pod if sf else crate, 2.0)
     anchors['wet'] = sprite('wet', wet, 2.0)
+    anchors['bed'] = sprite('bed', bed, 2.0)
     anchors['lamp'] = sprite('lamp', lamp, 2.0)
     for kind in ('flower', 'shroom', 'succulent', 'orb'):
         for c in range(5): anchors['%s_%d' % (kind, c)] = sprite('%s_%d' % (kind, c), lambda kind=kind, c=c: (plant(kind, c), scale_all(1.7)), 1.9)
     for c, f in CROPS.items():
         for st in range(3):
-            TINT[0] = (('leaf' if st == 0 else 'c_' + c) if sf else None)
-            anchors['%s_%d' % (c, st)] = sprite('%s_%d' % (c, st), lambda f=f, st=st: f(st), 2.0)
+            build = (lambda c=c, st=st: alien_crop(c, st)) if sf else (lambda f=f, st=st: f(st))
+            anchors['%s_%d' % (c, st)] = sprite('%s_%d' % (c, st), build, 2.0)
     TINT[0] = 'crystal' if sf else None
     for k, n in enumerate(FISH): anchors['fish_' + n] = sprite('fish_' + n, lambda k=k: fish(k), 2.2, 160, side=True)
     TINT[0] = None

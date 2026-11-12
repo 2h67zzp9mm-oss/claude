@@ -5,7 +5,7 @@
   "use strict";
   let BASE = "homestead/";
   // Worlds: same plot and gameplay, different paint. Art for each lives in homestead/worlds/<id>/.
-  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/", cover: "rgba(206,203,197,0.92)" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/", cover: "rgba(86,62,104,0.95)" } };
+  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/" } };
   let world = "clay";
   const SPEED = 5;            // metres per second (2.6 felt far too slow on a phone)
   const CELL = 0.25;          // walk grid
@@ -187,12 +187,6 @@
     }
     ctx.drawImage(space, 0, 0);
   }
-  // beds you haven't unlocked yet: covered over with grass
-  function coverBed(r) {
-    ctx.save(); ctx.fillStyle = WORLDS[world].cover; ctx.beginPath();
-    [[r.x0 - 0.08, r.y0 - 0.08], [r.x1 + 0.08, r.y0 - 0.08], [r.x1 + 0.08, r.y1 + 0.08], [r.x0 - 0.08, r.y1 + 0.08]].forEach(([x, y], i) => { const [sx, sy] = toScreen(...P(x, y, 0.2)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
-    ctx.fill(); ctx.restore();
-  }
   function walkTo(t) {
     fishing = null;
     me.target = t; me.path = route(t.x, t.y); marker = { x: t.x, y: t.y, at: performance.now() };
@@ -309,7 +303,7 @@
     const dpr = Math.min(2, window.devicePixelRatio || 1), cw = canvas.clientWidth, ch = canvas.clientHeight;
     if (canvas.width !== Math.round(cw * dpr)) { canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cam.z = Math.max(0.42, Math.min(1, cw / 760));
+    cam.z = Math.max(0.38, Math.min(1, cw / 880));   // a bit wider so the garden is in view
     const [px, py] = P(me.x, me.y, 0.9), G = imgs.ground;
     const wantX = Math.max(-40, Math.min(G.width - cw / cam.z + 40, px - cw / cam.z / 2));
     const wantY = Math.max(-40, Math.min(G.height - ch / cam.z + 40, py - ch / cam.z * 0.42));
@@ -321,7 +315,8 @@
     const items = [];
     (view?.plots || []).forEach((p, k) => {
       const r = plotRect(k);
-      if (k >= view.beds) { items.push({ d: r.cx - r.cy - 0.7, draw: () => coverBed(r) }); return; }
+      if (k >= view.beds) return;   // not dug yet: just ground
+      items.push({ d: r.cx - r.cy - 0.8, draw: () => drawSprite("bed", r.cx, r.cy) });
       if (p.wet) items.push({ d: r.cx - r.cy - 0.6, draw: () => drawSprite("wet", r.cx, r.cy) });
       if (p.crop) items.push({ d: r.cx - r.cy, draw: () => drawSprite(`${p.crop}_${p.growth >= 1 ? 2 : p.growth >= 0.4 ? 1 : 0}`, r.cx, r.cy) });
     });

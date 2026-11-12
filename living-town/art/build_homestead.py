@@ -2,23 +2,28 @@
 # python art/build_homestead.py RENDER_DIR WALKER_DIR
 #   RENDER_DIR: output of art/blender/homestead.py; WALKER_DIR: holds clay/ and clay_kid/ from art/blender/walker.py
 import sys, os, json
-from PIL import Image
+from PIL import Image, ImageEnhance
+# sci-fi: punch up colour so it pops on a phone (walkers are left alone)
+def pop(im):
+    if WORLD != 'scifi': return im
+    a = im.getchannel('A'); rgb = ImageEnhance.Contrast(ImageEnhance.Color(im.convert('RGB')).enhance(1.2)).enhance(1.1)
+    rgb = ImageEnhance.Brightness(rgb).enhance(1.05); out = rgb.convert('RGBA'); out.putalpha(a); return out
 RD, WD = sys.argv[1], sys.argv[2]
 WORLD = sys.argv[3] if len(sys.argv) > 3 else ''   # e.g. scifi -> public/homestead/worlds/scifi/
 OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'homestead', *(['worlds', WORLD] if WORLD else [])); os.makedirs(OUT, exist_ok=True)
 cam = json.load(open(os.path.join(RD, 'camera.json')))
 art = {'camera': cam, 'sprites': {}, 'walkers': {}, 'bg': {'scifi': '#2b1d47'}.get(WORLD, '#7d8fae')}
 
-g = Image.open(os.path.join(RD, 'ground.png')).convert('RGBA')
+g = pop(Image.open(os.path.join(RD, 'ground.png')).convert('RGBA'))
 g.save(os.path.join(OUT, 'ground.webp'), quality=88, method=6)
-h = Image.open(os.path.join(RD, 'house.png')).convert('RGBA'); bb = h.getbbox()
+h = pop(Image.open(os.path.join(RD, 'house.png')).convert('RGBA')); bb = h.getbbox()
 h.crop(bb).save(os.path.join(OUT, 'house.webp'), quality=90, method=6)
 art['house'] = {'x': bb[0], 'y': bb[1], 'w': bb[2] - bb[0], 'h': bb[3] - bb[1]}
 
 anchors = json.load(open(os.path.join(RD, 'sprites', '..', 'anchors.json')))
 sheet_items = []
 for name, (ax, ay) in anchors.items():
-    im = Image.open(os.path.join(RD, 'sprites', name + '.png')).convert('RGBA'); bb = im.getbbox()
+    im = pop(Image.open(os.path.join(RD, 'sprites', name + '.png')).convert('RGBA')); bb = im.getbbox()
     if not bb: continue
     sheet_items.append((name, im.crop(bb), ax - bb[0], ay - bb[1]))
 # one atlas for all the small things
