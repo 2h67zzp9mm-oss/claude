@@ -134,6 +134,9 @@
     const C = view.crops;
     if (t.kind === "plot") {
       const p = view.plots[t.plot];
+      if (t.plot >= view.beds) return view.upgrade
+        ? setBar(`🔒 Not dug yet. Upgrade at the crate (${view.upgrade.cost} ⭐) for ${view.upgrade.beds} beds.`, [{ label: "OK", go: idleBar }])
+        : idleBar();
       if (!p.crop) {
         const seeds = Object.entries(view.seeds).filter(([, n]) => n > 0);
         if (!seeds.length) return setBar("No seeds. The crate by the house sells them.", [{ label: "OK", go: idleBar }]);
@@ -146,7 +149,8 @@
     if (t.kind === "crate") {
       const n = Object.entries(view.bag).filter(([k]) => C[k] || view.fish[k]).reduce((s, [, v]) => s + v, 0);
       return setBar(`📦 Shipping crate · you have ${view.stars} ⭐`, [{ label: `Sell all (${n})`, big: n > 0, off: !n, go: () => act("sell") },
-        ...Object.entries(C).map(([k, c]) => ({ label: `🌱 ${c.emoji} ${c.seed}⭐`, off: view.stars < c.seed, go: () => act("buy", { crop: k }) }))]);
+        ...(view.upgrade ? [{ label: `🌱 Bigger garden ${view.upgrade.cost}⭐`, big: view.stars >= view.upgrade.cost, off: view.stars < view.upgrade.cost, go: () => act("upgrade") }] : []),
+        ...view.shop.map(k => [k, C[k]]).map(([k, c]) => ({ label: `🌱 ${c.emoji} ${c.seed}⭐`, off: view.stars < c.seed, go: () => act("buy", { crop: k }) }))]);
     }
     if (t.kind === "mailbox") return setBar(view.mail ? "✉️ You've got mail!" : "No new mail today.", [{ label: "✉️ Open", big: view.mail, go: () => act("mail") }, { label: "Done", go: idleBar }]);
     if (t.kind === "door") return setBar("Your house", [{ label: "🏠 Go inside", big: true, go: () => opts.openHouse() }, { label: "Done", go: idleBar }]);
@@ -154,6 +158,12 @@
     idleBar();
   }
 
+  // beds you haven't unlocked yet: covered over with grass
+  function coverBed(r) {
+    ctx.save(); ctx.fillStyle = "rgba(206,203,197,0.92)"; ctx.beginPath();
+    [[r.x0 - 0.08, r.y0 - 0.08], [r.x1 + 0.08, r.y0 - 0.08], [r.x1 + 0.08, r.y1 + 0.08], [r.x0 - 0.08, r.y1 + 0.08]].forEach(([x, y], i) => { const [sx, sy] = toScreen(...P(x, y, 0.2)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+    ctx.fill(); ctx.restore();
+  }
   function walkTo(t) {
     fishing = null;
     me.target = t; me.path = route(t.x, t.y); marker = { x: t.x, y: t.y, at: performance.now() };
@@ -281,6 +291,7 @@
     const items = [];
     (view?.plots || []).forEach((p, k) => {
       const r = plotRect(k);
+      if (k >= view.beds) { items.push({ d: r.cx - r.cy - 0.7, draw: () => coverBed(r) }); return; }
       if (p.wet) items.push({ d: r.cx - r.cy - 0.6, draw: () => drawSprite("wet", r.cx, r.cy) });
       if (p.crop) items.push({ d: r.cx - r.cy, draw: () => drawSprite(`${p.crop}_${p.growth >= 1 ? 2 : p.growth >= 0.4 ? 1 : 0}`, r.cx, r.cy) });
     });

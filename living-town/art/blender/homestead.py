@@ -157,6 +157,10 @@ CROPS = {
     'strawberry': lambda st: [ball(0.18 * math.cos(k * 2.1), 0.18 * math.sin(k * 2.1), 0.25, 0.14 + 0.06 * st, 0.12 + 0.06 * st, 0.08 + 0.03 * st) for k in range(3)] + ([ball(0.25 * math.cos(k * 2.1 + 1), 0.25 * math.sin(k * 2.1 + 1), 0.2, 0.06, 0.06, 0.08) for k in range(4)] if st == 2 else []),
     'sunflower':  lambda st: [cyl(0, 0, 0.15, 0.04, 0.3 + 0.6 * st)] + [ball(0.1, 0, 0.35 + 0.4 * st, 0.12, 0.05, 0.07)] + ([cyl(0, -0.02, 1.4, 0.24, 0.06), ball(0, -0.06, 1.43, 0.12, 0.04, 0.12)] if st == 2 else []),
     'pumpkin':    lambda st: [ball(0.2 * math.cos(k * 1.6), 0.2 * math.sin(k * 1.6), 0.22, 0.14, 0.08, 0.05) for k in range(4)] + ([ball(0, 0, 0.42, 0.42, 0.38, 0.28), cyl(0, 0, 0.66, 0.04, 0.1)] if st == 2 else ([ball(0, 0, 0.28, 0.14, 0.13, 0.1)] if st == 1 else [])),
+    'tomato':     lambda st: [cyl(0, 0, 0.15, 0.03, 0.4 + 0.3 * st), ball(0, 0, 0.45 + 0.2 * st, 0.22, 0.22, 0.2 + 0.08 * st)] + ([ball(0.18 * math.cos(k * 2.1), -0.12 + 0.1 * math.sin(k * 2.1), 0.5 + 0.12 * (k % 2), 0.09, 0.09, 0.09) for k in range(3)] if st == 2 else []),
+    'blueberry':  lambda st: [ball(0, 0, 0.3, 0.2 + 0.1 * st, 0.2 + 0.1 * st, 0.18 + 0.08 * st)] + ([ball(0.22 * math.cos(k * 1.3), -0.15 + 0.12 * math.sin(k * 1.3), 0.35 + 0.08 * (k % 3), 0.05, 0.05, 0.05) for k in range(6)] if st == 2 else []),
+    'corn':       lambda st: [cyl(0.2 * (k - 1), 0, 0.15, 0.04, 0.3 + 0.5 * st) for k in range(3)] + [ball(0.2 * (k - 1) + 0.1, 0, 0.4 + 0.3 * st, 0.14, 0.03, 0.05) for k in range(3)] + ([ball(0.2 * (k - 1) + 0.05, -0.05, 0.9, 0.06, 0.06, 0.16) for k in range(3)] if st == 2 else []),
+    'watermelon': lambda st: [ball(0.25 * math.cos(k * 1.6), 0.25 * math.sin(k * 1.6), 0.2, 0.15, 0.09, 0.05) for k in range(4)] + ([ball(0, 0, 0.36, 0.48, 0.32, 0.24)] if st == 2 else ([ball(0, 0, 0.26, 0.16, 0.12, 0.1)] if st == 1 else [])),
 }
 FISH = ['minnow', 'perch', 'sunfish', 'catfish', 'trout', 'koi', 'pike', 'golden']
 def fish(k):

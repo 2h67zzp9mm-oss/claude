@@ -18,8 +18,14 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   assert.ok(hs.view(state, "home-1", me, t0 + 21 * 60_000).plots[1].growth < 0.5);
   const sold = hs.act(state, "home-1", me, { action: "sell" }, t0 + 22 * 60_000);
   assert.equal(sold.ok, true); assert.equal(me.stars, 6);
-  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "pumpkin" }, t0).ok, true); assert.equal(me.stars, 0);
-  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "pumpkin" }, t0).ok, false, "can't buy without stars");
+  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "pumpkin" }, t0).ok, false, "pumpkins need a bigger garden");
+  assert.equal(hs.act(state, "home-1", me, { action: "plant", plot: 5, crop: "carrot" }, t0).ok, false, "start with 4 beds");
+  assert.equal(hs.act(state, "home-1", me, { action: "upgrade" }, t0).ok, false, "upgrades cost stars");
+  me.stars = 31; assert.equal(hs.act(state, "home-1", me, { action: "upgrade" }, t0).ok, true);
+  assert.equal(hs.view(state, "home-1", me, t0).beds, 8); assert.equal(me.stars, 6);
+  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "corn" }, t0).ok, true); assert.equal(me.stars, 3);
+  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "corn" }, t0).ok, true); assert.equal(me.stars, 0);
+  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "corn" }, t0).ok, false, "can't buy without stars");
   const fish = hs.act(state, "home-1", me, { action: "fish" }, t0);
   assert.ok(fish.fish && fish.first); assert.equal(hs.act(state, "home-1", me, { action: "fish" }, t0 + 1000).ok, false, "a moment between casts");
   const mail = hs.act(state, "home-1", me, { action: "mail" }, t0);
