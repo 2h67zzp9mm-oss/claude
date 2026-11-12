@@ -5,7 +5,7 @@
   "use strict";
   let BASE = "homestead/";
   // Worlds: same plot and gameplay, different paint. Art for each lives in homestead/worlds/<id>/.
-  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/", cover: "rgba(206,203,197,0.92)" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/", cover: "rgba(138,122,154,0.94)" } };
+  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/", cover: "rgba(206,203,197,0.92)" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/", cover: "rgba(86,62,104,0.95)" } };
   let world = "clay";
   const SPEED = 5;            // metres per second (2.6 felt far too slow on a phone)
   const CELL = 0.25;          // walk grid
@@ -52,6 +52,8 @@
     for (const [tx, ty] of L.trees) if (Math.hypot(x - tx, y - ty) < 0.55) return true;
     for (const [bx, by] of L.bushes) if (Math.hypot(x - bx, y - by) < 0.6) return true;
     if (Math.hypot(x - L.mailbox[0], y - L.mailbox[1]) < 0.4) return true;
+    for (const [lx, ly] of L.lamps || []) if (Math.hypot(x - lx, y - ly) < 0.3) return true;
+    for (const [dx, dy] of L.decor || []) if (Math.hypot(x - dx, y - dy) < 0.35) return true;
     if (Math.abs(x - L.crate[0]) < 0.6 && Math.abs(y - L.crate[1]) < 0.6) return true;
     return false;
   }
@@ -168,6 +170,23 @@
     idleBar();
   }
 
+  // sci-fi sky: a purple twilight with stars and two moons (drawn once, then reused)
+  let space = null;
+  function drawSpace(cw, ch) {
+    if (!space || space.width !== cw || space.height !== ch) {
+      space = document.createElement("canvas"); space.width = cw; space.height = ch; const g = space.getContext("2d");
+      const grad = g.createLinearGradient(0, 0, 0, ch); grad.addColorStop(0, "#1a1035"); grad.addColorStop(0.55, "#4a2a6e"); grad.addColorStop(1, "#7a4a8e");
+      g.fillStyle = grad; g.fillRect(0, 0, cw, ch);
+      let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < 140; i++) { g.globalAlpha = 0.3 + rnd() * 0.7; g.fillStyle = "#fff"; g.fillRect(rnd() * cw, rnd() * ch * 0.7, rnd() < 0.15 ? 2 : 1, rnd() < 0.15 ? 2 : 1); }
+      g.globalAlpha = 1;
+      for (const [mx, my, mr, col] of [[cw * 0.78, ch * 0.09, Math.min(cw, ch) * 0.075, "#f3c9b8"], [cw * 0.6, ch * 0.05, Math.min(cw, ch) * 0.035, "#e9b7c9"]]) {
+        const mg = g.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.2, mx, my, mr); mg.addColorStop(0, "#fff3ea"); mg.addColorStop(1, col);
+        g.shadowColor = col; g.shadowBlur = mr; g.fillStyle = mg; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill(); g.shadowBlur = 0;
+      }
+    }
+    ctx.drawImage(space, 0, 0);
+  }
   // beds you haven't unlocked yet: covered over with grass
   function coverBed(r) {
     ctx.save(); ctx.fillStyle = WORLDS[world].cover; ctx.beginPath();
@@ -296,7 +315,7 @@
     const wantY = Math.max(-40, Math.min(G.height - ch / cam.z + 40, py - ch / cam.z * 0.42));
     if (!cam.ready) { cam.x = wantX; cam.y = wantY; cam.ready = true; }
     cam.x += (wantX - cam.x) * 0.12; cam.y += (wantY - cam.y) * 0.12;
-    ctx.fillStyle = A.bg || "#7d8fae"; ctx.fillRect(0, 0, cw, ch);
+    if (world === "scifi") drawSpace(cw, ch); else { ctx.fillStyle = A.bg || "#7d8fae"; ctx.fillRect(0, 0, cw, ch); }
     const [gx, gy] = toScreen(0, 0); ctx.drawImage(G, gx, gy, G.width * cam.z, G.height * cam.z);
     // everything that stands up, back to front
     const items = [];
@@ -308,6 +327,8 @@
     });
     L.trees.forEach(([x, y]) => items.push({ d: x - y, draw: () => drawSprite("tree", x, y) }));
     L.bushes.forEach(([x, y]) => items.push({ d: x - y, draw: () => drawSprite("bush", x, y) }));
+    (L.lamps || []).forEach(([x, y]) => items.push({ d: x - y, draw: () => drawSprite("lamp", x, y) }));
+    (L.decor || []).forEach(([x, y, kind, c]) => items.push({ d: x - y, draw: () => drawSprite(`${kind}_${c}`, x, y) }));
     items.push({ d: L.mailbox[0] - L.mailbox[1], draw: () => drawSprite(view?.mail ? "mailbox_up" : "mailbox", L.mailbox[0], L.mailbox[1]) });
     items.push({ d: L.crate[0] - L.crate[1], draw: () => drawSprite("crate", L.crate[0], L.crate[1]) });
     const people = [{ id: opts.me(), p: me }, ...[...others.values()].map(o => ({ id: o.id, p: o }))];
