@@ -39,3 +39,12 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   assert.equal(hs.view(state, "home-2", me, t0).others.length, 0, "other families can't see in");
   roll = 0.99; assert.ok(hs.act(state, "home-1", me, { action: "fish" }, t0 + 4000).fish);
 });
+
+test("home plot: the family can switch worlds", () => {
+  const { createHomestead } = require("../lib/homestead");
+  const hs = createHomestead(); const state = { residents: [] }; const me = { id: "dad", stars: 0 };
+  assert.equal(hs.view(state, "h", me, 0).world, "clay");
+  assert.equal(hs.act(state, "h", me, { action: "world", world: "scifi" }, 0).ok, true);
+  assert.equal(hs.view(state, "h", me, 0).world, "scifi");
+  assert.equal(hs.act(state, "h", me, { action: "world", world: "nope" }, 0).ok, false);
+});

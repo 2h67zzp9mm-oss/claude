@@ -15,6 +15,18 @@ _mats = {}
 PPM = 81.92                       # pixels per metre (walker cells are 102.4 px/m, stored at 0.8)
 W, H = 2560, 1720
 CLAY, DARK, WET = (0.82, 0.80, 0.76), (0.62, 0.60, 0.57), (0.50, 0.48, 0.46)
+# World theme: THEME=scifi blender ... repaints the same scene. Same layout, same gameplay.
+THEME = os.environ.get('THEME', 'clay')
+TINT = [None]   # while set, plain clay parts take this colour (e.g. plants)
+# clay colour -> (colour, glow, metallic)
+SCIFI = {
+    CLAY: ((0.80, 0.84, 0.90), 0, 0.5), DARK: ((0.10, 0.75, 0.95), 2.5, 0), WET: ((0.12, 0.14, 0.22), 0, 0),
+    (0.72, 0.70, 0.67): ((0.32, 0.35, 0.44), 0, 0.6), (0.74, 0.72, 0.69): ((0.25, 0.80, 0.95), 0.8, 0),
+    (0.42, 0.44, 0.46): ((0.05, 0.85, 0.75), 1.6, 0), (0.70, 0.68, 0.65): ((0.16, 0.13, 0.22), 0, 0),
+    'ground': ((0.38, 0.30, 0.46), 0, 0), 'plant': ((0.25, 0.85, 0.55), 0.5, 0), 'crystal': ((0.75, 0.35, 1.0), 1.8, 0),
+    'beacon': ((0.3, 1.0, 0.45), 3.0, 0), 'off': ((0.2, 0.22, 0.28), 0, 0.4), 'accent': ((1.0, 0.55, 0.15), 1.2, 0),
+}
+SKY = {'clay': (0.62, 0.68, 0.78), 'scifi': (0.10, 0.10, 0.22)}[THEME]
 
 def reset(w, h, scale, centre):
     bpy.ops.wm.read_factory_settings(use_empty=True); _mats.clear()
@@ -23,7 +35,7 @@ def reset(w, h, scale, centre):
     try: sc.eevee.use_gtao = True; sc.eevee.gtao_distance = 1.5
     except Exception: pass
     wd = bpy.data.worlds.new('w'); sc.world = wd; wd.use_nodes = True
-    wd.node_tree.nodes['Background'].inputs[0].default_value = (0.62, 0.68, 0.78, 1); wd.node_tree.nodes['Background'].inputs[1].default_value = 0.45
+    wd.node_tree.nodes['Background'].inputs[0].default_value = (*SKY, 1); wd.node_tree.nodes['Background'].inputs[1].default_value = 0.45
     cam = bpy.data.cameras.new('cam'); cam.type = 'ORTHO'; cam.ortho_scale = scale
     co = bpy.data.objects.new('cam', cam); sc.collection.objects.link(co); sc.camera = co
     co.rotation_euler = (R(60), 0, R(45)); d = Vector((0, 0, 1)); d.rotate(co.rotation_euler); co.location = Vector(centre) + d * 60
@@ -33,9 +45,15 @@ def reset(w, h, scale, centre):
     return sc, co
 
 def mat(col, rough=0.6):
+    if col == CLAY and TINT[0]: col = TINT[0]
     if col in _mats: return _mats[col]
+    base, glow, metal = (col, 0, 0) if THEME == 'clay' or col not in SCIFI else SCIFI[col]
+    if isinstance(base, str): base = CLAY
     m = bpy.data.materials.new('clay'); m.use_nodes = True; p = m.node_tree.nodes['Principled BSDF']
-    p.inputs['Base Color'].default_value = (*col, 1); p.inputs['Roughness'].default_value = rough; _mats[col] = m; return m
+    p.inputs['Base Color'].default_value = (*base, 1); p.inputs['Roughness'].default_value = 0.5 if metal else rough
+    p.inputs['Metallic'].default_value = metal
+    if glow: p.inputs['Emission Color'].default_value = (*base, 1); p.inputs['Emission Strength'].default_value = glow
+    _mats[col] = m; return m
 
 def put(o, col=CLAY, smooth=False):
     o.data.materials.append(mat(col))
@@ -72,8 +90,9 @@ def ground_scene():
     for i in range(N):
         for j in range(N): bm.faces.new((verts[i, j], verts[i + 1, j], verts[i + 1, j + 1], verts[i, j + 1]))
     me = bpy.data.meshes.new('ground'); bm.to_mesh(me); o = bpy.data.objects.new('ground', me); bpy.context.scene.collection.objects.link(o)
-    o.data.materials.append(mat(CLAY)); bpy.context.view_layer.objects.active = o; o.select_set(True); bpy.ops.object.shade_smooth()
-    box(0, 0, -0.6, S, S, -0.02)  # thickness so the edge reads
+    G0 = 'ground' if THEME == 'scifi' else CLAY
+    o.data.materials.append(mat(G0)); bpy.context.view_layer.objects.active = o; o.select_set(True); bpy.ops.object.shade_smooth()
+    box(0, 0, -0.6, S, S, -0.48, G0)  # thickness so the edge reads
     # water surface, a little below the rim
     bpy.ops.mesh.primitive_circle_add(vertices=48, radius=1, fill_type='NGON', location=(P['x'], P['y'], -0.07))
     w = bpy.context.object; w.scale = (P['rx'] * 0.95, P['ry'] * 0.95, 1); put(w, (0.42, 0.44, 0.46))
@@ -139,6 +158,33 @@ def house_scene():
         ball(wx - 0.3, y0 - 0.35, 0.95, 0.25, 0.2, 0.18); ball(wx + 0.3, y0 - 0.35, 0.95, 0.25, 0.2, 0.18)  # window box plants
         box(wx - 0.55, y0 - 0.45, 0.8, wx + 0.55, y0 - 0.1, 0.95)
 
+def dome_scene():
+    h = L['house']; x0, y0, x1, y1 = h['x0'], h['y0'], h['x1'], h['y1']
+    cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2
+    cyl(cx, cy, 0, max(rx, ry) + 0.2, 0.3, (0.72, 0.70, 0.67), 48)                 # landing pad
+    d = ball(cx, cy, 0.3, rx, ry, 2.9)                                              # dome, top half only
+    bm = bmesh.new(); bm.from_mesh(d.data); bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -0.01], context='VERTS'); bm.to_mesh(d.data); bm.free()
+    bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.04, location=(cx, cy, 1.5)); t = bpy.context.object; t.scale = (rx * 0.89, ry * 0.89, 1); put(t, DARK)  # window band
+    dx, dy = h['door']
+    box(x1 - 0.6, dy - 0.75, 0.3, x1 + 0.5, dy + 0.75, 2.4)                         # airlock
+    box(x1 + 0.48, dy - 0.5, 0.3, x1 + 0.53, dy + 0.5, 2.15, DARK)                  # door glow
+    box(x1 + 0.4, dy - 0.75, 0, x1 + 0.9, dy + 0.75, 0.18, (0.72, 0.70, 0.67))      # step
+    cyl(x0 + 1.2, y1 - 1.0, 2.6, 0.04, 1.8, (0.72, 0.70, 0.67)); ball(x0 + 1.2, y1 - 1.0, 4.45, 0.12, 0.12, 0.12, 'accent')  # antenna
+    for wx in (x0 + 1.3, x1 - 1.4):                                                 # little round windows
+        ball(wx, y0 + 0.35, 1.0, 0.3, 0.06, 0.3, DARK)
+def alien_tree():
+    TINT[0] = 'plant'; cyl(0, 0, 0, 0.12, 2.2); TINT[0] = None
+    ball(0, 0, 2.6, 0.9, 0.9, 0.45, 'plant')
+    for k in range(5): an = k * 1.26; ball(0.55 * math.cos(an), 0.55 * math.sin(an), 2.2, 0.12, 0.12, 0.12, 'crystal')
+def crystals():
+    for k, (x, y, hgt) in enumerate(((0, 0, 0.9), (0.28, -0.1, 0.55), (-0.22, 0.15, 0.6), (0.1, 0.3, 0.45))):
+        bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.14, depth=hgt, location=(x, y, hgt / 2), rotation=(R(8 * (k - 1.5)), R(6 * k), 0)); put(bpy.context.object, 'crystal')
+def beacon(up):
+    cyl(0, 0, 0, 0.25, 0.12, (0.72, 0.70, 0.67)); cyl(0, 0, 0.12, 0.05, 1.2)
+    box(-0.22, -0.22, 1.2, 0.22, 0.22, 1.5); ball(0, 0, 1.68, 0.16, 0.16, 0.16, 'beacon' if up else 'off')
+def pod():
+    ball(0, 0, 0.42, 0.5, 0.45, 0.42); box(-0.52, -0.06, 0.15, 0.52, 0.06, 0.7, 'accent'); cyl(0, 0, 0, 0.35, 0.08, (0.72, 0.70, 0.67))
+
 # ---------- small sprites ----------
 def tree(): cyl(0, 0, 0, 0.22, 1.6); ball(0, 0, 2.3, 1.2, 1.2, 1.0); ball(0.4, -0.3, 2.9, 0.75, 0.75, 0.7); ball(-0.45, 0.2, 2.75, 0.7, 0.7, 0.65)
 def bush(): ball(0, 0, 0.35, 0.6, 0.55, 0.42); ball(0.35, -0.2, 0.45, 0.35, 0.35, 0.3)
@@ -185,20 +231,24 @@ anchors = {}
 mode = sys.argv[sys.argv.index('--') + 2] if len(sys.argv) > sys.argv.index('--') + 2 else 'all'
 S = L['size']; centre = (S / 2, S / 2, 1.6)
 if mode in ('all', 'scene'):
-    for part, fn in (('ground', ground_scene), ('house', house_scene)):
+    for part, fn in (('ground', ground_scene), ('house', dome_scene if THEME == 'scifi' else house_scene)):
         sc, cam = reset(W, H, W / PPM, centre); fn()
         sc.render.filepath = os.path.join(OUT, part + '.png'); bpy.ops.render.render(write_still=True)
     o, ax, ay, az = (project(sc, cam, p) for p in ((0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)))
     json.dump({'size': [W, H], 'ppm': PPM, 'origin': o, 'ex': [ax[0] - o[0], ax[1] - o[1]], 'ey': [ay[0] - o[0], ay[1] - o[1]], 'ez': [az[0] - o[0], az[1] - o[1]]},
               open(os.path.join(OUT, 'camera.json'), 'w'), indent=1)
 if mode in ('all', 'sprites'):
-    anchors['tree'] = sprite('tree', tree, 4.6)
-    anchors['bush'] = sprite('bush', bush, 2.0)
-    anchors['mailbox_up'] = sprite('mailbox_up', lambda: mailbox(True), 2.4)
-    anchors['mailbox'] = sprite('mailbox', lambda: mailbox(False), 2.4)
-    anchors['crate'] = sprite('crate', crate, 2.0)
+    sf = THEME == 'scifi'
+    anchors['tree'] = sprite('tree', alien_tree if sf else tree, 4.6)
+    anchors['bush'] = sprite('bush', crystals if sf else bush, 2.0)
+    anchors['mailbox_up'] = sprite('mailbox_up', lambda: beacon(True) if sf else mailbox(True), 2.4)
+    anchors['mailbox'] = sprite('mailbox', lambda: beacon(False) if sf else mailbox(False), 2.4)
+    anchors['crate'] = sprite('crate', pod if sf else crate, 2.0)
     anchors['wet'] = sprite('wet', wet, 2.0)
+    TINT[0] = 'plant' if sf else None
     for c, f in CROPS.items():
         for st in range(3): anchors['%s_%d' % (c, st)] = sprite('%s_%d' % (c, st), lambda f=f, st=st: f(st), 2.0)
+    TINT[0] = 'crystal' if sf else None
     for k, n in enumerate(FISH): anchors['fish_' + n] = sprite('fish_' + n, lambda k=k: fish(k), 2.2, 160, side=True)
+    TINT[0] = None
     json.dump(anchors, open(os.path.join(OUT, 'anchors.json'), 'w'), indent=1)

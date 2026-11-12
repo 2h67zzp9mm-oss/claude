@@ -4,9 +4,10 @@
 import sys, os, json
 from PIL import Image
 RD, WD = sys.argv[1], sys.argv[2]
-OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'homestead'); os.makedirs(OUT, exist_ok=True)
+WORLD = sys.argv[3] if len(sys.argv) > 3 else ''   # e.g. scifi -> public/homestead/worlds/scifi/
+OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'homestead', *(['worlds', WORLD] if WORLD else [])); os.makedirs(OUT, exist_ok=True)
 cam = json.load(open(os.path.join(RD, 'camera.json')))
-art = {'camera': cam, 'sprites': {}, 'walkers': {}}
+art = {'camera': cam, 'sprites': {}, 'walkers': {}, 'bg': {'scifi': '#14142c'}.get(WORLD, '#7d8fae')}
 
 g = Image.open(os.path.join(RD, 'ground.png')).convert('RGBA')
 g.save(os.path.join(OUT, 'ground.webp'), quality=88, method=6)

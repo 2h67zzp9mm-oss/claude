@@ -3,7 +3,10 @@
  * Walking works like inside buildings: your phone moves you straight away. */
 (function () {
   "use strict";
-  const BASE = "homestead/";
+  let BASE = "homestead/";
+  // Worlds: same plot and gameplay, different paint. Art for each lives in homestead/worlds/<id>/.
+  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/", cover: "rgba(206,203,197,0.92)" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/", cover: "rgba(138,122,154,0.94)" } };
+  let world = "clay";
   const SPEED = 2.6;          // metres per second
   const CELL = 0.25;          // walk grid
   const DIRS = 8;
@@ -16,11 +19,10 @@
   function load() {
     if (ready) return ready;
     const img = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = BASE + src; });
-    ready = Promise.all([fetch(BASE + "layout.json").then(r => r.json()), fetch(BASE + "art.json").then(r => r.json())]).then(async ([layout, art]) => {
-      L = layout; A = art;
-      const names = ["ground", "house", "sprites", ...Object.keys(A.walkers).map(k => "walk_" + k)];
+    ready = Promise.all([fetch("homestead/layout.json").then(r => r.json()), fetch(BASE + "art.json").then(r => r.json())]).then(async ([layout, art]) => {
+      const names = ["ground", "house", "sprites", ...Object.keys(art.walkers).map(k => "walk_" + k)];
       const loaded = await Promise.all(names.map(n => img(n + ".webp")));
-      names.forEach((n, i) => { imgs[n] = loaded[i]; });
+      L = layout; A = art; names.forEach((n, i) => { imgs[n] = loaded[i]; });
       buildGrid();
     });
     return ready;
@@ -126,7 +128,15 @@
     bar.querySelectorAll("button").forEach(btn => { btn.onclick = () => buttons[Number(btn.dataset.i)].go(); });
   }
   function idleBar() {
-    setBar("", [{ label: "🎒 Bag", go: showBag }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
+    setBar("", [{ label: "🎒 Bag", go: showBag }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
+  }
+  function worldBar() {
+    setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); idleBar(); } })), { label: "Back", go: idleBar }]);
+  }
+  function setWorld(k) {
+    if (!WORLDS[k] || k === world) return;
+    world = k; BASE = WORLDS[k].dir; const keep = { ...me }; ready = null;
+    load().then(() => Object.assign(me, keep)).catch(err => console.error(err));
   }
   function act(action, extra = {}) { opts.send({ type: "home", action, ...extra }); }
   function contextBar(t) {
@@ -160,7 +170,7 @@
 
   // beds you haven't unlocked yet: covered over with grass
   function coverBed(r) {
-    ctx.save(); ctx.fillStyle = "rgba(206,203,197,0.92)"; ctx.beginPath();
+    ctx.save(); ctx.fillStyle = WORLDS[world].cover; ctx.beginPath();
     [[r.x0 - 0.08, r.y0 - 0.08], [r.x1 + 0.08, r.y0 - 0.08], [r.x1 + 0.08, r.y1 + 0.08], [r.x0 - 0.08, r.y1 + 0.08]].forEach(([x, y], i) => { const [sx, sy] = toScreen(...P(x, y, 0.2)); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
     ctx.fill(); ctx.restore();
   }
@@ -205,6 +215,7 @@
   function onState(msg) {
     if (msg.error) return opts.toast(msg.error);
     view = msg.home;
+    if (view.world) setWorld(view.world);
     for (const o of view.others || []) {
       const cur = others.get(o.id) || { x: o.x, y: o.y, dir: o.dir, step: 0, name: o.name, id: o.id };
       Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, seen: performance.now() }); others.set(o.id, cur);
@@ -285,7 +296,7 @@
     const wantY = Math.max(-40, Math.min(G.height - ch / cam.z + 40, py - ch / cam.z * 0.42));
     if (!cam.ready) { cam.x = wantX; cam.y = wantY; cam.ready = true; }
     cam.x += (wantX - cam.x) * 0.12; cam.y += (wantY - cam.y) * 0.12;
-    ctx.fillStyle = "#7d8fae"; ctx.fillRect(0, 0, cw, ch);
+    ctx.fillStyle = A.bg || "#7d8fae"; ctx.fillRect(0, 0, cw, ch);
     const [gx, gy] = toScreen(0, 0); ctx.drawImage(G, gx, gy, G.width * cam.z, G.height * cam.z);
     // everything that stands up, back to front
     const items = [];

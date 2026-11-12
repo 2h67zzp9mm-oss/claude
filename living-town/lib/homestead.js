@@ -32,6 +32,7 @@ const FISH = {
   golden: { name: "Golden Fish", sell: 40, weight: 1 }
 };
 const PLOTS = 16;
+const WORLDS = ["clay", "scifi"];
 const WATER_HOURS = 6;
 const DRY_SPEED = 0.35;
 // Start small, then upgrade: each garden level opens more beds and better seeds.
@@ -92,6 +93,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       plots: h.plots.map(p => p.crop ? { crop: p.crop, growth: Math.round(p.growth * 100) / 100, wet: now < Number(p.wateredAt || 0) + WATER_HOURS * 3600_000 } : { crop: null }),
       beds: bedsOf(h), level: levelOf(h) + 1, shop: cropsOf(h),
       upgrade: LEVELS[levelOf(h) + 1] ? { cost: LEVELS[levelOf(h) + 1].cost, beds: LEVELS[levelOf(h) + 1].beds, crops: LEVELS[levelOf(h) + 1].crops } : null,
+      world: WORLDS.includes(h.world) ? h.world : "clay",
       seeds: h.seeds, bag: h.bag, caught: h.caught, stars: me?.stars || 0,
       mail: h.mailDay !== dayKey(now), others,
       crops: CROPS, fish: Object.fromEntries(Object.entries(FISH).map(([k, f]) => [k, { name: f.name, sell: f.sell, biting: inWindow(f.hours, hour) }]))
@@ -172,6 +174,11 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         if ((Number(r.stars) || 0) < cost) return { ok: false, toast: `You need ${cost} ⭐ for ${CROPS[crop].name.toLowerCase()} seeds.` };
         r.stars -= cost; h.seeds[crop] = (h.seeds[crop] || 0) + 1;
         return { ok: true, toast: `🌱 Bought ${CROPS[crop].name.toLowerCase()} seeds.` };
+      }
+      case "world": {
+        if (!WORLDS.includes(msg.world)) return { ok: false, toast: "That world isn't built yet." };
+        h.world = msg.world;
+        return { ok: true, toast: msg.world === "scifi" ? "🚀 Welcome to your space colony!" : "🤍 Back to the clay world." };
       }
       case "upgrade": {
         const next = LEVELS[levelOf(h) + 1];
