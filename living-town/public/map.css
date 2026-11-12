@@ -235,3 +235,25 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .person-row img { width: 40px; height: 40px; image-rendering: pixelated; object-fit: contain; }
 .person-row span { flex: 1; display: flex; flex-direction: column; }
 .person-row small { opacity: 0.75; font-size: 0.72rem; }
+
+/* The home plot (public/homestead.js): full screen, display at the top, buttons low for thumbs. */
+.homestead { position: fixed; inset: 0; z-index: 60; background: #7d8fae; touch-action: manipulation; }
+.homestead.hidden { display: none; }
+.homestead canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.home-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none;
+  color: #fff; font: 600 0.95rem system-ui; text-shadow: 0 1px 3px #0008; }
+.home-bar { position: absolute; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); padding: 10px; border-radius: 18px;
+  background: #0d1929e8; color: #eef3f8; backdrop-filter: blur(14px); max-height: 55vh; overflow: auto; }
+.home-title { margin: 0 0 8px; font: 500 0.85rem/1.35 system-ui; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.home-actions button { flex: 1 1 30%; min-height: 48px; border: 0; border-radius: 14px; background: #ffffff1a; color: #fff; font: 600 0.95rem system-ui; }
+.home-actions button.big { background: #4fc3a1; color: #06231a; }
+.home-actions button:disabled { opacity: 0.4; }
+.home-actions button.pulse { animation: home-pulse 0.25s ease-in-out infinite alternate; background: #ffb547; color: #2a1800; }
+@keyframes home-pulse { to { transform: scale(1.06); } }
+.fish-book { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.fish-card { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 10px; background: #ffffff10; font-size: 0.7rem; text-align: center; }
+.fish-card small { opacity: 0.7; }
+.fish-card.unknown .home-icon { filter: brightness(0) opacity(0.45); }
+.home-icon { display: inline-flex; align-items: center; justify-content: center; }
+.home-icon i { display: block; background-repeat: no-repeat; }

@@ -30,6 +30,7 @@ const { createStore } = require("./lib/persistence");
 const { createAuth } = require("./lib/auth");
 const cast = require("./lib/cast");
 const { createMrE, ollamaGenerator } = require("./lib/mre");
+const { createHomestead } = require("./lib/homestead");
 const cognition = require("./lib/cognition");
 const { startViewer, readToken } = require("./lib/viewer");
 const troupe = require("./lib/troupe");
@@ -1426,6 +1427,29 @@ async function handleTronChat(ws, msg) {
   send(ws, { type: "tron-chat", reply, history: tronConversations.slice(-30) });
 }
 
+// --- The home plot (lib/homestead.js): the family's own garden, pond and mailbox. ---
+const homestead = createHomestead({ isPlayer: r => isPlayable(r.id) });
+const householdOf = r => world.homeOf(r.id)?.id || `solo-${r.id}`;
+function handleHome(ws, msg) {
+  const profile = auth.profileForToken(ws.token);
+  if (!profile) return send(ws, { type: "home-state", error: "Sign in to visit your home." });
+  const r = state.residents.find(item => item.id === profile.residentId);
+  if (!r) return send(ws, { type: "home-state", error: "Your resident is unavailable." });
+  const now = Date.now(), id = householdOf(r);
+  const result = msg.action === "view" || msg.action === "enter" ? { ok: true, quiet: msg.action === "view" } : homestead.act(state, id, r, msg, now);
+  if (msg.action === "sell" || msg.action === "buy") r.lifeRevision = (r.lifeRevision || 0) + 1;
+  if (msg.action === "enter") { r.activity = "out in the garden at home"; r.lifeRevision = (r.lifeRevision || 0) + 1; }
+  if (result.quiet && !["pos", "view"].includes(msg.action)) return;
+  const { quiet, ...rest } = result;
+  send(ws, { type: "home-state", home: homestead.view(state, id, r, now), result: msg.action === "pos" ? null : rest });
+  if (!quiet && result.ok) {
+    // Family members on the plot see it change straight away.
+    for (const other of state.residents) if (other !== r && householdOf(other) === id) for (const sock of socketsOf(other.id)) send(sock, { type: "home-state", home: homestead.view(state, id, other, now), result: null });
+    if (result.fish && result.first) addEvent(`🎣 ${r.name} caught their first ${homestead.FISH[result.fish].name}!`, now, r.id);
+    if (result.harvested === "pumpkin") addEvent(`🎃 ${r.name} grew a pumpkin at home!`, now, r.id);
+  }
+}
+
 function handleTravel(ws, msg) {
   const reject = reason => send(ws, { type: "travel-result", error: reason });
   const profile = auth.profileForToken(ws.token);
@@ -1468,6 +1492,7 @@ wss.on("connection", (ws, req) => {
     if (msg.type === "control") handleControl(ws, msg);
     else if (msg.type === "tron-chat") void handleTronChat(ws, msg);
     else if (msg.type === "travel") handleTravel(ws, msg);
+    else if (msg.type === "home") handleHome(ws, msg);
     else if (msg.type === "release") releaseController(ws);
     else if (msg.type === "use" || msg.type === "indoor-move" || msg.type === "leave-home") handleIndoor(ws, msg);
     else if (msg.type === "social") handleSocial(ws, msg);

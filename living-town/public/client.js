@@ -203,6 +203,7 @@
       if (msg.error) showToast(msg.error);
       else { $("#travelCard").classList.add("hidden"); const d = (destinations || []).find(x => x.id === msg.destinationId); showToast(!msg.destinationId || msg.destinationId === "little-town" ? "Welcome home to Little Town!" : `Welcome to ${d?.name || "a new town"}!`); }
     } else if (msg.type === "toast") { if (typeof msg.text === "string") showToast(msg.text);
+    } else if (msg.type === "home-state") { window.LivingTownHome?.onState(msg);
     } else if (msg.type === "tron-chat") { if (msg.error) showToast(msg.error); else renderTron(msg.history || []); const ti = document.querySelector("#tronForm input"); if (ti) ti.disabled = false; }
   }
 
@@ -1732,6 +1733,12 @@
   $(".sheet-handle").addEventListener("click", () => ui.sheet.classList.toggle("open"));
   $("#peopleButton").addEventListener("click", openPeople);
   $("#todayButton").addEventListener("click", openToday);
+  // The home plot: your family's garden, pond and mailbox (public/homestead.js).
+  window.LivingTownHome?.init({
+    send, toast: showToast, me: () => me?.residentId || null, resident: id => residents.get(id),
+    openHouse: () => { window.LivingTownHome.close(); visitPlace("homes"); }
+  });
+  $("#homeButton").addEventListener("click", () => window.LivingTownHome?.open());
   // Everyone in town, with a face, where they are, and a ❗ if they need you.
   function openPeople() {
     const asks = new Set((myResident()?.questOffers || []).map(q => q.requesterId));

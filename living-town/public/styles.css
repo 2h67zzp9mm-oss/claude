@@ -413,7 +413,7 @@ button {
   height: calc(70px + env(safe-area-inset-bottom));
   padding: 7px 8px max(7px, env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   background: #0d1929f5;
   border-top: 1px solid #ffffff1c;
   backdrop-filter: blur(18px);
@@ -458,7 +458,7 @@ button {
 }
 .toast {
   position: absolute;
-  z-index: 60;
+  z-index: 70;
   left: 50%;
   bottom: 103px;
   transform: translateX(-50%);
