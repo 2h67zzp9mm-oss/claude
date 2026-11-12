@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 /**
- * Tron's builder: turns a build request Sean made by talking to Tron into a
+ * Glint's builder: turns a build request Sean made by talking to Glint into a
  * real change to Little Town, using Claude Code.
  *
  * Run every couple of minutes by launchd (com.livingtown.tron-builder). Each pass:
@@ -14,7 +14,7 @@
  *      doesn't come back up.
  *   6. Wait for the live checkout to reach the commit and mark the build "live".
  * Status is written back to the request file; the town server reads it and
- * Tron tells Sean how it went.
+ * Glint tells Sean how it went.
  */
 const { execFileSync, spawnSync } = require("child_process");
 const fs = require("fs");
@@ -44,7 +44,7 @@ function nextJob() {
   return null;
 }
 
-const PROMPT = text => `You are building a change to "Little Town", a family-friendly shared town game that Sean plays with his young daughters Olive and Hazel on iPhones. Sean asked Tron (the town's caretaker program) for this:
+const PROMPT = text => `You are building a change to "Little Town", a family-friendly shared town game that Sean plays with his young daughters Olive and Hazel on iPhones. Sean asked Glint (the town's caretaker program) for this:
 
 "${text}"
 
@@ -108,7 +108,7 @@ function build(file, job) {
     fs.unlinkSync(path.join(app, "node_modules"));
     if (test.status !== 0) return fail("The tests failed, so nothing went live.", test.stdout + test.stderr);
     git(dir, "add", "-A", "living-town");
-    git(dir, "-c", "user.name=Tron", "-c", "user.email=tron@little-town.local", "commit", "-q", "-m", `Tron build: ${job.text.slice(0, 60)}\n\nRequested by ${job.by} in Little Town.\n\n${job.summary}`);
+    git(dir, "-c", "user.name=Glint", "-c", "user.email=tron@little-town.local", "commit", "-q", "-m", `Glint build: ${job.text.slice(0, 60)}\n\nRequested by ${job.by} in Little Town.\n\n${job.summary}`);
     job.commit = git(dir, "rev-parse", "HEAD");
     git(dir, "push", "-q", "origin", `HEAD:${BRANCH}`);
     job.status = "deploying"; job.pushedAt = Date.now(); job.files = changed; save(file, job);

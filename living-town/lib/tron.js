@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Tron: Sean's caretaker program who lives in Little Town. He walks the
+ * Glint: Sean's caretaker program who lives in Little Town. He walks the
  * streets like everyone else, watches how the town is running, and keeps
  * notes on anything odd (someone stuck doing the same thing for hours, very
  * hungry or tired residents, people standing on top of each other, events
@@ -107,7 +107,7 @@ function createTron({ world, dir, log = console, random = Math.random }) {
     t.notes = t.notes.filter(n => now - n.at < 24 * 3600_000 && !/^cold:[^:]+:/.test(n.key));
   }
 
-  // Little things Tron does about what he notices. Gentle, and never to players.
+  // Little things Glint does about what he notices. Gentle, and never to players.
   const acted = new Map(); // key -> time
   function help(state, now, ctx) {
     const t = ensure(state);
@@ -119,16 +119,16 @@ function createTron({ world, dir, log = console, random = Math.random }) {
       const [kind, a, b] = n.key.split(":");
       if ((kind === "stuck" || kind === "needs") && once(n.key, 2 * 3600_000)) {
         const r = byId(a); if (!r || ctx.isPlayer(r)) continue;
-        ctx.nudge(r, kind === "needs" ? "Tron reminded me to look after myself" : "Tron gave me a nudge");
-        ctx.log(`◈ Tron gave ${r.name} a friendly nudge.`);
+        ctx.nudge(r, kind === "needs" ? "Glint reminded me to look after myself" : "Glint gave me a nudge");
+        ctx.log(`◈ Glint gave ${r.name} a friendly nudge.`);
         goLook(r.place);
       } else if (kind === "overlap" && once(n.key, 30 * 60_000)) {
         const r = byId(b); if (r && !ctx.isPlayer(r)) ctx.makeRoom(r);
       } else if (kind === "favours" && once(n.key, 3 * 3600_000)) {
-        const p = byId(a); if (p) ctx.tell(p, `◈ Tron: ${n.text.replace(` for ${p.name}`, " for you")}`);
+        const p = byId(a); if (p) ctx.tell(p, `◈ Glint: ${n.text.replace(` for ${p.name}`, " for you")}`);
       } else if (kind === "empty" && once(n.key, 3600_000)) {
         ctx.rally(n.place, a);
-        ctx.log(`◈ Tron pinged the town: come to ${world.places[n.place]?.name || "the event"}!`);
+        ctx.log(`◈ Glint pinged the town: come to ${world.places[n.place]?.name || "the event"}!`);
         goLook(n.place);
       }
     }
@@ -140,14 +140,14 @@ function createTron({ world, dir, log = console, random = Math.random }) {
     const lines = t.notes.map(n => `- ${new Date(n.at).toLocaleString()} · ${n.kind} · ${n.text}${n.count > 1 ? ` (seen ${n.count}×)` : ""}`);
     try {
       fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, "observations.md"), `# What Tron is noticing\n\nUpdated ${new Date(now).toLocaleString()}.\n\n${lines.join("\n") || "- All quiet. Nothing odd right now."}\n`);
-    } catch (err) { log.error("Tron notes:", err.message); }
+      fs.writeFileSync(path.join(dir, "observations.md"), `# What Glint is noticing\n\nUpdated ${new Date(now).toLocaleString()}.\n\n${lines.join("\n") || "- All quiet. Nothing odd right now."}\n`);
+    } catch (err) { log.error("Glint notes:", err.message); }
   }
 
   function tick(state, now, ctx) {
     const t = ensure(state);
     wander(t, now);
-    if (now - lastScan >= SCAN_MS) { lastScan = now; try { scan(state, now, ctx); if (ctx.nudge) help(state, now, ctx); } catch (err) { log.error("Tron scan:", err); } }
+    if (now - lastScan >= SCAN_MS) { lastScan = now; try { scan(state, now, ctx); if (ctx.nudge) help(state, now, ctx); } catch (err) { log.error("Glint scan:", err); } }
     if (now - lastWrite >= 10 * 60_000) { lastWrite = now; writeNotes(state, now); }
   }
 

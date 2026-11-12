@@ -3,7 +3,7 @@ const assert = require("node:assert");
 const world = require("../shared/world");
 const { createTron } = require("../lib/tron");
 
-test("Tron walks, notices odd things, and answers from his notes", () => {
+test("Glint walks, notices odd things, and answers from his notes", () => {
   const tron = createTron({ world, dir: null, random: () => 0.3 });
   const r = (id, extra) => ({ id, name: id, place: "square", activity: "chatting", needs: { hunger: 80, energy: 80, social: 80, fun: 80 }, relationships: {}, x: 100, y: 100, ...extra });
   const state = { residents: [r("A", { needs: { hunger: 5, energy: 80, social: 80, fun: 80 } }), r("B"), r("P", { x: 300 })], programme: {} };

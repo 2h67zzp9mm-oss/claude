@@ -691,7 +691,7 @@
     mreHitBox = { body: { x0: x - reach, y0: y - FEET_ROW * PX - 4, x1: x + reach, y1: y + screenPx(speaking ? 18 : 14) }, bubble };
   }
 
-  // Tron: Sean's glowing caretaker program. He lives in town, watches how it's
+  // Glint: Sean's glowing caretaker program. He lives in town, watches how it's
   // running, and you can tap him to ask what's going on.
   const TRON_LOOK = { skin: "#0b1a24", hair: "#0b1a24", shirt: "#0e2230", pants: "#0b1a24", shoes: "#08131b", style: "short", accessory: "none" };
   let tronCanvas = null, tronHit = null;
@@ -723,7 +723,7 @@
     ctx.imageSmoothingEnabled = true;
     const fs = screenPx(10);
     ctx.font = `800 ${fs}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    const label = T.notes ? `◈ Tron · ${T.notes}` : "◈ Tron";
+    const label = T.notes ? `◈ Glint · ${T.notes}` : "◈ Glint";
     const w = ctx.measureText(label).width + fs;
     ctx.fillStyle = "rgba(8,30,44,.88)"; ctx.beginPath(); ctx.roundRect(x - w / 2, y + 2, w, fs * 1.4, fs * 0.7); ctx.fill();
     ctx.strokeStyle = "#5ef2ff"; ctx.lineWidth = screenPx(1); ctx.stroke();
@@ -1582,7 +1582,7 @@
     const speaking = mreSpeaking(nowMs());
     if (playing && tappedMrE(p) && riddleForMe()) return openRiddle();
     if (speaking && tappedMrE(p)) return showToast(mreTapText(nowMs()));
-    if (tappedTron(p)) return me?.role === "owner" ? showTron() : showToast(`◈ Tron is scanning ${town.tron?.watching || "the town"}… beep boop.`);
+    if (tappedTron(p)) return me?.role === "owner" ? showTron() : showToast(`◈ Glint is scanning ${town.tron?.watching || "the town"}… beep boop.`);
     // Hunt items and lost things for favours: tap to collect (walking over if needed).
     // At least 24 screen px around each item, nearest one wins.
     const reach = Math.max(10, screenPx(24));
@@ -1669,7 +1669,7 @@
   }
   $("#travelButton").addEventListener("click", showTravelMenu);
   function renderTron(history) { const log = $("#tronLog"); if (log) { log.innerHTML = history.map(m => `<p class="tron-message"><b>${escapeHtml(m.who)}</b>${escapeHtml(m.text)}</p>`).join(""); log.scrollTop = log.scrollHeight; } }
-  function showTron() { if (!me) return showProfileMenu(); const card = $("#tronCard"); card.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><p class="eyebrow">CARETAKER</p><h2>Talk to Tron</h2><p class="today-intro">Tron lives in town, watches how everyone is doing, and tells you what he'd change.</p><div id="tronLog" class="tron-log"><p class="tron-message"><b>Tron</b>Greetings, creator. I'm keeping watch over ${escapeHtml(town.tron?.watching || "the town")}. I have ${town.tron?.notes || 0} notes. Ask me "what's going on?", "anything weird?" or "what should we change?"</p></div><form id="tronForm" class="tron-form"><input maxlength="600" placeholder="Talk to Tron…" aria-label="Message Tron" /><button>Send</button></form></div>`; card.classList.remove("hidden"); card.querySelector(".today-close").onclick = () => card.classList.add("hidden"); card.querySelector("#tronForm").onsubmit = e => { e.preventDefault(); const input = e.currentTarget.querySelector("input"); const text = input.value.trim(); if (text) { const log = card.querySelector("#tronLog"); input.value = ""; input.disabled = true; log.insertAdjacentHTML("beforeend", `<p class="tron-message"><b>You</b>${escapeHtml(text)}</p><p class="tron-message tron-thinking"><b>Tron</b>Thinking…</p>`); log.scrollTop = log.scrollHeight; send({ type: "tron-chat", text }); window.setTimeout(() => { input.disabled = false; }, 60_000); } }; }
+  function showTron() { if (!me) return showProfileMenu(); const card = $("#tronCard"); card.innerHTML = `<div class="today-inner"><button class="today-close" aria-label="Close">✕</button><p class="eyebrow">CARETAKER</p><h2>Talk to Glint</h2><p class="today-intro">Glint lives in town, watches how everyone is doing, and tells you what he'd change.</p><div id="tronLog" class="tron-log"><p class="tron-message"><b>Glint</b>Greetings, creator. I'm keeping watch over ${escapeHtml(town.tron?.watching || "the town")}. I have ${town.tron?.notes || 0} notes. Ask me "what's going on?", "anything weird?" or "what should we change?"</p></div><form id="tronForm" class="tron-form"><input maxlength="600" placeholder="Talk to Glint…" aria-label="Message Glint" /><button>Send</button></form></div>`; card.classList.remove("hidden"); card.querySelector(".today-close").onclick = () => card.classList.add("hidden"); card.querySelector("#tronForm").onsubmit = e => { e.preventDefault(); const input = e.currentTarget.querySelector("input"); const text = input.value.trim(); if (text) { const log = card.querySelector("#tronLog"); input.value = ""; input.disabled = true; log.insertAdjacentHTML("beforeend", `<p class="tron-message"><b>You</b>${escapeHtml(text)}</p><p class="tron-message tron-thinking"><b>Glint</b>Thinking…</p>`); log.scrollTop = log.scrollHeight; send({ type: "tron-chat", text }); window.setTimeout(() => { input.disabled = false; }, 60_000); } }; }
   $("#tronButton").addEventListener("click", showTron);
 
   const pointers = new Map();
@@ -1853,7 +1853,7 @@
     const claimed = new Set(status.profiles.map(profile => profile.residentId));
     const canCreate = owner && status.playable.some(id => !claimed.has(id));
     const others = owner ? status.profiles.filter(p => p.id !== me.id).map(p => `<li><b>${escapeHtml(p.name)}</b> · ${escapeHtml(residentName(p.residentId))}<span><button class="text-button" data-reset="${escapeHtml(p.id)}">Reset PIN</button><button class="text-button danger" data-remove="${escapeHtml(p.id)}">Remove</button></span></li>`).join("") : "";
-    const ownerTools = owner ? `<button id="ownerTravel" class="soft-button">⌁ Travel to another town</button><button id="ownerTron" class="soft-button">◈ Talk to Tron</button><button id="addResident" class="wide-button">Add a new resident</button><button id="askMrE" class="soft-button">✦ Ask Mr. E for a surprise</button><p class="gate-copy small">Mr. E's brain: ${escapeHtml(mreBrain || "starting up")}</p><p class="gate-copy small">NPC planning: ${escapeHtml(town.npcBrain?.mode || "adaptive planner")} · ${town.npcBrain?.accepted || 0} model plans accepted this session</p>` : "";
+    const ownerTools = owner ? `<button id="ownerTravel" class="soft-button">⌁ Travel to another town</button><button id="ownerTron" class="soft-button">◈ Talk to Glint</button><button id="addResident" class="wide-button">Add a new resident</button><button id="askMrE" class="soft-button">✦ Ask Mr. E for a surprise</button><p class="gate-copy small">Mr. E's brain: ${escapeHtml(mreBrain || "starting up")}</p><p class="gate-copy small">NPC planning: ${escapeHtml(town.npcBrain?.mode || "adaptive planner")} · ${town.npcBrain?.accepted || 0} model plans accepted this session</p>` : "";
     const gate = gateShell(`<div class="login-avatar">${escapeHtml(me.name.charAt(0))}</div><h3>${escapeHtml(me.name)}</h3><p class="gate-copy">Plays as ${escapeHtml(residentName(me.residentId))}</p><button id="editLook" class="soft-button">Customize my character</button>${ownerTools}${canCreate ? '<button id="createPlayer" class="soft-button">Create another player</button>' : ""}${others ? `<ul class="player-admin">${others}</ul>` : ""}<button id="backToTown" class="soft-button">Back to town</button><button id="logoutPlayer" class="text-button">Switch player</button>`, false, "");
     gate.querySelector("#backToTown").addEventListener("click", () => gate.remove());
     gate.querySelector("#editLook").addEventListener("click", () => {

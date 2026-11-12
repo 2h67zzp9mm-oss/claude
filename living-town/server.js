@@ -605,14 +605,14 @@ const tron = require("./lib/tron").createTron({ world, dir: path.join(__dirname,
 const tronCtx = {
   players: () => playerResidents(), isPlayer: r => playerResidents().includes(r),
   // Let them pick something new to do (the planner re-decides right away).
-  nudge: (r, why) => { if (r.mind) r.mind.commitUntil = 0; r.intent = "rethinking after a nudge from Tron"; will.feel(r, "◈", why, { now: Date.now() }); },
+  nudge: (r, why) => { if (r.mind) r.mind.commitUntil = 0; r.intent = "rethinking after a nudge from Glint"; will.feel(r, "◈", why, { now: Date.now() }); },
   makeRoom: r => { if (!r.place || isControlled(r.id)) return; const p = freeSpotAt(r, r.place); if (p) walkTo(r, p.x, p.y); },
   tell: (p, text) => { for (const ws of socketsOf(p.id)) send(ws, { type: "toast", text }); },
   rally: (place, eventId) => {
     state.effects = Array.isArray(state.effects) ? state.effects : [];
     const ev = state.programme?.current;
     if (!ev || ev.id !== eventId || state.effects.some(e => e.id === `${eventId}-tron`)) return;
-    state.effects.push({ id: `${eventId}-tron`, kind: "happening", place, pull: 1.4, until: ev.end, reason: `Tron's ping about the ${ev.name.toLowerCase()}`, activity: null });
+    state.effects.push({ id: `${eventId}-tron`, kind: "happening", place, pull: 1.4, until: ev.end, reason: `Glint's ping about the ${ev.name.toLowerCase()}`, activity: null });
   },
   log: text => addEvent(text)
 };
@@ -1291,7 +1291,7 @@ function handleControl(ws, msg) {
   r.asleep = false;
 }
 
-// --- Tron's builds: Sean asks, Tron confirms, deploy/tron-builder.cjs gets Claude to build it. ---
+// --- Glint's builds: Sean asks, Glint confirms, deploy/tron-builder.cjs gets Claude to build it. ---
 const TRON_BUILDS = path.join(DATA_DIR, "tron-builds");
 let tronPending = null;
 const tronBuildStatus = new Map();
@@ -1317,8 +1317,8 @@ function tronBuildChat(profile, text, now) {
     const list = tronBuilds().slice(-3);
     return list.length ? list.map(tronBuildLine).join(" ") : "No builds yet. Ask me to build something, like \"build a bench by the pond\".";
   }
-  if (/^(please |can you |could you |tron,? )?(build|make|add|create|put|change|fix)\b/i.test(t) && t.length > 8) {
-    tronPending = { text: t.replace(/^(please |can you |could you |tron,? )/i, "").replace(/\?$/, ""), at: now };
+  if (/^(please |can you |could you |(?:tron|glint),? )?(build|make|add|create|put|change|fix)\b/i.test(t) && t.length > 8) {
+    tronPending = { text: t.replace(/^(please |can you |could you |(?:tron|glint),? )/i, "").replace(/\?$/, ""), at: now };
     return `You want me to build: “${tronPending.text}”. Say yes and I'll get Claude on it. If every test passes, it goes live in town by itself (say no to cancel).`;
   }
   return null;
@@ -1330,20 +1330,20 @@ setInterval(() => {
     const first = !tronBuildStatus.has(b.id);
     tronBuildStatus.set(b.id, b.status);
     if (first || !["live", "failed"].includes(b.status)) continue;
-    const line = `◈ Tron: ${tronBuildLine(b)}`;
-    tronConversations.push({ at: Date.now(), who: "Tron", text: tronBuildLine(b) });
-    if (b.status === "live") addEvent(`◈ Tron built something new: ${b.text}`);
+    const line = `◈ Glint: ${tronBuildLine(b)}`;
+    tronConversations.push({ at: Date.now(), who: "Glint", text: tronBuildLine(b) });
+    if (b.status === "live") addEvent(`◈ Glint built something new: ${b.text}`);
     for (const p of auth.profiles().filter(x => x.role === "owner")) for (const ws of socketsOf(p.residentId)) send(ws, { type: "toast", text: line });
   }
 }, 30_000).unref();
 
-// Tron's brain for Sean: Claude, run headless on this Mac (no tools, just
+// Glint's brain for Sean: Claude, run headless on this Mac (no tools, just
 // thinking). He sees the whole town, his notes, his builds and the last part
 // of the conversation, and can queue a build once Sean has said yes to it.
 const CLAUDE_BIN = process.env.CLAUDE_BIN || "/opt/homebrew/bin/claude";
 // Off in tests and other sandboxes (they use their own data folder).
 const TRON_BRAIN = process.env.TRON_BRAIN !== "off" && !process.env.LIVING_TOWN_DATA_DIR && fs.existsSync(CLAUDE_BIN);
-const TRON_SYSTEM = `You are Tron, a glowing digital caretaker program who lives inside "Little Town", a family-friendly shared town game that Sean (your creator, the owner) plays with his young daughters Olive and Hazel on iPhones. You walk the streets, watch the residents (their needs, moods, activities, friendships) and keep notes on anything odd. You are talking with Sean.
+const TRON_SYSTEM = `You are Glint, a glowing digital caretaker program who lives inside "Little Town", a family-friendly shared town game that Sean (your creator, the owner) plays with his young daughters Olive and Hazel on iPhones. You walk the streets, watch the residents (their needs, moods, activities, friendships) and keep notes on anything odd. You are talking with Sean.
 
 Personality: warm, sharp, a little playful, light computer flavour ("scanning", "the grid") but never at the cost of being useful. Talk like a smart friend, not a greeting card. Short: 1-4 sentences unless Sean asks for detail. Never repeat your previous message; read the conversation and answer what Sean actually said. Don't open with "Greetings".
 
@@ -1365,11 +1365,11 @@ function tronClaude(profile, resident, text, now) {
     notes: tron.notes(state).slice(0, 15).map(n => `${n.kind}: ${n.text}`),
     builds: tronBuilds().slice(-5).map(b => ({ text: b.text, status: b.status, error: b.error || undefined }))
   };
-  const convo = tronConversations.slice(-16).map(m => `${m.who === "You" ? "Sean" : "Tron"}: ${m.text}`).join("\n");
+  const convo = tronConversations.slice(-16).map(m => `${m.who === "You" ? "Sean" : "Glint"}: ${m.text}`).join("\n");
   const prompt = `BRIEFING:\n${JSON.stringify(briefing)}\n\nCONVERSATION (latest last):\n${convo}\n\nReply to Sean's last message as JSON.`;
   return new Promise(resolve => {
     execFile(CLAUDE_BIN, ["-p", prompt, "--model", "sonnet", "--tools", "", "--system-prompt", TRON_SYSTEM], { cwd: os.tmpdir(), timeout: 60_000, maxBuffer: 2e6, env: { ...process.env, PATH: `/opt/homebrew/bin:${process.env.PATH || "/usr/bin:/bin"}` } }, (err, stdout) => {
-      if (err) { console.error("Tron/Claude:", err.message); return resolve(null); }
+      if (err) { console.error("Glint/Claude:", err.message); return resolve(null); }
       let out;
       try { out = JSON.parse(String(stdout).slice(String(stdout).indexOf("{"), String(stdout).lastIndexOf("}") + 1)); } catch { return resolve(null); }
       let reply = typeof out.reply === "string" ? out.reply.replace(/[\u0000-\u001f<>]/g, " ").trim().slice(0, 900) : "";
@@ -1380,7 +1380,7 @@ function tronClaude(profile, resident, text, now) {
         fs.mkdirSync(TRON_BUILDS, { recursive: true });
         fs.writeFileSync(path.join(TRON_BUILDS, `${job.id}.json`), JSON.stringify(job, null, 2));
         tronBuildStatus.set(job.id, "queued");
-        addEvent("◈ Tron started building something new.", Date.now());
+        addEvent("◈ Glint started building something new.", Date.now());
       }
       resolve(reply);
     });
@@ -1389,7 +1389,7 @@ function tronClaude(profile, resident, text, now) {
 
 async function handleTronChat(ws, msg) {
   const profile = auth.profileForToken(ws.token);
-  if (!profile) return send(ws, { type: "tron-chat", error: "Sign in to talk with Tron." });
+  if (!profile) return send(ws, { type: "tron-chat", error: "Sign in to talk with Glint." });
   const resident = state.residents.find(r => r.id === profile.residentId);
   if (!resident) return send(ws, { type: "tron-chat", error: "Your resident is unavailable." });
   const now = Date.now();
@@ -1397,14 +1397,14 @@ async function handleTronChat(ws, msg) {
   if (profile.role === "owner") {
     const smart = await tronClaude(profile, resident, msg.text, now);
     if (smart) {
-      tronConversations.push({ at: Date.now(), who: "Tron", text: smart }); tronConversations = tronConversations.slice(-100);
+      tronConversations.push({ at: Date.now(), who: "Glint", text: smart }); tronConversations = tronConversations.slice(-100);
       try { fs.writeFileSync(TRON_MEMORY_FILE, JSON.stringify(tronConversations, null, 2)); } catch {}
       return send(ws, { type: "tron-chat", reply: smart, history: tronConversations.slice(-30) });
     }
   }
   const built = profile.role === "owner" ? tronBuildChat(profile, msg.text, now) : null;
   if (built) {
-    tronConversations.push({ at: now, who: "Tron", text: built }); tronConversations = tronConversations.slice(-100);
+    tronConversations.push({ at: now, who: "Glint", text: built }); tronConversations = tronConversations.slice(-100);
     try { fs.writeFileSync(TRON_MEMORY_FILE, JSON.stringify(tronConversations, null, 2)); } catch {}
     return send(ws, { type: "tron-chat", reply: built, history: tronConversations.slice(-30) });
   }
@@ -1415,13 +1415,13 @@ async function handleTronChat(ws, msg) {
     // player waiting on an overloaded local model feels broken. Fall back
     // quickly while the model continues serving the town in the background.
     const raw = await Promise.race([
-      npcGenerator("You are Tron, a friendly glowing digital program who lives in Little Town and looks after it for your creator, Sean. You walk the streets, watch everyone, and keep notes (supplied in briefing.notes) on anything odd: residents stuck, too hungry or tired, standing on each other, events nobody attends, friendships going cold. Answer in 1-4 short sentences, upbeat with a little computer flavour ('scanning', 'the grid'). When asked what's going on, what's weird, or what to change, use the notes and give concrete recommendations. Never invent facts that aren't in the briefing. Do not claim actions you did not take. Return JSON only.", JSON.stringify({ message: msg.text, briefing }), { type: "object", additionalProperties: false, properties: { reply: { type: "string", minLength: 1, maxLength: 500 } }, required: ["reply"] }).catch(() => null),
+      npcGenerator("You are Glint, a friendly glowing digital program who lives in Little Town and looks after it for your creator, Sean. You walk the streets, watch everyone, and keep notes (supplied in briefing.notes) on anything odd: residents stuck, too hungry or tired, standing on each other, events nobody attends, friendships going cold. Answer in 1-4 short sentences, upbeat with a little computer flavour ('scanning', 'the grid'). When asked what's going on, what's weird, or what to change, use the notes and give concrete recommendations. Never invent facts that aren't in the briefing. Do not claim actions you did not take. Return JSON only.", JSON.stringify({ message: msg.text, briefing }), { type: "object", additionalProperties: false, properties: { reply: { type: "string", minLength: 1, maxLength: 500 } }, required: ["reply"] }).catch(() => null),
       new Promise(resolve => setTimeout(() => resolve(null), 10_000))
     ]);
     // eslint-disable-next-line no-control-regex -- remove transport controls from local model output.
     if (typeof raw?.reply === "string" && raw.reply.trim()) reply = raw.reply.replace(/[\u0000-\u001f<>]/g, " ").trim().slice(0, 500);
   } catch {}
-  tronConversations.push({ at: now, who: "Tron", text: reply }); tronConversations = tronConversations.slice(-100);
+  tronConversations.push({ at: now, who: "Glint", text: reply }); tronConversations = tronConversations.slice(-100);
   try { fs.writeFileSync(TRON_MEMORY_FILE, JSON.stringify(tronConversations, null, 2)); } catch {}
   send(ws, { type: "tron-chat", reply, history: tronConversations.slice(-30) });
 }
