@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Glint: Sean's caretaker program who lives in Little Town. He walks the
+ * Glint: Sean's caretaker program who lives in Cooke’s Corner. He walks the
  * streets like everyone else, watches how the town is running, and keeps
  * notes on anything odd (someone stuck doing the same thing for hours, very
  * hungry or tired residents, people standing on top of each other, events

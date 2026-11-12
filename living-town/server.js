@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Little Town — one shared, always-running world.
+ * Cooke’s Corner — one shared, always-running world.
  *
  * The server owns the canonical simulation and ticks once per real second
  * whether or not anyone is connected. Browsers connect over WebSocket and
@@ -666,7 +666,7 @@ function welcomeTroupe(now) {
   for (const a of arrived) for (const b of arrived) if (a !== b) a.relationships[b.id] = 60 + Math.floor(Math.random() * 15);
   cast.syncHomes(state);
   for (const resident of arrived) { life.ensureResidentLife(resident, now); mind.ensureMind(resident); }
-  if (arrived.length) addEvent(`🎪 A traveling circus troupe has put up the Big Top by the market: ${arrived.map(r => r.name).join(", ")}. Welcome to Little Town!`, now);
+  if (arrived.length) addEvent(`🎪 A traveling circus troupe has put up the Big Top by the market: ${arrived.map(r => r.name).join(", ")}. Welcome to Cooke’s Corner!`, now);
 }
 welcomeTroupe(bootTime);
 
@@ -872,7 +872,7 @@ if (PLAYABLE_SPINE_DIR && fs.existsSync(path.join(PLAYABLE_SPINE_DIR, "index.htm
       if (req.path === "/" || req.path === "/index.html") {
         return res.redirect(302, "/?next=%2Fplayable-spine%2F");
       }
-      return res.status(401).json({ error: "Sign in to Little Town before opening the playable preview." });
+      return res.status(401).json({ error: "Sign in to Cooke’s Corner before opening the playable preview." });
     }
     res.setHeader("Cache-Control", "private, no-store");
     next();
@@ -885,7 +885,7 @@ if (PLAYABLE_SPINE_M2_DIR && fs.existsSync(path.join(PLAYABLE_SPINE_M2_DIR, "ind
       if (req.path === "/" || req.path === "/index.html") {
         return res.redirect(302, "/?next=%2Fplayable-spine-m2%2F");
       }
-      return res.status(401).json({ error: "Sign in to Little Town before opening the tactical preview." });
+      return res.status(401).json({ error: "Sign in to Cooke’s Corner before opening the tactical preview." });
     }
     res.setHeader("Cache-Control", "private, no-store");
     next();
@@ -981,7 +981,7 @@ app.post("/api/residents", handle((req, res) => {
   cast.syncHomes(state);
   life.ensureResidentLife(resident, now);
   mind.ensureMind(resident);
-  addEvent(`${resident.name} moved into ${home.name}. Welcome to Little Town!`, now);
+  addEvent(`${resident.name} moved into ${home.name}. Welcome to Cooke’s Corner!`, now);
   broadcastRoster();
   res.status(201).json({ resident: residentSummary(resident) });
 }));
@@ -1344,7 +1344,7 @@ setInterval(() => {
 const CLAUDE_BIN = process.env.CLAUDE_BIN || "/opt/homebrew/bin/claude";
 // Off in tests and other sandboxes (they use their own data folder).
 const TRON_BRAIN = process.env.TRON_BRAIN !== "off" && !process.env.LIVING_TOWN_DATA_DIR && fs.existsSync(CLAUDE_BIN);
-const TRON_SYSTEM = `You are Glint, a glowing digital caretaker program who lives inside "Little Town", a family-friendly shared town game that Sean (your creator, the owner) plays with his young daughters Olive and Hazel on iPhones. You walk the streets, watch the residents (their needs, moods, activities, friendships) and keep notes on anything odd. You are talking with Sean.
+const TRON_SYSTEM = `You are Glint, a glowing digital caretaker program who lives inside "Cooke’s Corner", a family-friendly shared town game that Sean (your creator, the owner) plays with his young daughters Olive and Hazel on iPhones. You walk the streets, watch the residents (their needs, moods, activities, friendships) and keep notes on anything odd. You are talking with Sean.
 
 Personality: warm, sharp, a little playful, light computer flavour ("scanning", "the grid") but never at the cost of being useful. Talk like a smart friend, not a greeting card. Short: 1-4 sentences unless Sean asks for detail. Never repeat your previous message; read the conversation and answer what Sean actually said. Don't open with "Greetings".
 
@@ -1361,7 +1361,7 @@ function tronClaude(profile, resident, text, now) {
     return `${r.name}${isPlayable(r.id) ? " (player)" : ""}: ${r.asleep ? "asleep" : r.activity}${r.place ? ` @ ${world.places[r.place]?.name || r.place}` : ""}${r.mood?.label ? `, ${r.mood.label}` : ""}${low.length ? `, low: ${low.join(", ")}` : ""}`;
   });
   const briefing = {
-    time: new Date(now).toLocaleString(), town: destinationById[here]?.name || "Little Town", sean: `${resident.name} is ${resident.activity}`,
+    time: new Date(now).toLocaleString(), town: destinationById[here]?.name || "Cooke’s Corner", sean: `${resident.name} is ${resident.activity}`,
     people, recentEvents: state.events.slice(0, 8).map(e => e.text), nowOn: state.programme?.current?.name || null,
     notes: tron.notes(state).slice(0, 15).map(n => `${n.kind}: ${n.text}`),
     builds: tronBuilds().slice(-5).map(b => ({ text: b.text, status: b.status, error: b.error || undefined }))
@@ -1409,14 +1409,14 @@ async function handleTronChat(ws, msg) {
     try { fs.writeFileSync(TRON_MEMORY_FILE, JSON.stringify(tronConversations, null, 2)); } catch {}
     return send(ws, { type: "tron-chat", reply: built, history: tronConversations.slice(-30) });
   }
-  const briefing = { town: destinationById[resident.destinationId]?.name || "Little Town", people: state.residents.filter(r => r.destinationId === resident.destinationId).map(r => `${r.name}: ${r.activity}`).slice(0, 10), events: state.events.slice(0, 5).map(e => e.text), notes: tron.notes(state).slice(0, 12).map(n => `${n.kind}: ${n.text}`), memory: tronConversations.slice(-12) };
+  const briefing = { town: destinationById[resident.destinationId]?.name || "Cooke’s Corner", people: state.residents.filter(r => r.destinationId === resident.destinationId).map(r => `${r.name}: ${r.activity}`).slice(0, 10), events: state.events.slice(0, 5).map(e => e.text), notes: tron.notes(state).slice(0, 12).map(n => `${n.kind}: ${n.text}`), memory: tronConversations.slice(-12) };
   let reply = tron.answer(state, msg.text);
   if (npcGenerator) try {
     // A caretaker who is temporarily thinking is useful; one who keeps the
     // player waiting on an overloaded local model feels broken. Fall back
     // quickly while the model continues serving the town in the background.
     const raw = await Promise.race([
-      npcGenerator("You are Glint, a friendly glowing digital program who lives in Little Town and looks after it for your creator, Sean. You walk the streets, watch everyone, and keep notes (supplied in briefing.notes) on anything odd: residents stuck, too hungry or tired, standing on each other, events nobody attends, friendships going cold. Answer in 1-4 short sentences, upbeat with a little computer flavour ('scanning', 'the grid'). When asked what's going on, what's weird, or what to change, use the notes and give concrete recommendations. Never invent facts that aren't in the briefing. Do not claim actions you did not take. Return JSON only.", JSON.stringify({ message: msg.text, briefing }), { type: "object", additionalProperties: false, properties: { reply: { type: "string", minLength: 1, maxLength: 500 } }, required: ["reply"] }).catch(() => null),
+      npcGenerator("You are Glint, a friendly glowing digital program who lives in Cooke’s Corner and looks after it for your creator, Sean. You walk the streets, watch everyone, and keep notes (supplied in briefing.notes) on anything odd: residents stuck, too hungry or tired, standing on each other, events nobody attends, friendships going cold. Answer in 1-4 short sentences, upbeat with a little computer flavour ('scanning', 'the grid'). When asked what's going on, what's weird, or what to change, use the notes and give concrete recommendations. Never invent facts that aren't in the briefing. Do not claim actions you did not take. Return JSON only.", JSON.stringify({ message: msg.text, briefing }), { type: "object", additionalProperties: false, properties: { reply: { type: "string", minLength: 1, maxLength: 500 } }, required: ["reply"] }).catch(() => null),
       new Promise(resolve => setTimeout(() => resolve(null), 10_000))
     ]);
     // eslint-disable-next-line no-control-regex -- remove transport controls from local model output.
@@ -1565,6 +1565,6 @@ const viewer = viewerToken ? startViewer({
 }) : null;
 
 server.listen(PORT, HOST, () => {
-  console.log(`Little Town server running — http://${HOST}:${PORT}`);
+  console.log(`Cooke’s Corner server running — http://${HOST}:${PORT}`);
   console.log(`Schema ${SCHEMA_VERSION} · assets ${assetVersion} · autosave every ${AUTOSAVE_MS / 1000}s`);
 });

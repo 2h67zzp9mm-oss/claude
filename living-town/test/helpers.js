@@ -56,7 +56,7 @@ async function until(check, label, timeout = 8000) {
 async function waitForStart(proc) {
   await until(() => {
     if (proc.child.exitCode !== null) throw new Error(`server exited ${proc.child.exitCode}: ${proc.output()}`);
-    return proc.output().includes("Little Town server running");
+    return proc.output().includes("Cooke’s Corner server running");
   }, `server start: ${proc.output()}`);
 }
 

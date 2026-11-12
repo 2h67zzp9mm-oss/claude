@@ -93,14 +93,14 @@ function buildProfile(resident, now) {
   const stage = stageFor(age);
   const s = stages[stage];
   const minor = stage === "child" || stage === "teen";
-  const career = minor ? { kind: "school", title: stage === "child" ? "Elementary student" : "Student", level: 1, organization: "Little Town School" }
-    : stage === "senior" ? { kind: "retired", title: "Retired", level: 1, organization: "Little Town" }
-    : { kind: "free", title: "Town resident", level: 1, organization: "Little Town" };
+  const career = minor ? { kind: "school", title: stage === "child" ? "Elementary student" : "Student", level: 1, organization: "Cooke’s Corner School" }
+    : stage === "senior" ? { kind: "retired", title: "Retired", level: 1, organization: "Cooke’s Corner" }
+    : { kind: "free", title: "Town resident", level: 1, organization: "Cooke’s Corner" };
   return {
     name, born, role: s.role, custom: true, noHistory: true,
-    summary: `${name} moved to Little Town recently and is still finding a favorite spot.`,
+    summary: `${name} moved to Cooke’s Corner recently and is still finding a favorite spot.`,
     likes: s.likes, dislikes: ["being rushed", "rainy days"], values: ["kindness", "curiosity"],
-    goals: ["make a friend in town", "find a favorite spot in Little Town", "get to know the neighbors"],
+    goals: ["make a friend in town", "find a favorite spot in Cooke’s Corner", "get to know the neighbors"],
     family: [], career, historyTracks: ["community"]
   };
 }

@@ -201,7 +201,7 @@
       showToast(msg.reason);
     } else if (msg.type === "travel-result") {
       if (msg.error) showToast(msg.error);
-      else { $("#travelCard").classList.add("hidden"); const d = (destinations || []).find(x => x.id === msg.destinationId); showToast(!msg.destinationId || msg.destinationId === "little-town" ? "Welcome home to Little Town!" : `Welcome to ${d?.name || "a new town"}!`); }
+      else { $("#travelCard").classList.add("hidden"); const d = (destinations || []).find(x => x.id === msg.destinationId); showToast(!msg.destinationId || msg.destinationId === "little-town" ? "Welcome home to Cooke’s Corner!" : `Welcome to ${d?.name || "a new town"}!`); }
     } else if (msg.type === "toast") { if (typeof msg.text === "string") showToast(msg.text);
     } else if (msg.type === "home-state") { window.LivingTownHome?.onState(msg);
     } else if (msg.type === "tron-chat") { if (msg.error) showToast(msg.error); else renderTron(msg.history || []); const ti = document.querySelector("#tronForm input"); if (ti) ti.disabled = false; }
@@ -872,7 +872,7 @@
     const sorted = Object.entries(r.relationships || {}).sort((a, b) => b[1] - a[1]);
     ui.closestFriend.textContent = residents.get(sorted[0]?.[0])?.name || "Nobody yet";
     ui.age.textContent = String(r.profile?.age ?? "—");
-    ui.career.textContent = `${r.career?.title || "Resident"} · ${r.career?.organization || "Little Town"}`;
+    ui.career.textContent = `${r.career?.title || "Resident"} · ${r.career?.organization || "Cooke’s Corner"}`;
     const goal = r.goals?.find(item => !item.completed) || r.goals?.[r.goals.length - 1];
     ui.goal.textContent = goal ? capitalize(goal.text) : "Finding a new direction";
     ui.goalProgress.style.width = `${Math.round(goal?.progress || 0)}%`;
@@ -1355,7 +1355,7 @@
 
   function updateBanner() {
     const pg = programme();
-    if (!pg) { banner.textContent = "✨ Things to do · Explore Little Town"; banner.classList.remove("hidden"); return; }
+    if (!pg) { banner.textContent = "✨ Things to do · Explore Cooke’s Corner"; banner.classList.remove("hidden"); return; }
     const now = nowMs();
     const event = currentEvent();
     const mine = myResident();
@@ -1751,7 +1751,7 @@
   }
   function updateTownName() {
     const id = activeDestinationId();
-    const name = id === "little-town" ? "Little Town" : (destinations || []).find(d => d.id === id)?.name || "Little Town";
+    const name = id === "little-town" ? "Cooke’s Corner" : (destinations || []).find(d => d.id === id)?.name || "Cooke’s Corner";
     const el = document.querySelector(".town-title span");
     if (el && el.textContent !== name) el.textContent = name;
   }

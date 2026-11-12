@@ -152,7 +152,7 @@
   ];
 
   const destinations = [
-    { id: "little-town", name: "Little Town", subtitle: "Your familiar home town", map: "assets/town-map.webp", arrival: { x: 478, y: 556 } },
+    { id: "little-town", name: "Cooke’s Corner", subtitle: "Your familiar home town", map: "assets/town-map.webp", arrival: { x: 478, y: 556 } },
     { id: "copper-clover", name: "Copper & Clover", subtitle: "Gardens, repairs, and warm bakery mornings", map: "assets/destinations/copper-clover-concept.png", arrival: { x: 478, y: 556 } },
     { id: "patchwork-commons", name: "Patchwork Commons", subtitle: "Makers, market stalls, and small performances", map: "assets/destinations/patchwork-commons-concept.png", arrival: { x: 478, y: 556 } },
     { id: "riverlight", name: "Riverlight", subtitle: "Willows, ceramics, and waterside cafes", map: "assets/destinations/riverlight-concept.png", arrival: { x: 478, y: 556 } }
