@@ -5,7 +5,7 @@
   "use strict";
   let BASE = "homestead/";
   // Worlds: same plot and gameplay, different paint. Art for each lives in homestead/worlds/<id>/.
-  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/" } };
+  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/" }, castle: { name: "Cloud Castle", icon: "🏰", dir: "homestead/worlds/castle/" } };
   let world = "clay";
   const SPEED = 5;            // metres per second (2.6 felt far too slow on a phone)
   const CELL = 0.25;          // walk grid
@@ -22,9 +22,9 @@
     const img = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = BASE + src + ver; });
     ready = Promise.all([fetch("homestead/layout.json", { cache: "no-cache" }).then(r => r.json()), fetch(BASE + "art.json", { cache: "no-cache" }).then(r => r.json())]).then(async ([layout, art]) => {
       ver = "?v=" + (art.version || Date.now());   // new art = new URLs, so phones never mix old pictures with new
-      const names = ["ground", "house", "sprites", ...Object.keys(art.walkers).map(k => "walk_" + k)];
+      const names = ["ground", "house", "sprites", ...Object.keys(art.walkers).map(k => "walk_" + k), ...(art.sky ? ["sky"] : [])];
       const loaded = await Promise.all(names.map(n => img(n + ".webp")));
-      L = layout; A = art; names.forEach((n, i) => { imgs[n] = loaded[i]; });
+      L = layout; A = art; imgs = {}; names.forEach((n, i) => { imgs[n] = loaded[i]; });
       buildGrid();
     });
     return ready;
@@ -318,6 +318,13 @@
     }
     ctx.drawImage(space, 0, 0);
   }
+  // A painted sky (Cloud Castle): fills the screen, drifting a little as you walk so the island feels like it floats.
+  function drawSky(cw, ch) {
+    const S = imgs.sky, k = Math.max(cw / S.width, ch / S.height) * 1.12;
+    const w = S.width * k, h = S.height * k, G = imgs.ground;
+    const fx = G ? Math.max(0, Math.min(1, cam.x / Math.max(1, G.width - cw / cam.z))) : 0.5, fy = G ? Math.max(0, Math.min(1, cam.y / Math.max(1, G.height - ch / cam.z))) : 0.5;
+    ctx.drawImage(S, -(w - cw) * fx, -(h - ch) * fy, w, h);
+  }
   function walkTo(t, keepPending) {
     fishing = null; if (!keepPending) me.pending = null;
     me.target = t; me.path = route(t.x, t.y); marker = { x: t.x, y: t.y, at: performance.now() };
@@ -416,7 +423,7 @@
     const r = opts.resident(id), AV = window.LivingTownAvatar; if (!AV) return null;
     const kid = id === "hazel" || id === "olive" || (Number(r?.profile?.age) > 0 && Number(r.profile.age) < 13);
     const look = opts.look?.(id) || r?.look;
-    return AV.sheet(world, kid ? "kid" : AV.bodyFor(look, 30), look);
+    return AV.sheet(world === "scifi" ? "scifi" : "clay", kid ? "kid" : AV.bodyFor(look, 30), look);   // other worlds use the everyday clothes until they get outfits
   }
   function drawWalker(id, p) {
     const key = walkerFor(id), av = avatarFor(id);
@@ -468,7 +475,7 @@
     const wantY = Math.max(-40, Math.min(G.height - ch / cam.z + 40, py - ch / cam.z * 0.42));
     if (!cam.ready) { cam.x = wantX; cam.y = wantY; cam.ready = true; }
     cam.x += (wantX - cam.x) * 0.12; cam.y += (wantY - cam.y) * 0.12;
-    if (world === "scifi") drawSpace(cw, ch); else { ctx.fillStyle = A.bg || "#7d8fae"; ctx.fillRect(0, 0, cw, ch); }
+    if (imgs.sky) drawSky(cw, ch); else if (world === "scifi") drawSpace(cw, ch); else { ctx.fillStyle = A.bg || "#7d8fae"; ctx.fillRect(0, 0, cw, ch); }
     const [gx, gy] = toScreen(0, 0); ctx.drawImage(G, gx, gy, G.width * cam.z, G.height * cam.z);
     // everything that stands up, back to front
     const items = [];

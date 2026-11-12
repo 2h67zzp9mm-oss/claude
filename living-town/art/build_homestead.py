@@ -5,14 +5,17 @@ import sys, os, json
 from PIL import Image, ImageEnhance
 # sci-fi: punch up colour so it pops on a phone (walkers are left alone)
 def pop(im):
-    if WORLD != 'scifi': return im
-    a = im.getchannel('A'); rgb = ImageEnhance.Contrast(ImageEnhance.Color(im.convert('RGB')).enhance(1.2)).enhance(1.1)
+    if WORLD not in ('scifi', 'castle'): return im
+    a = im.getchannel('A'); rgb = ImageEnhance.Contrast(ImageEnhance.Color(im.convert('RGB')).enhance(1.3 if WORLD == 'castle' else 1.2)).enhance(1.1)
     rgb = ImageEnhance.Brightness(rgb).enhance(1.05); out = rgb.convert('RGBA'); out.putalpha(a); return out
 RD, WD = sys.argv[1], sys.argv[2]
 WORLD = sys.argv[3] if len(sys.argv) > 3 else ''   # e.g. scifi -> public/homestead/worlds/scifi/
 OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'homestead', *(['worlds', WORLD] if WORLD else [])); os.makedirs(OUT, exist_ok=True)
 cam = json.load(open(os.path.join(RD, 'camera.json')))
-art = {'camera': cam, 'sprites': {}, 'walkers': {}, 'bg': {'scifi': '#2b1d47'}.get(WORLD, '#7d8fae')}
+art = {'camera': cam, 'sprites': {}, 'walkers': {}, 'bg': {'scifi': '#2b1d47', 'castle': '#e7b3d3'}.get(WORLD, '#7d8fae')}
+# a painted sky behind the island (Cloud Castle)
+SKY = os.path.join(os.path.dirname(__file__), 'textures', WORLD, 'sky.jpg') if WORLD else ''
+if SKY and os.path.exists(SKY): Image.open(SKY).convert('RGB').save(os.path.join(OUT, 'sky.webp'), quality=85, method=6); art['sky'] = True
 
 g = pop(Image.open(os.path.join(RD, 'ground.png')).convert('RGBA'))
 g.save(os.path.join(OUT, 'ground.webp'), quality=88, method=6)

@@ -36,7 +36,7 @@ SCIFI = {
     'lampglow': ((1.0, 0.85, 0.55), 3.5, 0), 'paving': ((0.26, 0.18, 0.28), 0, 0),
     'c_watermelon': ((0.3, 1.0, 0.4), 2.4, 0), 'c_pumpkin': ((1.0, 0.5, 0.05), 2.4, 0), 'leaf': ((0.12, 0.55, 0.40), 0.15, 0),
 }
-SKY = {'clay': (0.62, 0.68, 0.78), 'scifi': (0.42, 0.30, 0.62)}[THEME]
+SKY = {'clay': (0.62, 0.68, 0.78), 'scifi': (0.42, 0.30, 0.62), 'castle': (0.86, 0.72, 0.86)}[THEME]
 
 def reset(w, h, scale, centre):
     bpy.ops.wm.read_factory_settings(use_empty=True); _mats.clear()
@@ -52,6 +52,14 @@ def reset(w, h, scale, centre):
     cam.clip_end = 200
     sun = bpy.data.lights.new('sun', 'SUN'); sun.energy = 3.2; sun.angle = R(10); so = bpy.data.objects.new('sun', sun); sc.collection.objects.link(so)
     so.rotation_euler = (R(50), 0, R(-20))
+    if THEME == 'castle':   # warm sunset light from the right, pink fill from behind, soft bloom
+        sun.color = (1.0, 0.88, 0.74); sun.energy = 3.0; so.rotation_euler = (R(48), 0, R(-35))
+        rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 1.1; rim.color = (1.0, 0.62, 0.82); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))
+        nt = bpy.data.node_groups.new('comp', 'CompositorNodeTree'); sc.compositing_node_group = nt
+        nt.interface.new_socket('Image', in_out='OUTPUT', socket_type='NodeSocketColor')
+        rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
+        gl.inputs['Type'].default_value = 'Bloom'; gl.inputs['Threshold'].default_value = 0.9; gl.inputs['Strength'].default_value = 0.5; gl.inputs['Size'].default_value = 0.5
+        nt.links.new(rl.outputs['Image'], gl.inputs['Image']); nt.links.new(gl.outputs['Image'], out.inputs[0])
     if THEME == 'scifi':
         sun.color = (1.0, 0.86, 0.78); sun.energy = 2.7
         rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 1.2; rim.color = (0.55, 0.6, 1.0); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))   # bloom, so glowing things bleed light like the concept art
@@ -416,11 +424,13 @@ def sprite(name, build, size=2.0, pxsize=None, side=False):
     sc.render.filepath = os.path.join(OUT, 'sprites', name + '.png'); bpy.ops.render.render(write_still=True)
     return project(sc, cam, (0, 0, 0))
 
+CS = THEME == 'castle'
+if CS: exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'castle_world.py')).read())
 anchors = {}
 mode = sys.argv[sys.argv.index('--') + 2] if len(sys.argv) > sys.argv.index('--') + 2 else 'all'
 S = L['size']; centre = (S / 2, S / 2, 1.6)
 if mode in ('all', 'scene'):
-    for part, fn in (('ground', ground_scifi if THEME == 'scifi' else ground_scene), ('house', dome_scene if THEME == 'scifi' else house_scene)):
+    for part, fn in (('ground', ground_castle if CS else ground_scifi if THEME == 'scifi' else ground_scene), ('house', castle_scene if CS else dome_scene if THEME == 'scifi' else house_scene)):
         sc, cam = reset(W, H, W / PPM, centre); fn()
         sc.render.filepath = os.path.join(OUT, part + '.png'); bpy.ops.render.render(write_still=True)
     o, ax, ay, az = (project(sc, cam, p) for p in ((0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)))
@@ -428,21 +438,23 @@ if mode in ('all', 'scene'):
               open(os.path.join(OUT, 'camera.json'), 'w'), indent=1)
 if mode in ('all', 'sprites'):
     sf = THEME == 'scifi'
-    anchors['tree'] = sprite('tree', alien_tree if sf else tree, 4.6)
-    anchors['bush'] = sprite('bush', crystals if sf else bush, 2.0)
-    anchors['mailbox_up'] = sprite('mailbox_up', lambda: beacon(True) if sf else mailbox(True), 2.4)
-    anchors['mailbox'] = sprite('mailbox', lambda: beacon(False) if sf else mailbox(False), 2.4)
-    anchors['crate'] = sprite('crate', pod if sf else crate, 2.0)
-    anchors['wet'] = sprite('wet', wet, 2.0)
-    anchors['bed'] = sprite('bed', bed, 2.0)
-    anchors['lamp'] = sprite('lamp', lamp, 2.0)
+    anchors['tree'] = sprite('tree', c_tree if CS else alien_tree if sf else tree, 4.6)
+    anchors['bush'] = sprite('bush', c_crystals if CS else crystals if sf else bush, 2.0)
+    anchors['mailbox_up'] = sprite('mailbox_up', lambda: c_mailbox(True) if CS else beacon(True) if sf else mailbox(True), 2.4)
+    anchors['mailbox'] = sprite('mailbox', lambda: c_mailbox(False) if CS else beacon(False) if sf else mailbox(False), 2.4)
+    anchors['crate'] = sprite('crate', c_crate if CS else pod if sf else crate, 2.0)
+    anchors['wet'] = sprite('wet', c_wet if CS else wet, 2.0)
+    anchors['bed'] = sprite('bed', c_bed if CS else bed, 2.0)
+    anchors['lamp'] = sprite('lamp', c_lamp if CS else lamp, 2.0)
     for kind in ('flower', 'shroom', 'succulent', 'orb'):
-        for c in range(5): anchors['%s_%d' % (kind, c)] = sprite('%s_%d' % (kind, c), lambda kind=kind, c=c: (plant(kind, c), scale_all(1.7)), 1.9)
+        for c in range(5): anchors['%s_%d' % (kind, c)] = sprite('%s_%d' % (kind, c), lambda kind=kind, c=c: ((c_plant if CS else plant)(kind, c), scale_all(1.7)), 1.9)
     for c, f in CROPS.items():
         for st in range(3):
-            build = (lambda c=c, st=st: alien_crop(c, st)) if sf else (lambda f=f, st=st: f(st))
+            build = (lambda c=c, st=st: veg(c, st)) if CS else (lambda c=c, st=st: alien_crop(c, st)) if sf else (lambda f=f, st=st: f(st))
             anchors['%s_%d' % (c, st)] = sprite('%s_%d' % (c, st), build, 2.0)
     TINT[0] = 'crystal' if sf else None
-    for k, n in enumerate(FISH): anchors['fish_' + n] = sprite('fish_' + n, lambda k=k: fish(k), 2.2, 160, side=True)
+    for k, n in enumerate(FISH):
+        if CS: TINT[0] = FISH_TINT[n]
+        anchors['fish_' + n] = sprite('fish_' + n, lambda k=k: fish(k), 2.2, 160, side=True)
     TINT[0] = None
     json.dump(anchors, open(os.path.join(OUT, 'anchors.json'), 'w'), indent=1)

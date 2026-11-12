@@ -32,7 +32,7 @@ const FISH = {
   golden: { name: "Golden Fish", sell: 40, weight: 1 }
 };
 const PLOTS = 16;
-const WORLDS = ["clay", "scifi"];
+const WORLDS = ["clay", "scifi", "castle"];
 const WATER_HOURS = 6;
 const DRY_SPEED = 0.35;
 // Start small, then upgrade: each garden level opens more beds and better seeds.
@@ -231,7 +231,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       case "world": {
         if (!WORLDS.includes(msg.world)) return { ok: false, toast: "That world isn't built yet." };
         h.world = msg.world;
-        return { ok: true, toast: msg.world === "scifi" ? "🚀 Welcome to your space colony!" : "🤍 Back to the clay world." };
+        return { ok: true, toast: { scifi: "🚀 Welcome to your space colony!", castle: "🏰 Welcome to Cloud Castle!" }[msg.world] || "🤍 Back to the clay world." };
       }
       case "upgrade": {
         const next = LEVELS[levelOf(h) + 1];

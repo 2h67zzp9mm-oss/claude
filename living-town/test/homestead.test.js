@@ -78,6 +78,7 @@ test("home plot: the family can switch worlds", () => {
   assert.equal(hs.view(state, "h", me, 0).world, "clay");
   assert.equal(hs.act(state, "h", me, { action: "world", world: "scifi" }, 0).ok, true);
   assert.equal(hs.view(state, "h", me, 0).world, "scifi");
+  assert.equal(hs.act(state, "h", me, { action: "world", world: "castle" }, 0).ok, true, "Cloud Castle is built");
   assert.equal(hs.act(state, "h", me, { action: "world", world: "nope" }, 0).ok, false);
 });
 
