@@ -62,19 +62,22 @@
     southWalk: [400, 600], homes: [478, 556], homesLow: [487, 600], southWalkE: [600, 600],
     seanHome: [483, 518], miloStairs: [603, 572], miloHome: [608, 520],
     westRoad: [190, 322], finnGate: [128, 300], finnHome: [129, 268], roseHome: [437, 516],
-    bigTop: [852, 432]
+    bigTop: [852, 432],
+    // round the paved ring of the fountain, so nobody walks through its flower beds
+    ringNW: [405, 207], ringNE: [543, 207], ringSE: [545, 318],
+    roseLow: [437, 600], cafeRoad: [669, 244]
   };
   const walkEdges = [
-    ["square", "plazaW"], ["square", "plazaE"], ["square", "plazaSW"], ["plazaSW", "plazaW"],
-    ["plazaN", "plazaW"], ["plazaN", "plazaE"], ["plazaN", "northRoad"],
+    ["square", "plazaSW"], ["plazaSW", "plazaW"], ["square", "ringSE"], ["ringSE", "plazaE"],
+    ["plazaN", "ringNW"], ["ringNW", "plazaW"], ["plazaN", "ringNE"], ["ringNE", "plazaE"], ["plazaN", "northRoad"],
     ["plazaW", "parkStairs"], ["parkStairs", "parkPath"], ["parkPath", "park"],
-    ["plazaE", "cafeStairs"], ["cafeStairs", "cafe"],
+    ["plazaE", "cafeRoad"], ["cafeRoad", "cafeStairs"], ["cafeStairs", "cafe"],
     ["plazaE", "marketSt"], ["square", "marketSt"], ["marketSt", "marketLane"], ["marketLane", "market"],
     ["plazaSW", "westStairs"], ["westStairs", "workshopPath"], ["workshopPath", "workshop"],
-    ["workshopPath", "southWest"], ["southWest", "southWalk"], ["southWalk", "homes"],
-    ["homes", "seanHome"], ["homes", "homesLow"], ["southWalk", "homesLow"], ["homesLow", "southWalkE"],
+    ["workshopPath", "southWest"], ["southWest", "southWalk"],
+    ["homes", "seanHome"], ["homes", "homesLow"], ["southWalk", "roseLow"], ["roseLow", "homesLow"], ["homesLow", "southWalkE"],
     ["southWalkE", "miloStairs"], ["miloStairs", "miloHome"],
-    ["plazaSW", "westRoad"], ["westRoad", "finnGate"], ["finnGate", "finnHome"], ["homes", "roseHome"], ["market", "bigTop"]
+    ["plazaSW", "westRoad"], ["westRoad", "finnGate"], ["finnGate", "finnHome"], ["roseLow", "roseHome"], ["market", "bigTop"]
   ];
 
   // Named buildings: a sign on the map, the walkway node at the door, and
@@ -202,29 +205,52 @@
   }
   const shortest = Object.fromEntries(Object.keys(walkNodes).map(id => [id, shortestFrom(id)]));
 
-  /** Waypoints from (fx, fy) to (tx, ty) along the walkways, ending at the target. */
-  function route(fx, fy, tx, ty) {
-    if (Math.hypot(tx - fx, ty - fy) < 45) return [{ x: tx, y: ty }];
+  // The closest point on the walkway lines themselves: { x, y, a, b, dist }.
+  function onLine(x, y) {
     let best = null;
-    for (const start of nearestNodes(fx, fy, 2)) {
-      for (const end of nearestNodes(tx, ty, 2)) {
-        const along = shortest[start.id].dist[end.id];
+    for (const [a, b] of walkEdges) {
+      const [ax, ay] = walkNodes[a], [bx, by] = walkNodes[b];
+      const lenSq = (bx - ax) ** 2 + (by - ay) ** 2;
+      const t = lenSq ? Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / lenSq)) : 0;
+      const px = ax + t * (bx - ax), py = ay + t * (by - ay), dist = Math.hypot(px - x, py - y);
+      if (!best || dist < best.dist) best = { x: px, y: py, a, b, dist };
+    }
+    return best;
+  }
+
+  /**
+   * Waypoints from (fx, fy) to (tx, ty). The walkway lines are the rule: step
+   * onto the nearest line, follow the lines, and only leave them for the last
+   * little step to the target (which callers keep near a walkway). So nobody
+   * cuts across fences, roofs, gardens or water, even on short trips.
+   */
+  function route(fx, fy, tx, ty) {
+    const s = onLine(fx, fy), e = onLine(tx, ty);
+    const target = { x: tx, y: ty };
+    if (!s || !e) return [target];
+    const node = id => ({ x: walkNodes[id][0], y: walkNodes[id][1] });
+    let middle = [];
+    const sameEdge = (s.a === e.a && s.b === e.b) || (s.a === e.b && s.b === e.a);
+    if (!sameEdge) {
+      let best = null;
+      for (const from of [s.a, s.b]) for (const to of [e.a, e.b]) {
+        const along = shortest[from].dist[to];
         if (along === undefined) continue;
-        const total = start.dist + along + end.dist;
-        if (!best || total < best.total) best = { total, start: start.id, end: end.id };
+        const total = Math.hypot(walkNodes[from][0] - s.x, walkNodes[from][1] - s.y) + along + Math.hypot(walkNodes[to][0] - e.x, walkNodes[to][1] - e.y);
+        if (!best || total < best.total) best = { total, from, to };
+      }
+      if (best) {
+        const ids = [best.to];
+        while (ids[0] !== best.from) ids.unshift(shortest[best.from].prev[ids[0]]);
+        middle = ids.map(node);
       }
     }
-    if (!best) return [{ x: tx, y: ty }];
-    const ids = [best.end];
-    while (ids[0] !== best.start) ids.unshift(shortest[best.start].prev[ids[0]]);
-    const points = ids.map(id => ({ x: walkNodes[id][0], y: walkNodes[id][1] }));
-    points.push({ x: tx, y: ty });
-    // Don't walk back to a corner you've already passed, or past the spot you
-    // tapped and back again: skip a waypoint that would mean doubling back.
-    const back = (a, b, c) => (b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y) < 0;
-    const from = { x: fx, y: fy };
-    while (points.length > 1 && back(from, points[0], points[1])) points.shift();
-    while (points.length > 2 && back(points[points.length - 3], points[points.length - 2], points[points.length - 1])) points.splice(points.length - 2, 1);
+    const points = [];
+    const add = p => { const last = points[points.length - 1] || { x: fx, y: fy }; if (Math.hypot(p.x - last.x, p.y - last.y) > 1) points.push({ x: p.x, y: p.y }); };
+    if (s.dist > 1) add(s);
+    middle.forEach(add);
+    add(e); add(target);
+    if (!points.length) points.push(target);
     return points;
   }
 

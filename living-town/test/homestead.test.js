@@ -87,3 +87,19 @@ test("on a real server: the playtest bot plays the whole home plot", async () =>
     await play({ action: "view" }, null, "view");
   } finally { await stop(server); }
 });
+
+test("town walking: everyone follows the walkway lines, even on short trips", () => {
+  const w = require("../shared/world");
+  const onLine = p => w.walkEdges.some(([a, b]) => {
+    const [ax, ay] = w.walkNodes[a], [bx, by] = w.walkNodes[b], L2 = (bx - ax) ** 2 + (by - ay) ** 2;
+    const t = Math.max(0, Math.min(1, ((p.x - ax) * (bx - ax) + (p.y - ay) * (by - ay)) / L2));
+    return Math.hypot(ax + t * (bx - ax) - p.x, ay + t * (by - ay) - p.y) < 0.5;
+  });
+  // From the cafe to the homes: every corner but the last is on a line.
+  const path = w.route(665, 180, 478, 556);
+  assert.ok(path.length > 3);
+  path.slice(0, -1).forEach(p => assert.ok(onLine(p), `off the walkway at ${p.x},${p.y}`));
+  // A short hop that used to cut straight across still goes by the lines.
+  const hop = w.route(437, 516, 483, 518);
+  assert.ok(hop.length > 2, "Rose's door to Sean's door goes down to the walk and back up");
+});
