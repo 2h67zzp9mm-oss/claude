@@ -8,25 +8,25 @@ CASTLE.update({
     'grass': ((0.95, 0.82, 0.55), 0, 0, 'sand', 0.14), 'lawn': ((0.42, 0.72, 0.22), 0, 0, 'grass', 0.16),
     'sandwet': ((0.80, 0.64, 0.40), 0, 0, None, 0), 'dirt': ((0.86, 0.70, 0.44), 0, 0, None, 0),
     'planks': ((0.36, 0.70, 0.70), 0, 0, 'planks', 0.5), 'thatch': ((0.92, 0.72, 0.30), 0, 0, 'thatch', 0.42),
-    'hull': ((0.55, 0.34, 0.20), 0, 0, 'wood', 0.6), 'deck': ((0.80, 0.60, 0.36), 0, 0, 'wood', 0.7),
-    'cloud': ((0.97, 1.0, 1.0), 0.7, 0, None, 0), 'cloud2': ((0.72, 0.95, 0.96), 0.6, 0, None, 0),
-    'water': ((0.05, 0.70, 0.80), 0.5, 0, None, 0), 'falls': ((0.60, 0.92, 1.0), 0.7, 0, None, 0),
-    'cream': ((0.97, 0.94, 0.86), 0, 0, None, 0), 'white': ((0.98, 0.97, 0.94), 0, 0, None, 0), 'sail': ((0.99, 0.95, 0.84), 0, 0, None, 0),
-    'path': ((0.70, 0.52, 0.34), 0, 0, None, 0), 'trunk': ((0.52, 0.37, 0.24), 0, 0, None, 0), 'coconut': ((0.42, 0.27, 0.16), 0, 0, None, 0),
-    'leaf': ((0.09, 0.42, 0.15), 0, 0, None, 0), 'leaf2': ((0.18, 0.58, 0.19), 0, 0, None, 0), 'blossom': ((1.0, 0.26, 0.36), 0.12, 0, None, 0),
-    'rope': ((0.88, 0.74, 0.48), 0, 0, None, 0), 'iron': ((0.30, 0.31, 0.36), 0, 0.5, None, 0), 'black': ((0.10, 0.10, 0.14), 0, 0, None, 0),
-    'red': ((0.90, 0.17, 0.14), 0, 0, None, 0), 'flag': ((0.90, 0.17, 0.14), 0, 0, None, 0), 'mail': ((0.90, 0.17, 0.14), 0, 0, None, 0),
-    'door': ((0.74, 0.38, 0.20), 0, 0, None, 0), 'doorframe': ((0.42, 0.25, 0.14), 0, 0, None, 0), 'window': ((1.0, 0.80, 0.42), 1.5, 0, None, 0),
-    'wooddark': ((0.42, 0.25, 0.13), 0, 0, None, 0), 'bamboo': ((0.66, 0.50, 0.24), 0, 0, None, 0),
-    'flame': ((1.0, 0.42, 0.08), 1.3, 0, None, 0), 'flame2': ((1.0, 0.78, 0.25), 1.6, 0, None, 0), 'lightglow': ((1.0, 0.94, 0.60), 3.0, 0, None, 0),
+    'hull': ((0.55, 0.34, 0.20), 0, 0, 'wood', 0.6), 'deck': ((0.80, 0.60, 0.36), 0, 0, 'wood', 0.7), 'gold': ((0.80, 0.56, 0.16), 0, 0.8, None, 0),
+    'cloud': ((0.90, 0.94, 0.92), 0.35, 0, None, 0), 'cloud2': ((0.50, 0.76, 0.80), 0.3, 0, None, 0),
+    'water': ((0.03, 0.46, 0.58), 0.35, 0, None, 0), 'falls': ((0.50, 0.80, 0.90), 0.5, 0, None, 0),
+    'cream': ((0.84, 0.78, 0.66), 0, 0, None, 0), 'white': ((0.82, 0.78, 0.70), 0, 0, None, 0), 'sail': ((0.80, 0.73, 0.58), 0, 0, None, 0),
+    'path': ((0.46, 0.31, 0.19), 0, 0, None, 0), 'trunk': ((0.42, 0.29, 0.19), 0, 0, None, 0), 'coconut': ((0.42, 0.27, 0.16), 0, 0, None, 0),
+    'leaf': ((0.04, 0.26, 0.09), 0, 0, None, 0), 'leaf2': ((0.08, 0.36, 0.10), 0, 0, None, 0), 'blossom': ((0.72, 0.10, 0.16), 0, 0, None, 0),
+    'rope': ((0.66, 0.52, 0.32), 0, 0, None, 0), 'iron': ((0.16, 0.17, 0.20), 0, 0.6, None, 0), 'black': ((0.05, 0.05, 0.07), 0, 0, None, 0),
+    'red': ((0.52, 0.07, 0.07), 0, 0, None, 0), 'flag': ((0.52, 0.07, 0.07), 0, 0, None, 0), 'mail': ((0.52, 0.07, 0.07), 0, 0, None, 0),
+    'door': ((0.40, 0.22, 0.12), 0, 0, None, 0), 'doorframe': ((0.24, 0.14, 0.08), 0, 0, None, 0), 'window': ((1.0, 0.62, 0.22), 2.0, 0, None, 0),
+    'wooddark': ((0.26, 0.15, 0.08), 0, 0, None, 0), 'bamboo': ((0.40, 0.27, 0.14), 0, 0, None, 0),
+    'flame': ((1.0, 0.42, 0.08), 1.3, 0, None, 0), 'flame2': ((1.0, 0.78, 0.25), 1.6, 0, None, 0), 'lightglow': ((1.0, 0.80, 0.40), 3.0, 0, None, 0),
     'lampglow': ((1.0, 0.82, 0.45), 2.4, 0, None, 0), 'glass': ((0.45, 0.88, 0.80), 0.35, 0, None, 0),
-    'shell': ((0.92, 0.46, 0.50), 0, 0, None, 0), 'shell2': ((0.86, 0.72, 0.52), 0, 0, None, 0), 'shell3': ((0.58, 0.46, 0.82), 0, 0, None, 0),
-    'starfish': ((0.95, 0.40, 0.18), 0, 0, None, 0), 'pebble': ((0.60, 0.60, 0.64), 0, 0, None, 0), 'pearl': ((0.86, 0.84, 0.86), 0, 0, None, 0),
-    'f0': ((1.0, 0.35, 0.60), 0.05, 0, None, 0), 'f1': ((1.0, 0.55, 0.15), 0.05, 0, None, 0), 'f2': ((1.0, 0.98, 0.95), 0, 0, None, 0),
-    'f3': ((1.0, 0.85, 0.25), 0.05, 0, None, 0), 'f4': ((0.95, 0.22, 0.25), 0.05, 0, None, 0),
+    'shell': ((0.66, 0.36, 0.34), 0, 0, None, 0), 'shell2': ((0.66, 0.54, 0.38), 0, 0, None, 0), 'shell3': ((0.42, 0.36, 0.52), 0, 0, None, 0),
+    'starfish': ((0.72, 0.28, 0.12), 0, 0, None, 0), 'pebble': ((0.40, 0.40, 0.43), 0, 0, None, 0), 'pearl': ((0.86, 0.84, 0.86), 0, 0, None, 0),
+    'f0': ((0.66, 0.14, 0.30), 0, 0, None, 0), 'f1': ((0.80, 0.36, 0.08), 0, 0, None, 0), 'f2': ((0.80, 0.76, 0.66), 0, 0, None, 0),
+    'f3': ((0.82, 0.60, 0.12), 0, 0, None, 0), 'f4': ((0.60, 0.08, 0.10), 0, 0, None, 0),
     'crystal': ((0.30, 0.85, 0.60), 0.5, 0, None, 0), 'crystal1': ((1.0, 0.35, 0.50), 0.5, 0, None, 0), 'crystal2': ((0.35, 0.60, 1.0), 0.5, 0, None, 0),
 })
-TEXTINT = {'thatch': (0.74, 0.60, 0.42), 'hull': (0.78, 0.60, 0.50), 'stone': (0.90, 0.86, 0.70)}
+TEXTINT = {'thatch': (0.56, 0.44, 0.30), 'hull': (0.52, 0.40, 0.34), 'deck': (0.70, 0.60, 0.50), 'planks': (0.50, 0.62, 0.62), 'stone': (0.62, 0.60, 0.52)}
 
 def mat(col, rough=0.6):
     if col == CLAY: col = TINT[0] or 'cream'
@@ -49,15 +49,15 @@ def mat(col, rough=0.6):
             if col in TEXTINT: mx.inputs['B'].default_value = (*TEXTINT[col], 1)
             else:   # big soft light/dark patches, so the sand and lawn aren't one flat colour
                 n = nt.nodes.new('ShaderNodeTexNoise'); n.inputs['Scale'].default_value = 0.35; ramp = nt.nodes.new('ShaderNodeValToRGB')
-                lo, hi = ((0.82, 0.68, 0.50), (0.94, 0.84, 0.64)) if col == 'grass' else ((0.48, 0.60, 0.40), (0.72, 0.80, 0.58))
-                if col == 'grass': mx.blend_type = 'MIX'; mx.inputs['Factor'].default_value = 0.45   # paler, softer sand than the painted texture
+                lo, hi = ((0.60, 0.47, 0.32), (0.76, 0.62, 0.43)) if col == 'grass' else ((0.34, 0.46, 0.28), (0.52, 0.62, 0.40))
+                if col == 'grass': mx.blend_type = 'MIX'; mx.inputs['Factor'].default_value = 0.6   # warmer, deeper, softer sand than the painted texture
                 ramp.color_ramp.elements[0].color = (*lo, 1); ramp.color_ramp.elements[1].color = (*hi, 1)
                 nt.links.new(g.outputs['Position'], n.inputs['Vector']); nt.links.new(n.outputs['Fac'], ramp.inputs['Fac']); nt.links.new(ramp.outputs['Color'], mx.inputs['B'])
             nt.links.new(mx.outputs['Result'], p.inputs['Base Color'])
         else: nt.links.new(im.outputs['Color'], p.inputs['Base Color'])
     if col == 'boulder':
         n = nt.nodes.new('ShaderNodeTexNoise'); n.inputs['Scale'].default_value = 6; ramp = nt.nodes.new('ShaderNodeValToRGB')
-        ramp.color_ramp.elements[0].color = (0.40, 0.37, 0.36, 1); ramp.color_ramp.elements[1].color = (0.66, 0.62, 0.57, 1)
+        ramp.color_ramp.elements[0].color = (0.24, 0.23, 0.24, 1); ramp.color_ramp.elements[1].color = (0.50, 0.47, 0.44, 1)
         nt.links.new(n.outputs['Fac'], ramp.inputs['Fac']); nt.links.new(ramp.outputs['Color'], p.inputs['Base Color'])
     _mats[col] = m; return m
 
@@ -95,14 +95,38 @@ def prism(ax, bx, ay, by, z0, z1, col):
 def barrel(x, y, z=0.0, s=1.0):
     revolve(x, y, z, [(0.2 * s, 0), (0.26 * s, 0.13 * s), (0.29 * s, 0.32 * s), (0.26 * s, 0.52 * s), (0.2 * s, 0.64 * s), (0.17 * s, 0.62 * s), (0.001, 0.62 * s)], 'hull', 24, 'barrel')
     for zz, rr in ((0.14, 0.265), (0.5, 0.265)): ring(x, y, z + zz * s, rr * s, rr * s, 0.018 * s, 'iron')
-def skull(x, y, z, a, s=1.0):
+def skull(x, y, z, a, s=1.0, bone='white', eye='black'):
     # a friendly little skull-and-crossbones badge facing outward at angle a
     ca, sa = math.cos(a), math.sin(a)
     for t in (-38, 38):
-        o = rbox(-0.012, -0.3 * s, -0.035 * s, 0.012, 0.3 * s, 0.035 * s, 'white', 0.01); o.location = (x + ca * 0.01, y + sa * 0.01, z - 0.03 * s); o.rotation_euler = (R(t), 0, a)
-    disc(x + ca * 0.02, y + sa * 0.02, z + 0.04 * s, a, 0.17 * s, 'white', 0.04)
-    o = rbox(-0.02, -0.09 * s, -0.07 * s, 0.02, 0.09 * s, 0.05 * s, 'white', 0.015); o.location = (x + ca * 0.02, y + sa * 0.02, z - 0.11 * s); o.rotation_euler = (0, 0, a)
-    for k in (-1, 1): disc(x + ca * 0.035 - sa * k * 0.065 * s, y + sa * 0.035 + ca * k * 0.065 * s, z + 0.045 * s, a, 0.042 * s, 'black', 0.03)
+        o = rbox(-0.012, -0.3 * s, -0.035 * s, 0.012, 0.3 * s, 0.035 * s, bone, 0.01); o.location = (x + ca * 0.01, y + sa * 0.01, z - 0.03 * s); o.rotation_euler = (R(t), 0, a)
+    disc(x + ca * 0.02, y + sa * 0.02, z + 0.04 * s, a, 0.17 * s, bone, 0.04)
+    o = rbox(-0.02, -0.09 * s, -0.07 * s, 0.02, 0.09 * s, 0.05 * s, bone, 0.015); o.location = (x + ca * 0.02, y + sa * 0.02, z - 0.11 * s); o.rotation_euler = (0, 0, a)
+    for k in (-1, 1): disc(x + ca * 0.035 - sa * k * 0.065 * s, y + sa * 0.035 + ca * k * 0.065 * s, z + 0.045 * s, a, 0.042 * s, eye, 0.03)
+def cannon(x, y, z, a, s=1.0):
+    # an iron deck gun on a little wooden carriage, pointing along angle a
+    ca, sa = math.cos(a), math.sin(a)
+    b = revolve(0, 0, 0, [(0.001, -0.05), (0.06, -0.04), (0.07, 0.0), (0.15, 0.03), (0.165, 0.14), (0.14, 0.24), (0.115, 0.9), (0.15, 0.93), (0.15, 1.0), (0.085, 1.0), (0.075, 0.9), (0.001, 0.9)], 'iron', 24, 'cannon')
+    b.scale = (s, s, s); b.rotation_euler = (0, R(80), a); b.location = (x - ca * 0.42 * s, y - sa * 0.42 * s, z + 0.3 * s)
+    o = rbox(-0.38 * s, -0.17 * s, -0.09 * s, 0.3 * s, 0.17 * s, 0.09 * s, 'hull', 0.03); o.location = (x - ca * 0.04 * s, y - sa * 0.04 * s, z + 0.17 * s); o.rotation_euler = (0, 0, a)
+    for u in (-0.26, 0.2):
+        for v in (-0.2, 0.2):
+            bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=0.11 * s, depth=0.06 * s, location=(x + (ca * u - sa * v) * s, y + (sa * u + ca * v) * s, z + 0.11 * s), rotation=(R(90), 0, a)); put(bpy.context.object, 'wooddark', True)
+    for k, (u, v, w) in enumerate(((0.55, 0.36, 0.08), (0.72, 0.36, 0.08), (0.635, 0.5, 0.08), (0.635, 0.41, 0.2))): ball(x + (ca * u - sa * v) * s, y + (sa * u + ca * v) * s, z + w * s, 0.085 * s, 0.085 * s, 0.085 * s, 'iron')
+def anchor(x, y, z, a, s=1.0, lean=0.22):
+    # a big iron anchor stuck in the sand, leaning back a little; its flat side faces angle a - 90
+    ca, sa = math.cos(a), math.sin(a); nx, ny = -sa * lean, ca * lean
+    P = lambda u, v: (x + (ca * u + nx * v) * s, y + (sa * u + ny * v) * s, z + v * s)
+    tube([(*P(0, 0.05), 0.05 * s), (*P(0, 1.25), 0.045 * s)], 'iron', 12, 'shank')
+    tube([(*P(0.5 * math.sin(t), 0.5 - 0.5 * math.cos(t)), (0.05 - 0.012 * abs(t)) * s) for t in [k / 6 * 1.25 for k in range(-6, 7)]], 'iron', 12, 'arms')
+    for k in (-1, 1): ball(*P(k * 0.5 * math.sin(1.25), 0.5 - 0.5 * math.cos(1.25) + 0.03), 0.11 * s, 0.11 * s, 0.11 * s, 'iron')
+    tube([(*P(-0.3, 1.08), 0.04 * s), (*P(0.3, 1.08), 0.04 * s)], 'wooddark', 10, 'stock')
+    o = ring(*P(0, 1.36), 0.11 * s, 0.11 * s, 0.03 * s, 'iron'); o.rotation_euler = (R(90) - math.atan(lean), 0, a)
+def jolly(x, y, z0, h=1.2, a=R(45), s=1.0):
+    # a black flag with the skull on a pole
+    cyl(x, y, z0, 0.035, h, 'hull', 10); ball(x, y, z0 + h, 0.06, 0.06, 0.06, 'gold')
+    ca, sa = math.cos(a), math.sin(a); o = rbox(0, -0.015, 0, 0.85 * s, 0.015, 0.5 * s, 'black', 0.01); o.location = (x + ca * 0.45 * s, y + sa * 0.45 * s, z0 + h - 0.32 * s); o.rotation_euler = (0, 0, a)
+    skull(x + ca * 0.45 * s + sa * 0.03, y + sa * 0.45 * s - ca * 0.03, z0 + h - 0.3 * s, a - R(90), 0.75 * s)
 def hibiscus(x, y, z, s=1.0, col='blossom'):
     for j in range(5): ball(x + 0.06 * s * math.cos(j * 1.256), y + 0.06 * s * math.sin(j * 1.256), z, 0.05 * s, 0.05 * s, 0.05 * s, col)
     ball(x, y, z, 0.03 * s, 0.03 * s, 0.03 * s, 'f3')
@@ -188,7 +212,7 @@ def shack_scene():
     disc(wx, ay - 0.08, wz, R(-90), 0.09, 'gold', 0.06)
     barrel(bx - 0.45, ay - 0.42, 0, 1.15); barrel(bx - 1.1, ay - 0.36, 0, 0.95)
     rbox(ax + 0.3, ay - 0.62, 0, ax + 0.9, ay - 0.08, 0.5, 'deck', 0.03); rbox(ax + 0.42, ay - 0.5, 0.5, ax + 0.82, ay - 0.14, 0.82, 'deck', 0.03)
-    bush(x1 + 0.1, dy + 1.45, 0.8, 5, 2); bush(x1 + 0.05, dy - 1.5, 0.7, 4, 3)
+    bush(x1 + 0.1, dy + 1.45, 0.8, 5, 2); anchor(x1 + 0.0, dy - 1.5, 0, R(20), 0.95); jolly(bx + 0.2, dy, 4.6, 1.3)
 
 def ship_scene():
     h = L['house']; x1 = h['x1']; dy = h['door'][1]; xs = x1 - 0.15; tf = lambda x, y, z: (xs + x, dy + y, z)
@@ -215,14 +239,15 @@ def ship_scene():
     for v in range(10):
         for u in range(10): bm.faces.new((g[v][u], g[v][u + 1], g[v + 1][u + 1], g[v + 1][u]))
     o = _obj(bm, 'sail', 'sail'); o.modifiers.new('s', 'SOLIDIFY').thickness = 0.04
-    skull(mx + 0.71, dy, 5.15, 0, 2.2)
+    skull(mx + 0.71, dy, 5.15, 0, 2.2, 'black', 'sail')
     revolve(mx, dy, 6.55, [(0.26, 0), (0.36, 0.34), (0.38, 0.38), (0.34, 0.38), (0.24, 0.06), (0.001, 0.06)], 'deck', 24, 'nest'); ring(mx, dy, 6.92, 0.37, 0.37, 0.03, 'red')
     ball(mx, dy, 7.52, 0.07, 0.07, 0.07, 'gold')
     o = rbox(0, -0.015, 0, 0.85, 0.015, 0.5, 'black', 0.01); o.location = (mx + 0.31, dy + 0.31, 7.2); o.rotation_euler = (0, 0, R(45))
     skull(mx + 0.32, dy + 0.28, 7.22, R(-45), 0.75)
     tube([(xs - 4.9, dy, 2.45, 0.07), (xs - 5.35, dy, 2.75, 0.06), (xs - 5.75, dy, 3.1, 0.04)], 'hull', 10)   # bowsprit
     rope(mx, dy, 6.5, xs - 5.7, dy, 3.1, 0.25, 0.018)
-    barrel(x1 + 0.0, dy + 1.25, 0, 0.9); bush(x1 + 0.05, dy - 1.5, 0.7, 4, 5)
+    barrel(x1 + 0.0, dy + 1.25, 0, 0.9); anchor(x1 + 0.05, dy - 1.55, 0, R(15), 0.95)
+    w, zd = at(0.2); cannon(xs - 4.75 * 0.2 - 1.55, dy - w + 0.75, zd * 0.86, R(-90), 0.8)
 
 def light_scene():
     h = L['house']; x1 = h['x1']; dy = h['door'][1]; cx, cy = 6.6, dy; rad = lambda z: 1.78 - 0.165 * z
@@ -242,7 +267,7 @@ def light_scene():
     lantern(x1 - 0.02, dy - 0.95, 1.45); box(x1 - 0.2, dy - 0.97, 1.75, x1, dy - 0.93, 1.78, 'iron')
     for (a, d, s) in ((-70, 2.3, 0.42), (-105, 2.35, 0.5), (-140, 2.3, 0.36), (65, 2.3, 0.45), (120, 2.35, 0.5), (170, 2.25, 0.4)):
         ball(cx + math.cos(R(a)) * d, cy + math.sin(R(a)) * d, 0.08, s * 1.2, s, s * 0.8, 'boulder')
-    bush(cx + math.cos(R(-42)) * 2.25, cy + math.sin(R(-42)) * 2.25, 0.7, 4, 6); starfish(cx - 0.4, cy - 2.2, 0.5, 2.2, 'starfish', 0.4)
+    bush(cx + math.cos(R(-42)) * 2.25, cy + math.sin(R(-42)) * 2.25, 0.7, 4, 6); anchor(cx - 0.5, cy - 2.15, 0.3, R(5), 1.0)
 
 def chest_scene():
     h = L['house']; x1 = h['x1']; dy = h['door'][1]; ax, bx, ay, by = 4.25, x1 - 0.15, dy - 1.9, dy + 1.9; mx = (ax + bx) / 2; rr0 = (bx - ax) / 2
@@ -275,7 +300,7 @@ def chest_scene():
     for k, (gx, gy, gz) in enumerate(((tx - 0.05, ty - 0.25, 0.26), (tx - 0.5, ty - 0.2, 0.2), (tx - 0.25, ty - 0.42, 0.14))): ball(gx, gy, gz, 0.09, 0.09, 0.09, ('crystal1', 'crystal', 'crystal2')[k])
     ball(tx + 0.22, ty - 0.3, 0.08, 0.07, 0.07, 0.07, 'pearl')
     lantern(bx + 0.14, dy - 0.95, 1.9, 0.9); box(bx - 0.02, dy - 0.97, 2.17, bx + 0.16, dy - 0.93, 2.2, 'gold')
-    bush(x1 + 0.05, dy + 1.5, 0.75, 5, 7)
+    bush(x1 + 0.05, dy + 1.5, 0.75, 5, 7); anchor(ax + 0.6, ay - 0.3, 0, R(8), 0.9)
 
 HOUSES = (('shack', shack_scene), ('ship', ship_scene), ('light', light_scene), ('chest', chest_scene))
 castle_scene = shack_scene
@@ -338,7 +363,7 @@ def ground_castle():
     tf = lambda x, y, z: (bx_ + x * ca - y * sa, by_ + x * sa + y * ca, -0.56 + z)
     hull(tf, 1.9, 0.5, 0.42, 0.08, 0.3, M=12, N=14)
     for xx in (-0.5, -1.15): o = rbox(-0.09, -0.4, -0.02, 0.09, 0.4, 0.02, 'deck', 0.01); o.location = tf(xx, 0, 0.34); o.rotation_euler = (0, 0, ang)
-    starfish(9.0, -1.0, -0.48, 2.0, 'starfish', 0.5); seashell(5.3, -0.8, -0.44, 2.2, 'shell'); seashell(12.5, -0.9, -0.48, 2.0, 'shell3')
+    anchor(9.3, -0.75, -0.42, R(10), 1.1); starfish(10.6, -1.0, -0.5, 2.0, 'starfish', 0.5); seashell(5.3, -0.8, -0.44, 2.2, 'shell'); seashell(12.5, -0.9, -0.48, 2.0, 'shell3')
 
 # ---------- small things ----------
 def c_tree(): palm()

@@ -70,9 +70,9 @@ def reset(w, h, scale, centre):
         gl.inputs['Type'].default_value = 'Bloom'; gl.inputs['Threshold'].default_value = 0.7; gl.inputs['Strength'].default_value = 0.8; gl.inputs['Size'].default_value = 0.6
         nt.links.new(rl.outputs['Image'], gl.inputs['Image']); nt.links.new(gl.outputs['Image'], out.inputs[0])
     if THEME == 'pirate':   # bright tropical sun, sea-blue fill light, a little bloom
-        sun.color = (1.0, 0.95, 0.82); sun.energy = 2.7; so.rotation_euler = (R(46), 0, R(-30))
-        rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 0.9; rim.color = (0.60, 0.88, 1.0); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))
-        wd.node_tree.nodes['Background'].inputs[1].default_value = 0.6
+        sun.color = (1.0, 0.78, 0.55); sun.energy = 1.9; so.rotation_euler = (R(57), 0, R(-30))
+        rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 0.8; rim.color = (0.42, 0.62, 0.95); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))
+        wd.node_tree.nodes['Background'].inputs[1].default_value = 0.4
         nt = bpy.data.node_groups.new('comp', 'CompositorNodeTree'); sc.compositing_node_group = nt
         nt.interface.new_socket('Image', in_out='OUTPUT', socket_type='NodeSocketColor')
         rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
