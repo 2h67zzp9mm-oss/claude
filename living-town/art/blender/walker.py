@@ -133,8 +133,6 @@ def build(sex, O):
     lathe(spine, (0, 0, 0), tp, shirt)  # one smooth body, waist to shoulders
     if BUFF:
         for sx in (-1, 1): blob(spine, (sx * 0.2, 0, 0.42), (0.1, 0.1, 0.09), shirt)             # shoulders
-    if F:
-        for sx in (-1, 1): blob(spine, (sx * 0.07, -0.1, 0.33), (0.08, 0.075, 0.075), shirt)
     blob(spine, (0, 0, 0.53), (0.065 if BUFF else 0.05, 0.065 if BUFF else 0.05, 0.07), skin)   # neck
     head = empty('head', spine, (0, 0, 0.66)); J['head'] = head
     if O.get('kid'): head.scale = (1.3, 1.3, 1.3)
@@ -201,13 +199,15 @@ def build(sex, O):
         for sx in (-1, 1): blob(spine, (sx * 0.08, 0.25, 0.38), (0.025, 0.012, 0.025), trim(0.3, 1.5))
         blob(spine, (0, -0.15, 0.36), (0.05, 0.02, 0.04), trim(0.3, 1.8))                   # chest light
         for sx in (-1, 1): blob(spine, (sx * 0.1, -0.13, 0.12), (0.035, 0.02, 0.1), trim())  # suit stripes
-    over = lambda k, a=0.01: [(z, rx * 1.07 + a, ry * 1.07 + a) for (z, rx, ry) in tp]   # a layer just over the body
+    def over(a=0.01, m=None):   # a layer just over the body
+        out = [(z, rx * 1.07 + a, ry * 1.07 + a) for (z, rx, ry) in tp]
+        return out
     if O.get('dress'):   # princess ball gown: fitted top, one big flowing skirt with soft folds, a draped scalloped overskirt
         d = fabric(M['dress'], 'satin', 2.2); lace = fabric(mat((0.97, 0.96, 0.94), 0.5, region='dresstrim'), 'lace', 4.0); gold = mat((0.95, 0.72, 0.25), 0.3, region='dresstrim')
-        lathe(spine, (0, 0, 0), over(0), d)
-        sk = [(0.1, wx * 1.08, wy * 1.08), (0.05, 0.2, 0.17), (-0.05, 0.25, 0.22), (-0.2, 0.31, 0.28), (-0.38, 0.37, 0.34), (-0.56, 0.42, 0.39), (-0.72, 0.46, 0.43), (-0.8, 0.475, 0.445), (-0.815, 0.4, 0.38)]
+        lathe(spine, (0, 0, 0), over(0, d), d)
+        sk = [(0.1, wx * 1.1, wy * 1.1), (0.05, 0.235, 0.19), (-0.05, 0.28, 0.24), (-0.2, 0.31, 0.28), (-0.38, 0.37, 0.34), (-0.56, 0.42, 0.39), (-0.72, 0.46, 0.43), (-0.8, 0.475, 0.445), (-0.815, 0.4, 0.38)]
         lathe(hips, (0, 0, 0), sk, d, 72, (9, [0, 0, 0.01, 0.025, 0.04, 0.05, 0.055, 0.055, 0.05], [0, 0, 0, 0, 0, 0, 0.01, 0.015, 0.015]))
-        lathe(hips, (0, 0, 0), [(0.08, 0.215, 0.185), (0.0, 0.25, 0.22), (-0.15, 0.32, 0.29), (-0.3, 0.38, 0.35), (-0.36, 0.395, 0.365), (-0.37, 0.36, 0.33)], d, 72,
+        lathe(hips, (0, 0, 0), [(0.08, 0.235, 0.2), (0.0, 0.27, 0.23), (-0.15, 0.33, 0.3), (-0.3, 0.38, 0.35), (-0.36, 0.395, 0.365), (-0.37, 0.36, 0.33)], d, 72,
               (6, [0, 0, 0.03, 0.06, 0.07, 0.07], [0, 0, 0, 0.03, 0.06, 0.06]))                 # overskirt drapes in scallops
         lathe(hips, (0, 0, 0), [(-0.77, 0.485, 0.455), (-0.82, 0.49, 0.46), (-0.83, 0.43, 0.41)], lace, 96, (24, [0.035, 0.04, 0.03], [0, 0.008, 0.008]))  # lace frill at the hem
         lathe(spine, (0, 0, 0), [(0.06, wx * 1.12 + 0.012, wy * 1.12 + 0.012), (0.0, wx * 1.12 + 0.012, wy * 1.12 + 0.012)], gold)   # gold sash
@@ -215,14 +215,14 @@ def build(sex, O):
         blob(spine, (0, wy * 1.12 + 0.035, 0.03), (0.02, 0.02, 0.02), gold)                      # bow at the back
         lathe(spine, (0, 0, 0), [(0.45, cx * 0.86 + 0.02, cy * 0.88 + 0.02), (0.42, cx * 0.93 + 0.02, cy * 0.92 + 0.02)], lace, 64, (16, [0.06, 0.06], [0, 0]))  # lace neckline
     if O.get('witch'):   # long robe and a tall pointy hat with a wide brim
-        wi = M['witch']; lathe(spine, (0, 0, 0), over(0.005), wi)
-        lathe(hips, (0, 0, 0), [(0.1, wx * 1.1, wy * 1.1), (0.0, 0.21, 0.18), (-0.3, 0.27, 0.24), (-0.6, 0.33, 0.3), (-0.8, 0.37, 0.34), (-0.82, 0.2, 0.2)], wi)
+        wi = M['witch']; lathe(spine, (0, 0, 0), over(0.005, wi), wi)
+        lathe(hips, (0, 0, 0), [(0.1, wx * 1.1, wy * 1.1), (0.0, 0.235, 0.2), (-0.3, 0.28, 0.25), (-0.6, 0.33, 0.3), (-0.8, 0.37, 0.34), (-0.82, 0.2, 0.2)], wi)
         lathe(head, (0, 0, 0), [(0.175, 0.29, 0.29), (0.165, 0.29, 0.29)], wi)
         hat = lathe(head, (0, 0.01, 0.0), [(0.17, 0.16, 0.16), (0.3, 0.12, 0.12), (0.42, 0.075, 0.075), (0.52, 0.035, 0.035), (0.58, 0.006, 0.006)], wi); hat.rotation_euler = (R(12), 0, 0)
     if O.get('knight'):  # shiny armour: chest plate, shoulder guards, helmet with a visor and a red plume
         steel = mat((0.72, 0.74, 0.78), 0.28, region='knight'); steel.node_tree.nodes['Principled BSDF'].inputs['Metallic'].default_value = 0.7
         dark = mat((0.08, 0.08, 0.1), 0.5, region='knight'); plume = mat((0.85, 0.12, 0.15), 0.6, region='knight')
-        lathe(spine, (0, 0, 0), over(0.02), steel)
+        lathe(spine, (0, 0, 0), over(0.02, steel), steel)
         lathe(hips, (0, 0, 0), [(0.1, wx * 1.15, wy * 1.15), (-0.02, 0.21, 0.17), (-0.18, 0.23, 0.19), (-0.2, 0.12, 0.12)], steel)
         blob(head, (0, 0, 0.06), (0.17, 0.18, 0.19), steel); blob(head, (0, -0.175, 0.07), (0.1, 0.012, 0.014), dark)
         blob(head, (0, 0.03, 0.27), (0.03, 0.1, 0.08), plume)
