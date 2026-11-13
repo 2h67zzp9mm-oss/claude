@@ -239,7 +239,7 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 /* The home plot (public/homestead.js): full screen, display at the top, buttons low for thumbs. */
 .homestead { position: fixed; inset: 0; z-index: 60; background: #7d8fae; touch-action: manipulation; }
 .homestead.hidden { display: none; }
-.homestead canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.homestead > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .home-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none;
   color: #fff; font: 600 0.95rem system-ui; text-shadow: 0 1px 3px #0008; }
 .home-bar { position: absolute; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); padding: 10px; border-radius: 18px;
@@ -279,3 +279,17 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .home-banner.big { background: linear-gradient(135deg, #ffe27a, #ff9ad5); font-size: 1.05rem; }
 @keyframes home-banner { 0% { transform: translate(-50%, -20px) scale(0.8); opacity: 0; } 10% { transform: translate(-50%, 0) scale(1.05); opacity: 1; }
   16% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { transform: translate(-50%, -10px); opacity: 0; } }
+
+/* Pets panel */
+.home-pets { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.home-pets .home-title { text-align: center; }
+.pet-big { width: 150px; height: 120px; }
+.pet-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pet-kind { min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: #ffffff1f; color: inherit; font: 700 1rem system-ui; }
+.pet-kind.on { background: #4fc3a1; color: #10231c; }
+.pet-col { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; }
+.pet-col.on { border-color: #ffe27a; box-shadow: 0 0 0 2px #10231c; }
+.pet-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; width: 100%; }
+.pet-card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 2px solid transparent; border-radius: 14px; background: #ffffff14; color: inherit; font: 600 0.78rem system-ui; }
+.pet-card.on { border-color: #ffe27a; background: #ffe27a22; }
+.pet-card canvas { width: 72px; height: 58px; }

@@ -159,3 +159,29 @@ test("dress-up looks: outfits, colours, wings and crown are kept; junk is droppe
   const bad = cast.sanitizeLook({ outfit: "spacesuit", outfitColor: "red", wings: "yes", crown: "yes" });
   assert.equal(bad.outfit, undefined); assert.equal(bad.outfitColor, undefined); assert.equal(bad.wings, undefined); assert.equal(bad.crown, undefined);
 });
+
+test("pets: a free starter, treats to find, tame today's visitor, the travelling seller, rename and choose", () => {
+  const hs = createHomestead({ random: () => 0.9 });
+  const kid = { id: "hazel", name: "Hazel", stars: 0 }, state = { residents: [kid] }, t0 = Date.parse("2026-11-13T10:00:00");
+  let v = hs.view(state, "home-1", kid, t0).pets;
+  assert.deepEqual(v.owned, []); assert.deepEqual(v.starters, ["kitty", "bunny", "puppy"]); assert.equal(v.spots.length, 3);
+  assert.equal(hs.act(state, "home-1", kid, { action: "petStart", species: "dragon", color: "green" }, t0).ok, false, "dragons aren't starters");
+  const start = hs.act(state, "home-1", kid, { action: "petStart", species: "bunny", color: "pink" }, t0);
+  assert.equal(start.ok, true); assert.equal(start.pet.name, "Pink Bunny");
+  assert.equal(hs.act(state, "home-1", kid, { action: "petStart", species: "kitty", color: "pink" }, t0).ok, false, "only one free pet");
+  assert.equal(hs.act(state, "home-1", kid, { action: "petFeed" }, t0).ok, false, "no treats yet");
+  for (const s of v.spots) assert.equal(hs.act(state, "home-1", kid, { action: "treat", spot: s.i }, t0).ok, true);
+  assert.equal(hs.act(state, "home-1", kid, { action: "treat", spot: 0 }, t0).ok, false, "each treat once");
+  hs.act(state, "home-1", kid, { action: "petFeed" }, t0); hs.act(state, "home-1", kid, { action: "petFeed" }, t0);
+  const tame = hs.act(state, "home-1", kid, { action: "petFeed" }, t0);
+  assert.equal(tame.tamed, true); v = hs.view(state, "home-1", kid, t0).pets;
+  assert.equal(v.owned.length, 2); assert.equal(v.wild, null); assert.equal(v.treats, 0); assert.equal(v.spots.length, 0);
+  assert.equal(hs.act(state, "home-1", kid, { action: "petBuy" }, t0).ok, false, "seller pets cost stars");
+  kid.stars = 45; const buy = hs.act(state, "home-1", kid, { action: "petBuy" }, t0);
+  assert.equal(buy.ok, true); assert.ok(["unicorn", "dragon"].includes(buy.pet.species)); assert.equal(kid.stars, 5);
+  assert.equal(hs.act(state, "home-1", kid, { action: "petName", id: 1, name: "Sprinkles<script>" }, t0).ok, true);
+  v = hs.view(state, "home-1", kid, t0).pets; assert.equal(v.owned[0].name, "Sprinklesscript");
+  assert.equal(hs.act(state, "home-1", kid, { action: "petActive", id: 3 }, t0).ok, true); assert.equal(hs.view(state, "home-1", kid, t0).pets.active, 3);
+  // A new day brings new treats, a new visitor and the seller again.
+  v = hs.view(state, "home-1", kid, t0 + 86400_000).pets; assert.equal(v.spots.length, 3); assert.ok(v.wild); assert.ok(v.seller);
+});

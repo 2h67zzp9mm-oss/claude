@@ -53,6 +53,21 @@ const GOALS = {
 };
 const GOAL_STARS = 3, ALL_BONUS = 5;
 
+// Pets (Hazel's idea): one free starter, then tame visitors with treats you find, or buy from the travelling seller.
+const PET_COLORS = {
+  cream: "#f3e3c6", ginger: "#f0a050", grey: "#a3abb5", black: "#4a4a55", white: "#fafafa", brown: "#a0704a", pink: "#f7a8cb",
+  lilac: "#c9a8f2", sky: "#9fd3f5", mint: "#a6e8c6", gold: "#f6c945", red: "#e8615a", green: "#7cc96a", teal: "#5cc6c0"
+};
+const PETS = {
+  kitty: { name: "Kitty", emoji: "🐱", colors: ["cream", "ginger", "grey", "black", "white", "pink", "lilac", "gold"], starter: true, weight: 4 },
+  bunny: { name: "Bunny", emoji: "🐰", colors: ["white", "cream", "grey", "brown", "pink", "lilac", "sky", "gold"], starter: true, weight: 4 },
+  puppy: { name: "Puppy", emoji: "🐶", colors: ["cream", "brown", "black", "white", "ginger", "grey", "sky", "gold"], starter: true, weight: 4 },
+  fox: { name: "Fox", emoji: "🦊", colors: ["ginger", "white", "grey", "pink", "lilac", "gold"], weight: 2 },
+  unicorn: { name: "Unicorn", emoji: "🦄", colors: ["white", "pink", "lilac", "sky", "mint", "gold"], weight: 1 },
+  dragon: { name: "Baby Dragon", emoji: "🐉", colors: ["green", "teal", "red", "pink", "lilac", "sky", "gold"], weight: 1 }
+};
+const TREATS_PER_DAY = 3, TAME_TREATS = 3, SELLER_COST = 40;
+
 function levelOf(h) { return Math.min(LEVELS.length - 1, Math.max(0, Number(h.level) || 0)); }
 function bedsOf(h) { return LEVELS[levelOf(h)].beds; }
 function cropsOf(h) { return LEVELS.slice(0, levelOf(h) + 1).flatMap(l => l.crops); }
@@ -107,6 +122,39 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     const today = dayKey(now), yesterday = dayKey(now - 86400_000);
     return h.streakDay === today || h.streakDay === yesterday ? Number(h.streak) || 0 : 0;
   }
+  // --- pets: each player has their own; today's treats, visitor and seller are the same all day ---
+  function petsOf(h, rid) {
+    if (!h.pets || typeof h.pets !== "object") h.pets = {};
+    const p = h.pets[rid] ||= {};
+    if (!Array.isArray(p.owned)) p.owned = [];
+    p.treats = Math.max(0, Number(p.treats) || 0);
+    return p;
+  }
+  function petToday(h, id, rid, now) {
+    const p = petsOf(h, rid), day = dayKey(now);
+    if (p.day !== day) Object.assign(p, { day, found: [], fed: 0, tamed: false, bought: false });
+    const rnd = seeded(id + rid + day + "pets");
+    const pick = (pool) => { let roll = rnd() * pool.reduce((s, k) => s + PETS[k].weight, 0); for (const k of pool) { roll -= PETS[k].weight; if (roll <= 0) return k; } return pool[0]; };
+    const spots = Array.from({ length: TREATS_PER_DAY }, (_, i) => ({ i, u: rnd(), v: rnd() }));
+    const ws = pick(Object.keys(PETS)), wild = { species: ws, color: PETS[ws].colors[Math.floor(rnd() * PETS[ws].colors.length)], u: rnd(), v: rnd() };
+    const ss = rnd() < 0.5 ? "unicorn" : "dragon", seller = { species: ss, color: PETS[ss].colors[Math.floor(rnd() * PETS[ss].colors.length)], cost: SELLER_COST };
+    return { p, spots, wild, seller };
+  }
+  function adopt(p, species, color) {
+    const pet = { id: (p.owned.reduce((m, x) => Math.max(m, x.id), 0) || 0) + 1, species, color, name: `${color[0].toUpperCase()}${color.slice(1)} ${PETS[species].name}` };
+    p.owned.push(pet); if (!p.active) p.active = pet.id; return pet;
+  }
+  function petView(h, id, rid, now) {
+    const { p, spots, wild, seller } = petToday(h, id, rid, now);
+    return {
+      owned: p.owned, active: p.active || null, treats: p.treats, starters: Object.keys(PETS).filter(k => PETS[k].starter),
+      spots: spots.filter(s => !p.found.includes(s.i)),
+      wild: p.tamed ? null : { ...wild, fed: p.fed, need: TAME_TREATS },
+      seller: p.bought ? null : seller, tameTreats: TAME_TREATS,
+      kinds: Object.fromEntries(Object.entries(PETS).map(([k, v]) => [k, { name: v.name, emoji: v.emoji, colors: v.colors }])), colors: PET_COLORS
+    };
+  }
+
   // Count a finished job toward today's goals. Returns what just got finished.
   function bump(h, id, r, kind, amount, now) {
     const d = daily(h, id, now), done = [];
@@ -138,6 +186,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       upgrade: LEVELS[levelOf(h) + 1] ? { cost: LEVELS[levelOf(h) + 1].cost, beds: LEVELS[levelOf(h) + 1].beds, crops: LEVELS[levelOf(h) + 1].crops } : null,
       world: WORLDS.includes(h.world) ? h.world : "clay",
       seeds: h.seeds, bag: h.bag, caught: h.caught, stars: me?.stars || 0,
+      pets: me ? petView(h, id, me.id, now) : null,
       mail: h.mailDay !== dayKey(now), others,
       goals: daily(h, id, now).goals.map(g => ({ icon: GOALS[g.k].icon, text: GOALS[g.k].text(g.n), have: g.have, n: g.n })),
       streak: streakOf(h, now), streakToday: h.streakDay === dayKey(now), goalStars: GOAL_STARS, allBonus: ALL_BONUS,
@@ -161,7 +210,8 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     if (!res.ok || res.quiet) return res;
     const h = home(state, id);
     const kind = { plant: "plant", water: "water", harvest: "harvest", fish: "fish", sell: "sell", mail: "mail" }[msg.action];
-    if (kind) { const g = bump(h, id, r, kind, 1, now); if (g.done.length) res.goals = g.done; if (g.all) res.allGoals = g.all; }
+    if (kind) { const g = bump(h, id, r, kind, 1, now); if (g.done.length) res.goals = g.done; if (g.all) { res.allGoals = g.all; petsOf(h, r.id).treats += 2; res.allGoals.treats = 2; } }
+    if (msg.action === "fish" && random() < 0.3) { petsOf(h, r.id).treats += 1; res.treat = true; res.toast += " It had a 🍪 treat on the hook!"; }
     return res;
   }
   function doAct(state, id, r, msg, now) {
@@ -250,11 +300,52 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         const lines = ["I had extra seeds and thought of you!", "Your garden is looking lovely. Here's something for it!", "Found these in my shed. Happy planting!", "A little something to grow. Say hi next time you're in town!"];
         return { ok: true, letter: { from: from?.name || "A neighbour", text: lines[Math.floor(random() * lines.length)], gift: `2 ${CROPS[gift].name.toLowerCase()} seeds ${CROPS[gift].emoji}` } };
       }
+      case "petStart": {
+        const p = petsOf(h, r.id), kind = PETS[msg.species];
+        if (p.owned.length) return { ok: false, toast: "You already have a pet!" };
+        if (!kind?.starter || !kind.colors.includes(msg.color)) return { ok: false, toast: "Pick a kitty, bunny or puppy." };
+        const pet = adopt(p, msg.species, msg.color);
+        return { ok: true, pet, toast: `${kind.emoji} Say hi to your new ${kind.name.toLowerCase()}!` };
+      }
+      case "treat": {
+        const { p, spots } = petToday(h, id, r.id, now), s = spots.find(x => x.i === msg.spot);
+        if (!s || p.found.includes(s.i)) return { ok: false, toast: "Someone already found that one." };
+        p.found.push(s.i); p.treats++;
+        return { ok: true, treat: true, toast: `🍪 You found a pet treat! (${p.treats})` };
+      }
+      case "petFeed": {
+        const { p, wild } = petToday(h, id, r.id, now), kind = PETS[wild.species];
+        if (p.tamed) return { ok: false, toast: "Your new friend is already home with you." };
+        if (p.treats < 1) return { ok: false, toast: `${kind.emoji} It looks hungry. Find 🍪 treats around your home, catch fish, or finish your goals!` };
+        p.treats--; p.fed++;
+        if (p.fed < TAME_TREATS) return { ok: true, fed: p.fed, toast: `${kind.emoji} Yum! ${TAME_TREATS - p.fed} more treat${TAME_TREATS - p.fed > 1 ? "s" : ""} and it'll trust you.` };
+        p.tamed = true; const pet = adopt(p, wild.species, wild.color);
+        return { ok: true, pet, tamed: true, toast: `${kind.emoji} The ${pet.name.toLowerCase()} wants to live with you!` };
+      }
+      case "petBuy": {
+        const { p, seller } = petToday(h, id, r.id, now), kind = PETS[seller.species];
+        if (p.bought) return { ok: false, toast: "The pet seller has gone for today. Come back tomorrow!" };
+        if ((Number(r.stars) || 0) < seller.cost) return { ok: false, toast: `You need ${seller.cost} ⭐. Ask your family to help you save up!` };
+        r.stars -= seller.cost; p.bought = true; const pet = adopt(p, seller.species, seller.color);
+        return { ok: true, pet, toast: `${kind.emoji} You got a ${pet.name.toLowerCase()}!` };
+      }
+      case "petActive": {
+        const p = petsOf(h, r.id);
+        if (msg.id === null) { p.active = null; return { ok: true, toast: "🏠 Your pet is resting at home." }; }
+        const pet = p.owned.find(x => x.id === msg.id); if (!pet) return { ok: false, toast: "Which pet?" };
+        p.active = pet.id; return { ok: true, toast: `${PETS[pet.species].emoji} ${pet.name} is following you!` };
+      }
+      case "petName": {
+        const p = petsOf(h, r.id), pet = p.owned.find(x => x.id === msg.id);
+        const name = String(msg.name || "").replace(/[^\p{L}\p{N} '-]/gu, "").trim().slice(0, 16);
+        if (!pet || !name) return { ok: false, toast: "Give your pet a name." };
+        pet.name = name; return { ok: true, toast: `${PETS[pet.species].emoji} Hello, ${name}!` };
+      }
       default: return { ok: false, toast: "Hmm, I don't know how to do that." };
     }
   }
 
-  return { view, act, home, CROPS, FISH, LEVELS, GOALS };
+  return { view, act, home, CROPS, FISH, LEVELS, GOALS, PETS };
 }
 
-module.exports = { createHomestead, CROPS, FISH };
+module.exports = { createHomestead, CROPS, FISH, PETS, PET_COLORS };

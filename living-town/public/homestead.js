@@ -14,6 +14,7 @@
   let opts = null, canvas, ctx, bar, top, el, isOpen = false;
   let grid = null, N = 0;
   const me = { x: 10, y: 12.6, dir: 0, path: [], moving: false, step: 0, target: null };
+  const pet = { x: 10.6, y: 12.6, dir: 0, step: 0, moving: false, trail: [] };
   let view = null, others = new Map(), cam = { x: 0, y: 0, z: 0.6 }, lastPos = 0, lastFrame = 0, fishing = null, marker = null, splash = null;
 
   function load() {
@@ -113,8 +114,48 @@
     const s = A.sprites[name]; if (!s) return false; const [sx, sy] = P(x, y);
     return px > sx - s.ax && px < sx - s.ax + s.w && py > sy - s.ay && py < sy - s.ay + s.h;
   }
+  // --- pets ---
+  function spotPos(u, v) { const S = L.size, [i, j] = nearestFree(2 + u * (S - 4), 1 + v * (S - 3)); return [(i + 0.5) * CELL, (j + 0.5) * CELL]; }
+  const petHex = c => view?.pets?.colors?.[c] || "#ffffff";
+  function petSheet(species, color) { return window.LivingTownAvatar?.sheet("pets", species, { skin: petHex(color) }) || null; }
+  function activePet() { const P2 = view?.pets; return P2?.active ? P2.owned.find(x => x.id === P2.active) || null : null; }
+  function drawPet(info, p, idle) {
+    const sh = petSheet(info.species, info.color); if (!sh) return;
+    const [px, py] = P(p.x, p.y), [cx, cy] = toScreen(px, py), f = p.moving ? Math.floor(p.step * 2.6) % 4 : 4;
+    ctx.fillStyle = "rgba(0,0,0,0.14)"; ctx.beginPath(); ctx.ellipse(cx, cy, 11 * cam.z * 1.6, 4.5 * cam.z * 1.6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.drawImage(sh.canvas, f * sh.cw, p.dir * sh.ch, sh.cw, sh.ch, cx - sh.ax * cam.z, cy - sh.ay * cam.z, sh.cw * cam.z, sh.ch * cam.z);
+    if (idle) { ctx.font = `600 ${Math.max(11, 12 * cam.z * 1.4)}px system-ui`; ctx.textAlign = "center"; ctx.fillStyle = "rgba(20,30,50,0.8)"; ctx.fillText(idle, cx, cy - 70 * cam.z); }
+  }
+  function stepPet(dt) {
+    if (!activePet()) return;
+    const last = pet.trail[pet.trail.length - 1];
+    if (!last || Math.hypot(me.x - last.x, me.y - last.y) > 0.15) { pet.trail.push({ x: me.x, y: me.y }); if (pet.trail.length > 300) pet.trail.shift(); }
+    pet.moving = false; let budget = SPEED * 1.05 * dt;
+    while (budget > 0 && pet.trail.length && Math.hypot(pet.x - me.x, pet.y - me.y) > 0.85) {
+      const n = pet.trail[0], gap = Math.hypot(n.x - pet.x, n.y - pet.y);
+      if (gap > 0.01) { const [ax, ay] = P(pet.x, pet.y), [bx, by] = P(n.x, n.y); pet.dir = dirFor(bx - ax, by - ay); pet.moving = true; }
+      if (gap <= budget) { pet.x = n.x; pet.y = n.y; budget -= gap; pet.trail.shift(); } else { pet.x += (n.x - pet.x) / gap * budget; pet.y += (n.y - pet.y) / gap * budget; budget = 0; }
+    }
+    if (!pet.moving && !me.moving && !me.path.length) {   // you stopped: trot round to your side (x + y runs across the screen), so it's never hidden behind you
+      pet.still = (pet.still || 0) + dt;
+      if (pet.still > 0.4) {
+        const sides = [[0.55, 0.55], [-0.55, -0.55], [0.7, 0.2], [-0.2, -0.7]].map(([dx, dy]) => [me.x + dx, me.y + dy]).filter(([x, y]) => { const [i, j] = cellOf(x, y); return !grid[j * N + i] && lineFree(pet.x, pet.y, x, y); });
+        const goal = sides.sort((a, b) => Math.hypot(a[0] - pet.x, a[1] - pet.y) - Math.hypot(b[0] - pet.x, b[1] - pet.y))[0];
+        if (goal) { const gap = Math.hypot(goal[0] - pet.x, goal[1] - pet.y); if (gap > 0.05) { const k = Math.min(gap, SPEED * 0.6 * dt); const [ax, ay] = P(pet.x, pet.y), [bx, by] = P(...goal); pet.dir = dirFor(bx - ax, by - ay); pet.x += (goal[0] - pet.x) / gap * k; pet.y += (goal[1] - pet.y) / gap * k; pet.moving = true; } }
+      }
+    } else pet.still = 0;
+    if (pet.moving) pet.step += dt * SPEED; else if (!me.moving) { const [ax, ay] = P(pet.x, pet.y), [bx, by] = P(me.x, me.y); if (Math.hypot(bx - ax, by - ay) > 4) pet.dir = dirFor(bx - ax, by - ay); }
+  }
+  function petTargets() {
+    const out = [], v = view?.pets; if (!v || !L) return out;
+    for (const s of v.spots) { const [x, y] = spotPos(s.u, s.v); out.push({ kind: "treat", spot: s.i, x, y, hx: x, hy: y, r: 28 }); }
+    if (v.wild) { const [x, y] = spotPos(v.wild.u, v.wild.v); out.push({ kind: "wild", x: x + 0.5, y, hx: x, hy: y, r: 36 }); }
+    if (activePet()) out.push({ kind: "mypet", x: pet.x + 0.4, y: pet.y, hx: pet.x, hy: pet.y, r: 30 });
+    return out;
+  }
   function targetAt(px, py) {
     const w = unP(px, py);
+    for (const t of petTargets()) { const [sx, sy] = P(t.hx, t.hy, 0.25); if (Math.hypot(px - sx, py - sy) < t.r) return t; }
     if (spriteHit(view?.mail ? "mailbox_up" : "mailbox", L.mailbox[0], L.mailbox[1], px, py)) return { kind: "mailbox", x: L.mailbox[0] + 0.3, y: L.mailbox[1] - 0.6 };
     if (spriteHit("crate", L.crate[0], L.crate[1], px, py)) return { kind: "crate", x: L.crate[0] + 0.9, y: L.crate[1] };
     const h = A.house; if (px > h.x && px < h.x + h.w && py > h.y && py < h.y + h.h) {
@@ -246,7 +287,7 @@
   }
   function idleBar() {
     const g = view?.goals || [], left = g.filter(x => x.have < x.n).length;
-    setBar("", [{ label: g.length ? (left ? `🎯 Goals ${g.length - left}/${g.length}` : "🎯 All done!") : "🎯 Goals", big: g.length > 0 && left > 0 && left === g.length, go: goalsBar }, { label: "🎒 Bag", go: showBag }, { label: "🎨 Look", go: () => opts.editLook?.() }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
+    setBar("", [{ label: g.length ? (left ? `🎯 Goals ${g.length - left}/${g.length}` : "🎯 All done!") : "🎯 Goals", big: g.length > 0 && left > 0 && left === g.length, go: goalsBar }, { label: "🐾 Pets", go: petsBar }, { label: "🎒 Bag", go: showBag }, { label: "🎨 Look", go: () => opts.editLook?.() }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
   }
   function goalsBar() {
     const g = view?.goals || [];
@@ -287,6 +328,16 @@
       }
       if (p.growth >= 1) return setBar(`${C[p.crop].emoji} Ready to pick!`, [{ label: "🧺 Pick", big: true, go: () => act("harvest", { plot: t.plot }) }]);
       return setBar(`${C[p.crop].emoji} ${C[p.crop].name}: ${Math.round(p.growth * 100)}% grown${p.wet ? " · watered" : ""}`, [{ label: "💧 Water", big: !p.wet, go: () => act("water", { plot: t.plot }) }, { label: "Done", go: idleBar }]);
+    }
+    if (t.kind === "treat") return setBar("🍪 A pet treat!", [{ label: "🍪 Pick up", big: true, go: () => act("treat", { spot: t.spot }) }, { label: "Done", go: idleBar }]);
+    if (t.kind === "wild" && view.pets?.wild) {
+      const w = view.pets.wild, k = view.pets.kinds[w.species];
+      return setBar(`${k.emoji} A wild ${w.color} ${k.name.toLowerCase()}! It's a bit shy.<br>Feed it ${w.need} treats so it trusts you · fed ${w.fed}/${w.need} · you have ${view.pets.treats} 🍪`,
+        [{ label: `🍪 Feed it`, big: view.pets.treats > 0, go: () => act("petFeed") }, { label: "Done", go: idleBar }]);
+    }
+    if (t.kind === "mypet" && activePet()) {
+      const a = activePet(), k = view.pets.kinds[a.species];
+      return setBar(`${k.emoji} ${esc(a.name)}`, [{ label: "💕 Cuddle", big: true, go: () => { burst(pet.x, pet.y, 0.8, { n: 6, emoji: "💕", speed: 30, up: 120, life: 1100, size: 5 }); SFX.pop(); navigator.vibrate?.(20); } }, { label: "🐾 Pets", go: petsBar }]);
     }
     if (t.kind === "pond") return setBar("The pond", [{ label: "🎣 Fish", big: true, go: () => startFishing(t) }, { label: "Done", go: idleBar }]);
     if (t.kind === "crate") {
@@ -352,6 +403,39 @@
     const k = size / Math.max(s.w, s.h);
     return `<span class="home-icon" style="width:${size}px;height:${size}px"><i style="width:${s.w * k}px;height:${s.h * k}px;background-image:url(${BASE}sprites.webp);background-size:${imgs.sprites.width * k}px ${imgs.sprites.height * k}px;background-position:-${s.x * k}px -${s.y * k}px"></i></span>`;
   }
+  // The pets panel: pick a free starter, or see your pets, treats, today's visitor and the travelling seller.
+  let starter = null;
+  function petThumb(c, species, color) {
+    const sh = petSheet(species, color), g = c.getContext("2d");
+    if (!sh) { setTimeout(() => c.isConnected && petThumb(c, species, color), 150); return; }
+    g.clearRect(0, 0, c.width, c.height); g.drawImage(sh.canvas, 4 * sh.cw + sh.cw * 0.12, sh.ch * 0.5, sh.cw * 0.76, sh.ch * 0.48, 0, 0, c.width, c.height);
+  }
+  function petsBar() {
+    const v = view?.pets; if (!v) return;
+    const K = v.kinds;
+    if (!v.owned.length) {
+      starter = starter && K[starter.species] ? starter : { species: v.starters[0], color: K[v.starters[0]].colors[0] };
+      const kinds = v.starters.map(k => `<button class="pet-kind ${k === starter.species ? "on" : ""}" data-k="${k}">${K[k].emoji} ${K[k].name}</button>`).join("");
+      const cols = K[starter.species].colors.filter(c => c !== "gold").map(c => `<button class="pet-col ${c === starter.color ? "on" : ""}" data-c="${c}" style="background:${petHex(c)}" aria-label="${c}"></button>`).join("");
+      bar.innerHTML = `<div class="home-pets"><p class="home-title">🐾 Pick your first pet. It's free!</p><canvas class="pet-big" width="150" height="120"></canvas><div class="pet-row">${kinds}</div><div class="pet-row">${cols}</div></div><div class="home-actions"><button class="big" data-go="adopt">💕 Adopt</button><button data-go="back">Back</button></div>`;
+      petThumb(bar.querySelector(".pet-big"), starter.species, starter.color);
+      bar.querySelectorAll(".pet-kind").forEach(b => b.onclick = () => { starter = { species: b.dataset.k, color: K[b.dataset.k].colors[0] }; petsBar(); });
+      bar.querySelectorAll(".pet-col").forEach(b => b.onclick = () => { starter.color = b.dataset.c; petsBar(); });
+      bar.querySelector('[data-go="adopt"]').onclick = () => act("petStart", starter);
+      bar.querySelector('[data-go="back"]').onclick = idleBar;
+      return;
+    }
+    const cards = v.owned.map(p => `<button class="pet-card ${p.id === v.active ? "on" : ""}" data-id="${p.id}"><canvas width="72" height="58"></canvas><b>${esc(p.name)}</b></button>`).join("");
+    const wild = v.wild ? `<p class="home-title">${K[v.wild.species].emoji} A wild ${v.wild.color} ${K[v.wild.species].name.toLowerCase()} is visiting your garden! Find it and feed it ${v.wild.need} 🍪 (fed ${v.wild.fed}).</p>` : `<p class="home-title">🌙 New visitors come tomorrow.</p>`;
+    const sell = v.seller ? `<p class="home-title">🧳 The travelling pet seller has a <b>${v.seller.color} ${K[v.seller.species].name.toLowerCase()}</b> today.</p>` : "";
+    bar.innerHTML = `<div class="home-pets"><p class="home-title">🐾 Your pets · tap one to bring it along · 🍪 ${v.treats} treat${v.treats === 1 ? "" : "s"}${v.spots.length ? ` · ${v.spots.length} more hiding around your home` : ""}</p><div class="pet-cards">${cards}</div>${wild}${sell}</div>
+      <div class="home-actions">${v.seller ? `<button data-go="buy" class="${view.stars >= v.seller.cost ? "big" : ""}">🧳 Buy ${K[v.seller.species].emoji} ${v.seller.cost}⭐</button>` : ""}${v.active ? `<button data-go="name">✏️ Name</button><button data-go="rest">🏠 Rest</button>` : ""}<button data-go="back">Back</button></div>`;
+    bar.querySelectorAll(".pet-card").forEach(b => { const p = v.owned.find(x => x.id === Number(b.dataset.id)); petThumb(b.querySelector("canvas"), p.species, p.color); b.onclick = () => { if (p.id !== v.active) { pet.x = me.x + 0.5; pet.y = me.y; pet.trail = []; } act("petActive", { id: p.id }); }; });
+    const go = (k, f) => { const b = bar.querySelector(`[data-go="${k}"]`); if (b) b.onclick = f; };
+    go("buy", () => act("petBuy")); go("rest", () => act("petActive", { id: null })); go("back", idleBar);
+    go("name", () => { const a = activePet(); const n = a && prompt(`A new name for ${a.name}?`, a.name); if (n) act("petName", { id: a.id, name: n }); });
+  }
+
   function showBag() {
     if (!view) return;
     const C = view.crops, F = view.fish;
@@ -376,6 +460,14 @@
     const r = msg.result;
     if (!r) return;
     if (r.toast) opts.toast(r.toast);
+    if (r.treat && !r.fish) { burst(me.x, me.y, 0.6, { n: 3, emoji: "🍪", speed: 40, up: 200, life: 900, size: 5 }); floatText(me.x, me.y, 1.5, "+1 🍪"); SFX.pop(); navigator.vibrate?.(20); }
+    if (r.fed) burst(me.x, me.y, 0.8, { n: 4, emoji: "💕", speed: 40, up: 140, life: 900, size: 4 });
+    if (r.pet) {
+      const k = view.pets.kinds[r.pet.species]; pet.x = me.x + 0.5; pet.y = me.y; pet.trail = [];
+      banner(`${k.emoji} New pet! <b>${esc(r.pet.name)}</b>`, "big"); SFX.goal(); burst(me.x, me.y, 1.4, { n: 26, color: CONFETTI, speed: 150, up: 160, life: 1300, size: 4 });
+      return petsBar();
+    }
+    if (bar.querySelector(".home-pets") && !r.treat) petsBar();
     if (r.splash != null) {
       splash = { plot: r.splash, at: performance.now() }; const pr = plotRect(r.splash);
       burst(pr.cx, pr.cy, 0.9, { n: 14, color: ["#7cc8ff", "#b5e3ff", "#4aa3e8"], speed: 60, up: 60, gravity: 420, life: 700, size: 3 }); SFX.water();
@@ -449,7 +541,7 @@
     const dt = Math.min(0.1, (t - (lastFrame || t)) / 1000); lastFrame = t;
     try {
       const wasMoving = me.path.length > 0;
-      stepWalker(me, dt);
+      stepWalker(me, dt); stepPet(dt);
       if (wasMoving && !me.path.length && me.target) {
         if (me.target.kind === "pond") faceToward(me.target.cast.x, me.target.cast.y);
         highlight = null;
@@ -492,6 +584,12 @@
     (L.decor || []).forEach(([x, y, kind, c]) => items.push({ d: x - y, draw: () => drawSprite(`${kind}_${c}`, x, y) }));
     items.push({ d: L.mailbox[0] - L.mailbox[1], draw: () => drawSprite(view?.mail ? "mailbox_up" : "mailbox", L.mailbox[0], L.mailbox[1]) });
     items.push({ d: L.crate[0] - L.crate[1], draw: () => drawSprite("crate", L.crate[0], L.crate[1]) });
+    const pv = view?.pets;
+    if (pv) {
+      for (const sp of pv.spots) { const [x, y] = spotPos(sp.u, sp.v); items.push({ d: x - y, draw: () => { const [sx, sy] = toScreen(...P(x, y, 0.25)); const bob = Math.sin(t / 260 + sp.i) * 3; ctx.font = `${Math.round(26 * cam.z * 1.4)}px system-ui`; ctx.textAlign = "center"; ctx.fillText("🍪", sx, sy + bob); if ((t / 400 + sp.i) % 3 < 0.4) ctx.fillText("✨", sx + 14 * cam.z, sy - 18 * cam.z); } }); }
+      if (pv.wild) { const [x, y] = spotPos(pv.wild.u, pv.wild.v), wp = { x, y, dir: 0, moving: false }; const [ax, ay] = P(x, y), [bx, by] = P(me.x, me.y); wp.dir = dirFor(bx - ax, by - ay); items.push({ d: x - y, draw: () => drawPet(pv.wild, wp, pv.wild.fed ? `💕 ${pv.wild.fed}/${pv.wild.need}` : "❔") }); }
+      const ap = activePet(); if (ap) items.push({ d: pet.x - pet.y, person: pet, draw: () => drawPet(ap, pet) });
+    }
     const people = [{ id: opts.me(), p: me }, ...[...others.values()].map(o => ({ id: o.id, p: o }))];
     people.forEach(({ id, p }) => items.push({ d: p.x - p.y, person: p, draw: () => drawWalker(id, p) }));
     const H = L.house, house = { house: true, draw: () => { const [sx, sy] = toScreen(A.house.x, A.house.y); ctx.drawImage(imgs.house, sx, sy, A.house.w * cam.z, A.house.h * cam.z); } };
@@ -533,7 +631,7 @@
     if (!opts.me()) return opts.toast("Sign in to visit your home.");
     el.classList.remove("hidden"); isOpen = true; lastFrame = 0;
     load().then(() => {
-      if (!me.placed) { me.x = L.spawn[0]; me.y = L.spawn[1]; me.placed = true; }
+      if (!me.placed) { me.x = L.spawn[0]; me.y = L.spawn[1]; me.placed = true; pet.x = me.x + 0.5; pet.y = me.y; pet.trail = []; }
       act("enter"); idleBar(); cam.ready = false; requestAnimationFrame(frame);
     }).catch(err => { console.error(err); opts.toast("The home plot couldn't load."); close(); });
   }
@@ -549,6 +647,6 @@
       canvas.addEventListener("click", onTap);
     },
     open, close, onState, get isOpen() { return isOpen; },
-    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me, view: () => view, L: () => L }
+    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me, view: () => view, L: () => L, petTargets: () => petTargets(), pet }
   };
 })();
