@@ -151,3 +151,11 @@ test("character creator: a grown-up's body choice is kept, junk is dropped", () 
   assert.equal(cast.sanitizeLook({ body: "fem", shirt: "#E53935" }).shirt, "#e53935");
   assert.equal(cast.sanitizeLook({ body: "robot" }).body, undefined);
 });
+
+test("dress-up looks: outfits, colours, wings and crown are kept; junk is dropped", () => {
+  const cast = require("../lib/cast");
+  const l = cast.sanitizeLook({ outfit: "dress", outfitColor: "#F48FB1", wings: "#bfe6ff", crown: true, style: "long" });
+  assert.equal(l.outfit, "dress"); assert.equal(l.outfitColor, "#f48fb1"); assert.equal(l.wings, "#bfe6ff"); assert.equal(l.crown, true);
+  const bad = cast.sanitizeLook({ outfit: "spacesuit", outfitColor: "red", wings: "yes", crown: "yes" });
+  assert.equal(bad.outfit, undefined); assert.equal(bad.outfitColor, undefined); assert.equal(bad.wings, undefined); assert.equal(bad.crown, undefined);
+});

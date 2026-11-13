@@ -76,6 +76,10 @@ function sanitizeLook(look = {}) {
   if (world.HAIR_STYLES.includes(look?.style)) out.style = look.style;
   if (world.ACCESSORIES.includes(look?.accessory)) out.accessory = look.accessory;
   if (["masc", "fem"].includes(look?.body)) out.body = look.body;   // grown-ups' 3D body (character creator)
+  if (["dress", "witch", "knight"].includes(look?.outfit)) out.outfit = look.outfit;   // dress-up outfits (Hazel's picks)
+  if (HEX.test(look?.outfitColor || "")) out.outfitColor = look.outfitColor.toLowerCase();
+  if (HEX.test(look?.wings || "")) out.wings = look.wings.toLowerCase();
+  if (look?.crown === true) out.crown = true;
   return out;
 }
 

@@ -1,5 +1,5 @@
 {
- "version": 1794535795,
+ "version": 1794538248,
  "cw": 128,
  "ch": 160,
  "bodies": {
@@ -15,7 +15,13 @@
     "hair_buns",
     "hair_curls",
     "acc_glasses",
-    "acc_bow"
+    "acc_bow",
+    "out_dress",
+    "out_witch",
+    "out_wings",
+    "out_knight",
+    "out_dresstrim",
+    "acc_tiara"
    ]
   },
   "man": {
@@ -31,7 +37,13 @@
     "hair_curls",
     "acc_glasses",
     "acc_bow",
-    "acc_beard"
+    "acc_beard",
+    "out_dress",
+    "out_witch",
+    "out_wings",
+    "out_knight",
+    "out_dresstrim",
+    "acc_tiara"
    ]
   },
   "woman": {
@@ -46,7 +58,13 @@
     "hair_buns",
     "hair_curls",
     "acc_glasses",
-    "acc_bow"
+    "acc_bow",
+    "out_dress",
+    "out_witch",
+    "out_wings",
+    "out_knight",
+    "out_dresstrim",
+    "acc_tiara"
    ]
   }
  }

@@ -25,7 +25,11 @@ if WORLD == 'clay':
     layers['acc_glasses'] = dict(glasses=(0.12, 0.10, 0.12))
     layers['acc_bow'] = dict(bow=WHITE, bowonly=True)
     if BODY == 'man': layers['acc_beard'] = dict(beard=WHITE)
-OVER = {'hair_': 'hair', 'acc_glasses': 'glasses', 'acc_bow': 'bow', 'acc_beard': 'beard'}
+    for k in ('dress', 'witch', 'wings'): layers['out_' + k] = {k: WHITE}
+    layers['out_knight'] = dict(knight=True)
+    layers['out_dresstrim'] = dict(dress=WHITE)
+    layers['acc_tiara'] = dict(tiara=(0.95, 0.72, 0.25))
+OVER = {'hair_': 'hair', 'acc_glasses': 'glasses', 'acc_bow': 'bow', 'acc_beard': 'beard', 'acc_tiara': 'tiara', 'out_': None}
 
 def region_of(m):
     r = m.get('region') if m else None
@@ -62,7 +66,7 @@ for name, extra in layers.items():
         sc.eevee.taa_render_samples = 1; sc.render.filter_size = 0.01
         render_all(sc, J, 'mask')
     else:
-        want = next(v for k, v in OVER.items() if name.startswith(k)); hold = holdout()
+        want = next(v for k, v in OVER.items() if name.startswith(k)) or name[4:]; hold = holdout()
         swap(lambda m: m if (m and m.get('region') == want) else hold)
         render_all(sc, J, name)
 if not ONLY: json.dump(meta, open(os.path.join(OUT, 'layers.json'), 'w'), indent=1)

@@ -1012,7 +1012,8 @@ app.put("/api/residents/:id/look", handle((req, res) => {
   const me = auth.profileForToken(auth.tokenFromRequest(req));
   const resident = findResident(req.params.id);
   if (!me || (me.role !== "owner" && me.residentId !== resident.id)) throw Object.assign(new Error("You can only change your own character's look."), { status: 403 });
-  resident.look = { ...resident.look, ...cast.sanitizeLook(req.body?.look) };
+  const { outfit, outfitColor, wings, crown, ...kept } = resident.look || {};   // dress-up is replaced as a whole, so taking it off works
+  resident.look = { ...kept, ...cast.sanitizeLook(req.body?.look) };
   if (resident.look.shirt) resident.color = resident.look.shirt;
   resident.lifeRevision += 1;
   broadcastRoster();

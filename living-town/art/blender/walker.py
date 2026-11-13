@@ -31,6 +31,14 @@ def mat(col, rough=0.55, glow=0, region=None):
     if glow: p.inputs['Base Color'].default_value = (*[c * 0.2 for c in col], 1); p.inputs['Emission Color'].default_value = (*col, 1); p.inputs['Emission Strength'].default_value = glow
     return m
 
+def fabric(m, tex, tiles):  # wrap a painted fabric (art/textures/dress) round a piece, fixed to the piece so it doesn't slide as it walks
+    nt = m.node_tree; p = nt.nodes['Principled BSDF']
+    tc = nt.nodes.new('ShaderNodeTexCoord'); mp = nt.nodes.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (tiles, tiles, tiles)
+    im = nt.nodes.new('ShaderNodeTexImage'); im.image = bpy.data.images.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'textures', 'dress', tex + '.jpg'), check_existing=True)
+    im.projection = 'BOX'; im.projection_blend = 0.4
+    nt.links.new(tc.outputs['Object'], mp.inputs['Vector']); nt.links.new(mp.outputs['Vector'], im.inputs['Vector']); nt.links.new(im.outputs['Color'], p.inputs['Base Color'])
+    p.inputs['Roughness'].default_value = 0.35; return m
+
 def empty(name, parent, loc):
     e = bpy.data.objects.new(name, None); bpy.context.scene.collection.objects.link(e); e.parent = parent; e.location = loc; return e
 
@@ -39,11 +47,17 @@ def blob(parent, loc, size, m, rot=(0, 0, 0)):  # smooth ellipsoid body part
     o = bpy.context.object; o.scale = size; o.rotation_euler = rot; bpy.ops.object.shade_smooth()
     o.parent = parent; o.location = loc; o.data.materials.append(m); return o
 
-def lathe(parent, loc, prof, m, seg=28):  # one smooth body piece: elliptical rings (z, rx, ry) joined top to bottom, closed at both ends
+def lathe(parent, loc, prof, m, seg=28, fold=None):  # one smooth body piece: elliptical rings (z, rx, ry) joined top to bottom, closed at both ends
+    # fold = (n, radial amps per ring, height amps per ring): soft fabric folds and a wavy hem
     import bmesh
     bm = bmesh.new(); rings = []
-    for (z, rx, ry) in prof:
-        rings.append([bm.verts.new((rx * math.cos(2 * math.pi * k / seg), ry * math.sin(2 * math.pi * k / seg), z)) for k in range(seg)])
+    for i, (z, rx, ry) in enumerate(prof):
+        ring = []
+        for k in range(seg):
+            a = 2 * math.pi * k / seg; f = 1.0; dz = 0.0
+            if fold: f = 1 + fold[1][i] * math.sin(fold[0] * a); dz = fold[2][i] * math.cos(fold[0] * a)
+            ring.append(bm.verts.new((rx * f * math.cos(a), ry * f * math.sin(a), z + dz)))
+        rings.append(ring)
     for a, b in zip(rings, rings[1:]):
         for k in range(seg): bm.faces.new((a[k], a[(k + 1) % seg], b[(k + 1) % seg], b[k]))
     for ring, z, flip in ((rings[0], prof[0][0], False), (rings[-1], prof[-1][0], True)):
@@ -102,7 +116,7 @@ def build(sex, O):
     BUFF = sex == 'male' and not O.get('kid'); lin = (lambda c: c) if O.get('name', '').startswith('clay') else (lambda c: tuple(x ** 2.2 for x in c))  # outfit colours are sRGB
     if O.get('space'):  # trim colour for this walker: gloves, boots, belt
         acc = O['accent_f' if G else 'accent_m']; O = dict(O, skin=acc, boots=acc, belt=acc, bald=True)
-    REG = {'skin': 'skin', 'shirt': 'shirt', 'coat': 'shirt', 'vest': 'shirt', 'pants': 'pants', 'skirt': 'pants', 'boots': 'shoes', 'hair': 'hair', 'beard': 'beard', 'glasses': 'glasses', 'bow': 'bow'}
+    REG = {'skin': 'skin', 'shirt': 'shirt', 'coat': 'shirt', 'vest': 'shirt', 'pants': 'pants', 'skirt': 'pants', 'boots': 'shoes', 'hair': 'hair', 'beard': 'beard', 'glasses': 'glasses', 'bow': 'bow', 'dress': 'dress', 'witch': 'witch', 'wings': 'wings', 'tiara': 'tiara'}
     M = {k: mat(lin(v), 0.75 if k in ('shirt', 'pants', 'hat') else 0.55, region=REG.get(k)) for k, v in O.items() if isinstance(v, tuple)}
     skin, shirt, pants, boots, belt, hair, eye = (M[k] for k in ('skin', 'shirt', 'pants', 'boots', 'belt', 'hair', 'eye'))
     s = O.get('scale', 0.95 if F else 1.0)  # overall scale
@@ -114,8 +128,9 @@ def build(sex, O):
     spine = empty('spine', hips, (0, 0, 0.08)); J['spine'] = spine
     if 'clay' not in O.get('name', ''): blob(spine, (0, 0, 0.02), (0.165 if not F else 0.13, 0.125 if not F else 0.105, 0.03), belt)  # belt
     wx, wy = (0.12, 0.10) if F else (0.16, 0.12); cx, cy = (0.18, 0.13) if F else ((0.27, 0.17) if BUFF else (0.22, 0.14))
-    lathe(spine, (0, 0, 0), [(-0.08, wx * 0.5, wy * 0.5), (-0.05, wx * 0.9, wy * 0.9), (0.02, wx, wy), (0.12, wx * 1.02, wy), (0.22, (wx + cx) / 2, (wy + cy) / 2),
-          (0.32, cx, cy), (0.40, cx * 0.97, cy * 0.95), (0.46, cx * 0.82, cy * 0.85), (0.50, cx * 0.55, cy * 0.62), (0.52, cx * 0.25, cy * 0.3)], shirt)  # one smooth body, waist to shoulders
+    tp = [(-0.08, wx * 0.5, wy * 0.5), (-0.05, wx * 0.9, wy * 0.9), (0.02, wx, wy), (0.12, wx * 1.02, wy), (0.22, (wx + cx) / 2, (wy + cy) / 2),
+          (0.32, cx, cy), (0.40, cx * 0.97, cy * 0.95), (0.46, cx * 0.82, cy * 0.85), (0.50, cx * 0.55, cy * 0.62), (0.52, cx * 0.25, cy * 0.3)]
+    lathe(spine, (0, 0, 0), tp, shirt)  # one smooth body, waist to shoulders
     if BUFF:
         for sx in (-1, 1): blob(spine, (sx * 0.2, 0, 0.42), (0.1, 0.1, 0.09), shirt)             # shoulders
     if F:
@@ -186,16 +201,57 @@ def build(sex, O):
         for sx in (-1, 1): blob(spine, (sx * 0.08, 0.25, 0.38), (0.025, 0.012, 0.025), trim(0.3, 1.5))
         blob(spine, (0, -0.15, 0.36), (0.05, 0.02, 0.04), trim(0.3, 1.8))                   # chest light
         for sx in (-1, 1): blob(spine, (sx * 0.1, -0.13, 0.12), (0.035, 0.02, 0.1), trim())  # suit stripes
+    over = lambda k, a=0.01: [(z, rx * 1.07 + a, ry * 1.07 + a) for (z, rx, ry) in tp]   # a layer just over the body
+    if O.get('dress'):   # princess ball gown: fitted top, one big flowing skirt with soft folds, a draped scalloped overskirt
+        d = fabric(M['dress'], 'satin', 2.2); lace = fabric(mat((0.97, 0.96, 0.94), 0.5, region='dresstrim'), 'lace', 4.0); gold = mat((0.95, 0.72, 0.25), 0.3, region='dresstrim')
+        lathe(spine, (0, 0, 0), over(0), d)
+        sk = [(0.1, wx * 1.08, wy * 1.08), (0.05, 0.2, 0.17), (-0.05, 0.25, 0.22), (-0.2, 0.31, 0.28), (-0.38, 0.37, 0.34), (-0.56, 0.42, 0.39), (-0.72, 0.46, 0.43), (-0.8, 0.475, 0.445), (-0.815, 0.4, 0.38)]
+        lathe(hips, (0, 0, 0), sk, d, 72, (9, [0, 0, 0.01, 0.025, 0.04, 0.05, 0.055, 0.055, 0.05], [0, 0, 0, 0, 0, 0, 0.01, 0.015, 0.015]))
+        lathe(hips, (0, 0, 0), [(0.08, 0.215, 0.185), (0.0, 0.25, 0.22), (-0.15, 0.32, 0.29), (-0.3, 0.38, 0.35), (-0.36, 0.395, 0.365), (-0.37, 0.36, 0.33)], d, 72,
+              (6, [0, 0, 0.03, 0.06, 0.07, 0.07], [0, 0, 0, 0.03, 0.06, 0.06]))                 # overskirt drapes in scallops
+        lathe(hips, (0, 0, 0), [(-0.77, 0.485, 0.455), (-0.82, 0.49, 0.46), (-0.83, 0.43, 0.41)], lace, 96, (24, [0.035, 0.04, 0.03], [0, 0.008, 0.008]))  # lace frill at the hem
+        lathe(spine, (0, 0, 0), [(0.06, wx * 1.12 + 0.012, wy * 1.12 + 0.012), (0.0, wx * 1.12 + 0.012, wy * 1.12 + 0.012)], gold)   # gold sash
+        for sx in (-1, 1): blob(spine, (sx * 0.05, wy * 1.12 + 0.03, 0.03), (0.05, 0.02, 0.035), gold, (0, R(sx * 20), 0)); blob(spine, (sx * 0.03, wy * 1.12 + 0.03, -0.05), (0.015, 0.012, 0.07), gold, (0, R(sx * 15), 0))
+        blob(spine, (0, wy * 1.12 + 0.035, 0.03), (0.02, 0.02, 0.02), gold)                      # bow at the back
+        lathe(spine, (0, 0, 0), [(0.45, cx * 0.86 + 0.02, cy * 0.88 + 0.02), (0.42, cx * 0.93 + 0.02, cy * 0.92 + 0.02)], lace, 64, (16, [0.06, 0.06], [0, 0]))  # lace neckline
+    if O.get('witch'):   # long robe and a tall pointy hat with a wide brim
+        wi = M['witch']; lathe(spine, (0, 0, 0), over(0.005), wi)
+        lathe(hips, (0, 0, 0), [(0.1, wx * 1.1, wy * 1.1), (0.0, 0.21, 0.18), (-0.3, 0.27, 0.24), (-0.6, 0.33, 0.3), (-0.8, 0.37, 0.34), (-0.82, 0.2, 0.2)], wi)
+        lathe(head, (0, 0, 0), [(0.175, 0.29, 0.29), (0.165, 0.29, 0.29)], wi)
+        hat = lathe(head, (0, 0.01, 0.0), [(0.17, 0.16, 0.16), (0.3, 0.12, 0.12), (0.42, 0.075, 0.075), (0.52, 0.035, 0.035), (0.58, 0.006, 0.006)], wi); hat.rotation_euler = (R(12), 0, 0)
+    if O.get('knight'):  # shiny armour: chest plate, shoulder guards, helmet with a visor and a red plume
+        steel = mat((0.72, 0.74, 0.78), 0.28, region='knight'); steel.node_tree.nodes['Principled BSDF'].inputs['Metallic'].default_value = 0.7
+        dark = mat((0.08, 0.08, 0.1), 0.5, region='knight'); plume = mat((0.85, 0.12, 0.15), 0.6, region='knight')
+        lathe(spine, (0, 0, 0), over(0.02), steel)
+        lathe(hips, (0, 0, 0), [(0.1, wx * 1.15, wy * 1.15), (-0.02, 0.21, 0.17), (-0.18, 0.23, 0.19), (-0.2, 0.12, 0.12)], steel)
+        blob(head, (0, 0, 0.06), (0.17, 0.18, 0.19), steel); blob(head, (0, -0.175, 0.07), (0.1, 0.012, 0.014), dark)
+        blob(head, (0, 0.03, 0.27), (0.03, 0.1, 0.08), plume)
+    if O.get('wings'):   # fairy wings on the back: two big upper wings and two small lower ones
+        wg = M['wings']
+        for sx in (-1, 1):
+            blob(spine, (sx * 0.27, 0.22, 0.5), (0.32, 0.014, 0.2), wg, (0, R(-sx * 30), R(sx * 20)))
+            blob(spine, (sx * 0.2, 0.2, 0.2), (0.2, 0.014, 0.13), wg, (0, R(sx * 35), R(sx * 20)))
+        blob(spine, (0, 0.16, 0.34), (0.04, 0.03, 0.06), wg)
+    if O.get('tiara'):   # gold tiara with a pink jewel
+        gold = M['tiara']; gem = mat((1.0, 0.3, 0.6), 0.2, region='tiara')
+        lathe(head, (0, 0.02, 0), [(0.27, 0.075, 0.075), (0.225, 0.08, 0.08)], gold)              # a little crown on top
+        for k in range(6):
+            a = R(-90 + k * 60); blob(head, (0.075 * math.cos(a), 0.02 + 0.075 * math.sin(a), 0.285), (0.016, 0.016, 0.03), gold)
+        blob(head, (0, -0.058, 0.25), (0.02, 0.012, 0.022), gem)
     sw = 0.175 if F else (0.26 if BUFF else 0.22); rolled = O.get('sleeves') == 'rolled'
     for side, sx in (('L', 1), ('R', -1)):
         sh = empty('sh' + side, spine, (sx * sw, 0, 0.42)); J['sh' + side] = sh
         limb(sh, 0.27, 0.055 if F else (0.085 if BUFF else 0.065), 0.058 if BUFF else 0.045, M.get('coat', shirt))
         el = empty('el' + side, sh, (0, 0, -0.28)); J['el' + side] = el
+        if O.get('dress'): lathe(sh, (sx * 0.01, 0, 0), [(0.06, 0.04, 0.04), (0.02, 0.095, 0.095), (-0.06, 0.105, 0.105), (-0.12, 0.08, 0.08), (-0.13, 0.05, 0.05)], M['dress'], 48, (8, [0, 0.08, 0.1, 0.08, 0], [0, 0, 0, 0, 0]))  # puff sleeves
+        if O.get('witch'): limb(sh, 0.27, 0.075, 0.07, M['witch']); lathe(el, (0, 0, 0), [(0.03, 0.065, 0.065), (-0.08, 0.075, 0.075), (-0.2, 0.11, 0.11), (-0.22, 0.09, 0.09)], M['witch'])
+        if O.get('knight'): blob(sh, (sx * 0.02, 0, 0.0), (0.11, 0.11, 0.085), steel)
         limb(el, 0.25, 0.056 if BUFF else 0.045, 0.045 if BUFF else 0.038, skin if rolled else M.get('coat', shirt)); blob(el, (0, -0.01, -0.29), (0.04, 0.045, 0.055), skin)  # forearm + hand
         if rolled: blob(el, (0, 0, -0.02), (0.068, 0.068, 0.045), shirt)                        # rolled cuff
         hp = empty('hp' + side, hips, (sx * (0.11 if F else 0.09), 0, -0.04)); J['hp' + side] = hp
         limb(hp, 0.42, 0.095 if F else 0.08, 0.06, pants)
         kn = empty('kn' + side, hp, (0, 0, -0.43)); J['kn' + side] = kn
+        if O.get('knight'): limb(kn, 0.3, 0.075, 0.065, steel)                                   # leg guards
         limb(kn, 0.40, 0.06, 0.045, pants)
         if boots is not pants: blob(kn, (0, 0, -0.3), (0.075, 0.075, 0.13), boots)             # boot shaft
         an = empty('an' + side, kn, (0, 0, -0.41)); J['an' + side] = an

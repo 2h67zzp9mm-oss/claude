@@ -18,6 +18,7 @@
   function getImage(src) {
     return images[src] ||= new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
   }
+  const HEXRE = /^#?[0-9a-f]{6}$/i;
   const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ""); const n = m ? parseInt(m[1], 16) : 0xcccccc; return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
 
   /** Which body to use: kids get the child body; grown-ups pick man or woman (look.body). */
@@ -31,7 +32,7 @@
   /** A canvas walk sheet for this look, or null while it's still loading (then try again next frame). */
   function sheet(world, body, rawLook) {
     const look = { ...DEFAULTS, ...(rawLook || {}) };
-    const key = [world, body, look.skin, look.hair, look.shirt, look.pants, look.shoes, look.style, look.accessory].join("|");
+    const key = [world, body, look.skin, look.hair, look.shirt, look.pants, look.shoes, look.style, look.accessory, look.outfit, look.outfitColor, look.wings, look.crown].join("|");
     const have = sheets.get(key);
     if (have !== undefined) return have;
     sheets.set(key, null);
@@ -49,7 +50,9 @@
     g.drawImage(base, 0, 0); const px = g.getImageData(0, 0, W, H);
     const mc = document.createElement("canvas"); mc.width = W; mc.height = H; const mg = mc.getContext("2d", { willReadFrequently: true });
     mg.drawImage(mask, 0, 0); const mp = mg.getImageData(0, 0, W, H).data;
-    const col = { skin: hex(look.skin), shirt: hex(look.shirt), pants: hex(look.pants), shoes: hex(look.shoes) };
+    // under a dress the arms are bare; a witch's robe has long sleeves; armour is steel all over
+    const shirt = look.outfit === "dress" ? look.skin : look.outfit === "witch" ? (look.outfitColor || look.shirt) : look.outfit === "knight" ? "#b8bcc6" : look.shirt;
+    const col = { skin: hex(look.skin), shirt: hex(shirt), pants: hex(look.outfit === "knight" ? "#9aa0ab" : look.pants), shoes: hex(look.shoes) };
     const d = px.data;
     for (let i = 0; i < d.length; i += 4) {
       if (!d[i + 3]) continue;
@@ -63,22 +66,31 @@
       if (c) { d[i] = d[i] * c[0] / 225; d[i + 1] = d[i + 1] * c[1] / 225; d[i + 2] = d[i + 2] * c[2] / 225; }
     }
     g.putImageData(px, 0, 0);
-    // hair and extras on top, each tinted
+    // hair, outfits and extras on top, each tinted. Wings go behind everything when you face us, on top when you face away.
     const layers = [];
-    const hair = look.style === "bald" ? null : (HAIR[look.style] || "buzz");
+    const hair = look.style === "bald" || look.outfit === "knight" ? null : (HAIR[look.style] || "buzz");
     if (hair) layers.push(["hair_" + hair, look.hair]);
-    if (look.accessory === "glasses") layers.push(["acc_glasses", null]);
-    if (look.accessory === "beard") layers.push(["acc_beard", look.hair]);
-    if (["bow", "headband", "star"].includes(look.accessory) || look.style === "ribbons") layers.push(["acc_bow", look.accessory === "star" ? "#ffd84a" : look.shirt]);
-    for (const [name, tint] of layers) {
-      if (!b.layers.includes(name)) continue;
+    if (look.accessory === "glasses" && look.outfit !== "knight") layers.push(["acc_glasses", null]);
+    if (look.accessory === "beard" && look.outfit !== "knight") layers.push(["acc_beard", look.hair]);
+    if (!look.outfit && (["bow", "headband", "star"].includes(look.accessory) || look.style === "ribbons")) layers.push(["acc_bow", look.accessory === "star" ? "#ffd84a" : look.shirt]);
+    if (look.outfit) layers.push(["out_" + look.outfit, look.outfit === "knight" ? null : (look.outfitColor || look.shirt)]);
+    if (look.outfit === "dress") layers.push(["out_dresstrim", null]);   // white lace and gold sash
+    if (look.crown && !["knight", "witch"].includes(look.outfit)) layers.push(["acc_tiara", null]);
+    const paint = async (name, tint) => {
+      if (!b.layers.includes(name)) return null;
       const img = await getImage(dir + name + ".webp" + v);
-      if (!tint) { g.drawImage(img, 0, 0); continue; }
+      if (!tint) return img;
       const t = document.createElement("canvas"); t.width = W; t.height = H; const tg = t.getContext("2d");
       tg.drawImage(img, 0, 0); tg.globalCompositeOperation = "multiply"; tg.fillStyle = tint; tg.fillRect(0, 0, W, H);
       tg.globalCompositeOperation = "destination-in"; tg.drawImage(img, 0, 0);
-      g.drawImage(t, 0, 0);
-    }
+      return t;
+    };
+    const wings = HEXRE.test(look.wings || "") ? await paint("out_wings", look.wings) : null;
+    const rows = (img, keep) => { const rh = H / 8; for (let r = 0; r < 8; r++) if (keep(r)) g.drawImage(img, 0, r * rh, W, rh, 0, r * rh, W, rh); };
+    const away = r => r >= 3 && r <= 5;   // NW, N, NE
+    if (wings) rows(wings, r => !away(r));
+    for (const [name, tint] of layers) { const img = await paint(name, tint); if (img) g.drawImage(img, 0, 0); }
+    if (wings) rows(wings, away);
     return { canvas: out, cw: idx.cw, ch: idx.ch, ax: b.ax, ay: b.ay };
   }
 

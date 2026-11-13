@@ -1929,6 +1929,8 @@
       <label>Home<select name="homeId">${homeBuildings.map(b => option(b.id, currentHome, b.name)).join("")}</select></label>` : "";
     // Thumb-friendly picker: big live 3D preview, then rows of swatches and chips.
     const HAIR_COLORS = ["#1f1510", "#3b2416", "#5a3825", "#8a5a2b", "#c48a3f", "#e8c46a", "#b9452a", "#9a9a9a", "#eeeeee", "#7a4ad8", "#3a8ad8", "#e05a9a"];
+    const OUTFIT_COLORS = ["#f48fb1", "#ec407a", "#ce93d8", "#9575cd", "#90caf9", "#4fc3f7", "#80deea", "#a5d6a7", "#fff59d", "#ffcc80", "#ef5350", "#fafafa", "#ffd54f", "#5e35b1", "#263238"];
+    const WING_COLORS = ["#bfe6ff", "#ffc1e3", "#e1c4ff", "#c8ffd8", "#fff3b0", "#ffffff"];
     const CLOTHES = ["#e53935", "#fb8c00", "#fdd835", "#7cb342", "#26a69a", "#29b6f6", "#3949ab", "#8e24aa", "#ec407a", "#f1eee4", "#9e9e9e", "#3f4d79", "#212121", "#6d4c41"];
     const kidAge = Number(isNew ? 10 : resident.profile?.age ?? 30) < 13 || (!isNew && (resident.id === "hazel" || resident.id === "olive"));
     const chips = (name, values, current, label = v => LOOK_LABELS[v] || v) => `<input type="hidden" name="${name}" value="${escapeHtml(current)}"><div class="chip-row" data-for="${name}">${values.map(v => `<button type="button" class="chip${v === current ? " active" : ""}" data-v="${escapeHtml(v)}">${escapeHtml(label(v))}</button>`).join("")}</div>`;
@@ -1939,6 +1941,10 @@
         <div class="look-stage-buttons"><button type="button" id="spinLook" class="chip">↻ Turn</button><button type="button" id="worldLook" class="chip">🚀 Sci-fi</button></div></div>
       <form id="characterForm" class="creator-form">${details}
         ${kidAge ? '<input type="hidden" name="body" value="">' : `<p class="look-label">Body</p>${chips("body", ["masc", "fem"], look.body || (/long|pigtails|buns|bunny|ribbons|curls/.test(look.style) ? "fem" : "masc"), v => v === "masc" ? "💪 Man" : "👩 Woman")}`}
+        <p class="look-label">Dress-up</p>${chips("outfit", ["", "dress", "witch", "knight"], look.outfit || "", v => ({ "": "👕 Everyday", dress: "👗 Princess", witch: "🧙‍♀️ Witch", knight: "🛡️ Knight" })[v])}
+        <p class="look-label">Outfit colour</p>${swatchRow("outfitColor", OUTFIT_COLORS, look.outfitColor || "#f48fb1")}
+        <p class="look-label">Fairy wings</p>${chips("wings", ["", ...WING_COLORS], look.wings || "", v => v ? "🦋" : "None")}
+        <p class="look-label">Crown</p>${chips("crown", ["", "yes"], look.crown ? "yes" : "", v => v ? "👑 Crown" : "None")}
         <p class="look-label">Skin</p>${swatchRow("skin", SKIN_TONES, look.skin)}
         <p class="look-label">Hair</p>${chips("style", HAIR_STYLES, look.style)}
         <p class="look-label">Hair colour</p>${swatchRow("hair", HAIR_COLORS, look.hair)}
@@ -1949,6 +1955,7 @@
         <button class="wide-button">${isNew ? "Welcome them to town" : "Save"}</button>
       </form>${editDetails && !isNew ? '<button id="moveAway" class="text-button danger">Move away from town</button>' : ""}`, false, "");
     const form = gate.querySelector("#characterForm");
+    gate.querySelectorAll('[data-for="wings"] .chip[data-v^="#"]').forEach(b => { b.style.background = b.dataset.v; b.style.color = "#333"; });
     const preview = gate.querySelector("#lookPreview").getContext("2d");
     const avatarCtx = gate.querySelector("#lookAvatar").getContext("2d");
     let facing = 0, lookWorld = "clay";
@@ -1956,6 +1963,9 @@
       const data = new FormData(form);
       const out = Object.fromEntries(["skin", "hair", "style", "accessory", "shirt", "pants", "shoes"].map(key => [key, data.get(key)]));
       if (data.get("body")) out.body = data.get("body");
+      if (data.get("outfit")) { out.outfit = data.get("outfit"); out.outfitColor = data.get("outfitColor"); }
+      if (data.get("wings")) out.wings = data.get("wings");
+      if (data.get("crown")) out.crown = true;
       return out;
     };
     const drawAvatar = () => {
