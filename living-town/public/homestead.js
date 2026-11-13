@@ -174,7 +174,8 @@
   // --- the bar of buttons along the bottom (thumbs) ---
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   let setBar = function (title, buttons, cls = "") {
-    bar.innerHTML = `${title ? `<div class="home-title">${title}</div>` : ""}<div class="home-actions ${cls}">${buttons.map((b, i) => `<button data-i="${i}" ${b.off ? "disabled" : ""} class="${b.big ? "big" : ""}">${b.label}</button>`).join("")}</div>`;
+    const dock = cls.includes("dock");   // one compact row: a picture with a small word under it
+    bar.innerHTML = `${title ? `<div class="home-title">${title}</div>` : ""}<div class="home-actions ${cls}">${buttons.map((b, i) => `<button data-i="${i}" ${b.off ? "disabled" : ""} class="${b.big ? "big" : ""}">${dock ? b.label.replace(/^(\S+)\s+(.*)$/, `<b>$1</b>${b.badge ? `<em>${b.badge}</em>` : ""}<span>$2</span>`) : b.label}</button>`).join("")}</div>`;
     bar.querySelectorAll("button").forEach(btn => { btn.onclick = () => { hidePop(); buttons[Number(btn.dataset.i)].go(); }; });   // a pop-up never lingers over a menu
   };
 
@@ -290,39 +291,36 @@
   }
   function idleBar() {
     const g = view?.goals || [], left = g.filter(x => x.have < x.n).length;
-    setBar("", [{ label: g.length ? (left ? `🎯 Goals ${g.length - left}/${g.length}` : "🎯 All done!") : "🎯 Goals", big: g.length > 0 && left > 0 && left === g.length, go: goalsBar }, { label: "🐾 Pets", go: petsBar }, { label: "🎒 Bag", go: showBag }, { label: "🎨 Look", go: () => opts.editLook?.() }, { label: "🌍 World", go: worldBar }, { label: "🏘️ To town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }]);
+    setBar("", [{ label: "🎯 Goals", badge: g.length ? (left ? `${g.length - left}/${g.length}` : "✓") : "", big: g.length > 0 && left > 0 && left === g.length, go: goalsBar }, { label: "🐾 Pets", go: petsBar }, { label: "🎒 Bag", go: showBag }, { label: "🎨 Look", go: () => opts.editLook?.() }, { label: "🌍 World", go: worldBar }, { label: "🏘️ Town", go: () => walkTo({ kind: "exit", x: L.exit[0], y: L.exit[1] }) }], "home-dock");
   }
   function goalsBar() {
     const g = view?.goals || [];
     const rows = g.map(x => row(x.icon, esc(x.text), `<small>${x.have}/${x.n} · +${view.goalStars}⭐</small>`, x.have >= x.n)).join("");
-    const bonus = `+${view?.allBonus ?? 5}⭐ bonus`;
-    const streak = view?.streak ? `<span>🎉 All three: ${bonus} (more for a streak)</span><span>🔥 ${view.streak} day${view.streak > 1 ? "s" : ""} in a row${view.streakToday ? "" : ". Finish today to keep it going!"}</span>`
-      : `<span>🎉 Finish all three: ${bonus} and a 🔥 streak!</span>`;
+    const note = `All 3: +${view?.allBonus ?? 5}⭐${view?.streak ? ` · 🔥 ${view.streak} day${view.streak > 1 ? "s" : ""}${view.streakToday ? "" : ", keep it going!"}` : " and a 🔥 streak"}`;
     const st = view?.story, m = view?.me;
     const more = (st ? (st.done ? row("📖", "Story finished here. Try another world!") : row("📖", esc(st.job), `<small>${st.have}/${st.n} · +${st.stars}⭐</small>`)) : "")
       + (m ? row("⭐", `Level ${m.level} · ${esc(m.title)}`, `${meter(m.into, m.need)}<small>${m.into}/${m.need} XP</small>`) : "");
-    setBar(`<span class="home-goals"><b>🎯 Today’s goals</b>${rows}${streak}${more}</span>`,
+    setBar(`<span class="home-goals"><span class="home-head"><b>🎯 Today’s goals</b><small>${note}</small></span>${rows}${more}</span>`,
       [{ label: "📖 Story", big: !!st && !st.done, go: () => questBar("story") }, { label: "🔨 Build", go: () => questBar("build") }, { label: "📚 Book", go: () => questBar("book") }, { label: "⭐ Level", go: () => questBar("level") },
-        { label: soundOn ? "🔊 Sound on" : "🔈 Sound off", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "Back", go: idleBar }]);
+        { label: soundOn ? "🔊 Sound" : "🔈 Muted", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "↩️ Back", go: idleBar }], "home-dock");
   }
   // --- reasons to keep playing: your level, this world's story, the family build and the collection book ---
   // One row in a panel: a picture in its own column, the words, then anything for the right-hand side (a meter, small have/need text).
   const row = (icon, text, tail = "", done = false) => `<span class="home-goal ${done ? "done" : ""}"><i class="home-ico">${done ? "✅" : icon}</i><span>${text}</span>${tail}</span>`;
   const meter = (have, need) => `<i class="home-meter"><i style="width:${Math.round(100 * Math.min(1, have / Math.max(1, need)))}%"></i></i>`;
-  const fishIcon = (k, size = 44) => sprIcon("fish_" + k, size) || `<span class="home-icon home-emoji" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.7)}px">${view?.fish[k]?.emoji || "🐟"}</span>`;
+  const fishIcon = (k, size = 34) => sprIcon("fish_" + k, size) || `<span class="home-icon home-emoji" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.7)}px">${view?.fish[k]?.emoji || "🐟"}</span>`;
   function questBar(p) {
     if (!view?.me) return idleBar();
     const m = view.me, st = view.story, b = view.build, bk = view.book; let html = "", buttons = [];
     if (p === "level") {
       const next = m.perks.filter(k => k.level > m.level).slice(0, 3), got = m.perks.filter(k => k.level <= m.level);
       html = `<b>⭐ Level ${m.level} · ${esc(m.title)}</b>` + row("⭐", "Next level", `${meter(m.into, m.need)}<small>${m.into}/${m.need} XP · +${m.nextStars}⭐</small>`)
-        + `<span>Everything you do earns XP: planting, watering, picking, fishing, goals and stories.</span>`
         + next.map(k => row(k.icon, esc(k.text), `<small>🔒 Level ${k.level}</small>`)).join("")
         + got.map(k => row(k.icon, esc(k.text), "", true)).join("");
     } else if (p === "story") {
       html = `<b>📖 ${esc(st.title)}</b><span>${st.done ? "The end" : `Chapter ${st.ch} of ${st.total}`} · ${esc(st.guide)} says:</span><span class="home-say">“${esc(st.text)}”</span>`
         + (st.done ? "" : row("👉", esc(st.job), `${meter(st.have, st.n)}<small>${st.have}/${st.n} · +${st.stars}⭐</small>`))
-        + `<span>Your whole family shares this story. Every world has its own.</span>`;
+;
     } else if (p === "build") {
       html = `<b>${b.icon} ${esc(b.name)}</b>` + (b.done ? `<span class="home-say">It’s all built. What a family! 🎉</span>`
         : `<span>Stage ${b.stage} of ${b.total}: ${esc(b.stageName)}</span>`
@@ -333,8 +331,8 @@
     } else {
       const C = view.crops, K = view.pets?.kinds || {}, page = (k, icon, title, cards) => row(icon, title, `${meter(bk[k].length, bk.totals[k])}<small>${bk[k].length}/${bk.totals[k]}${bk.done[k] ? "" : ` · +${bk.prizes[k]}⭐`}</small>`, bk.done[k]) + `<div class="fish-book">${cards}</div>`;
       const card = (known, icon, name, note = "") => `<div class="fish-card ${known ? "" : "unknown"}">${icon}<b>${known ? esc(name) : "???"}</b><small>${note}</small></div>`;
-      const em = e => `<span class="home-icon home-emoji" style="width:44px;height:44px;font-size:30px">${e}</span>`;
-      html = `<b>📚 Collection book</b><span>Fill a page and everyone in the family gets its stars.</span>`
+      const em = e => `<span class="home-icon home-emoji" style="width:34px;height:34px;font-size:24px">${e}</span>`;
+      html = `<span class="home-head"><b>📚 Collection book</b><small>A full page pays everyone</small></span>`
         + page("fish", "🐟", "Fish", Object.entries(view.fish).map(([k, f]) => card(bk.fish.includes(k), fishIcon(k), f.name, bk.fish.includes(k) ? `caught ${view.caught[k] || 1}` : f.level > m.level ? `🔒 Level ${f.level}` : f.biting ? "biting now" : "not biting now")).join(""))
         + page("crops", "🌱", "Crops", Object.entries(C).map(([k, c]) => card(bk.crops.includes(k), em(c.emoji), c.name, bk.crops.includes(k) ? "grown" : "grow one")).join(""))
         + page("pets", "🐾", "Pets", Object.entries(K).map(([k, c]) => card(bk.pets.includes(k), em(c.emoji), c.name, bk.pets.includes(k) ? "in the family" : "not yet")).join(""));
@@ -364,18 +362,28 @@
     return menu;
   }
   function contextBar(t) { contextBarInner(t); }
+  // The seed shop stays open while you buy: every tap buys one, and the stars and counts update in place.
+  function shopBar() {
+    if (!view) return idleBar();
+    const C = view.crops, up = view.upgrade;
+    setBar(`<span class="home-goals home-shop"><span class="home-head"><b>🛒 Seed shop</b><small>You have ${view.stars}⭐ · tap to buy one</small></span></span>`,
+      [...view.shop.map(k => ({ label: `${C[k].emoji} ${C[k].name} ${C[k].seed}⭐${view.seeds[k] > 0 ? ` <small>×${view.seeds[k]}</small>` : ""}`, off: view.stars < C[k].seed, go: () => act("buy", { crop: k }) })),
+        ...(up ? [{ label: `🌱 Bigger garden ${up.cost}⭐`, big: view.stars >= up.cost, off: view.stars < up.cost, go: () => act("upgrade") }] : []), { label: "Back", go: idleBar }], "wide");
+  }
   function contextBarInner(t) {
     if (!view) return idleBar();
     const C = view.crops;
     if (t.kind === "plot") {
       const p = view.plots[t.plot];
       if (t.plot >= view.beds) return view.upgrade
-        ? setBar(`🔒 Not dug yet. Upgrade at the crate (${view.upgrade.cost} ⭐) for ${view.upgrade.beds} beds.`, [{ label: "OK", go: idleBar }])
+        ? setBar(`🔒 Not dug yet. A bigger garden has ${view.upgrade.beds} beds.`, [{ label: `🌱 Bigger garden ${view.upgrade.cost}⭐`, big: view.stars >= view.upgrade.cost, off: view.stars < view.upgrade.cost, go: () => act("upgrade") }, { label: "OK", go: idleBar }])
         : idleBar();
       if (!p.crop) {
-        const seeds = Object.entries(view.seeds).filter(([, n]) => n > 0);
-        if (!seeds.length) return setBar("No seeds. The crate by the house sells them.", [{ label: "OK", go: idleBar }]);
-        return setBar("🌱 Plant something:", [...seeds.map(([k, n]) => ({ label: `${C[k].emoji} ${C[k].name} ×${n}`, go: () => act("plant", { plot: t.plot, crop: k }) })), { label: "Done", go: idleBar }]);
+        // Seeds you have, then seeds you can buy right here (a price means "buy one and plant it").
+        const seeds = Object.entries(view.seeds).filter(([, n]) => n > 0), buy = view.shop.filter(k => !(view.seeds[k] > 0) && view.stars >= C[k].seed);
+        if (!seeds.length && !buy.length) return setBar("No seeds, and not enough ⭐ for more. Sell crops or fish at the crate!", [{ label: "OK", go: idleBar }]);
+        return setBar(`🌱 Plant · you have ${view.stars}⭐`, [...seeds.map(([k, n]) => ({ label: `${C[k].emoji} ${C[k].name} ×${n}`, go: () => act("plant", { plot: t.plot, crop: k }) })),
+          ...buy.map(k => ({ label: `${C[k].emoji} ${C[k].name} ${C[k].seed}⭐`, go: () => act("plant", { plot: t.plot, crop: k }) })), { label: "Done", go: idleBar }]);
       }
       if (p.growth >= 1) return setBar(`${C[p.crop].emoji} Ready to pick!`, [{ label: "🧺 Pick", big: true, go: () => act("harvest", { plot: t.plot }) }]);
       return setBar(`${C[p.crop].emoji} ${C[p.crop].name}: ${Math.round(p.growth * 100)}% grown${p.wet ? " · watered" : ""}`, [{ label: "💧 Water", big: !p.wet, go: () => act("water", { plot: t.plot }) }, { label: "Done", go: idleBar }]);
@@ -394,8 +402,7 @@
     if (t.kind === "crate") {
       const n = Object.entries(view.bag).filter(([k]) => C[k] || view.fish[k]).reduce((s, [, v]) => s + v, 0);
       return setBar(`📦 Shipping crate · you have ${view.stars}⭐`, [{ label: `📦 Sell all (${n})`, big: n > 0, off: !n, go: () => act("sell") },
-        ...(view.upgrade ? [{ label: `🌱 Bigger garden ${view.upgrade.cost}⭐`, big: view.stars >= view.upgrade.cost, off: view.stars < view.upgrade.cost, go: () => act("upgrade") }] : []),
-        ...view.shop.map(k => [k, C[k]]).map(([k, c]) => ({ label: `🌱 ${c.emoji} ${c.seed}⭐`, off: view.stars < c.seed, go: () => act("buy", { crop: k }) })), { label: "Done", go: idleBar }]);
+        { label: "🛒 Seed shop", go: shopBar }, { label: "Done", go: idleBar }]);
     }
     if (t.kind === "mailbox") return setBar(view.mail ? "✉️ You've got mail!" : "No new mail today.", [{ label: "✉️ Open", big: view.mail, go: () => act("mail") }, { label: "Done", go: idleBar }]);
     if (t.kind === "door") return setBar("Your house", [{ label: "🏠 Go inside", big: true, go: () => opts.openHouse() }, { label: "Done", go: idleBar }]);
@@ -491,7 +498,7 @@
     if (!view) return;
     const C = view.crops, F = view.fish;
     const chip = (emoji, name, n) => `<span class="home-chip">${emoji} ${esc(name)} ×${n}</span>`;
-    const seeds = Object.entries(view.seeds).filter(([, n]) => n > 0).map(([k, n]) => chip(C[k].emoji, C[k].name, n)).join("") || "<span>None. The crate by the house sells them.</span>";
+    const seeds = Object.entries(view.seeds).filter(([, n]) => n > 0).map(([k, n]) => chip(C[k].emoji, C[k].name, n)).join("") || "<span>None. Tap an empty bed or the crate to buy some.</span>";
     const bag = Object.entries(view.bag).filter(([, n]) => n > 0).map(([k, n]) => chip(C[k]?.emoji || "🐟", (C[k] || F[k])?.name || k, n)).join("") || "<span>Empty. Grow or catch something!</span>";
     const book = Object.entries(F).map(([k, f]) => `<div class="fish-card ${view.caught[k] ? "" : "unknown"}">${fishIcon(k)}<b>${view.caught[k] ? esc(f.name) : "???"}</b><small>${view.caught[k] ? `caught ${view.caught[k]}` : f.level > (view.me?.level || 1) ? `🔒 Level ${f.level}` : f.biting ? "biting now" : "not biting now"}</small></div>`).join("");
     bar.innerHTML = `<div class="home-scroll"><p class="home-title"><b>🌱 Seeds</b>${seeds}</p><p class="home-title"><b>🎒 Bag</b>${bag}</p><p class="home-title"><b>🐟 Fish book</b><span>${Object.keys(view.caught).length}/${Object.keys(F).length}</span></p><div class="fish-book">${book}</div></div><div class="home-actions"><button>Back</button></div>`;
@@ -535,6 +542,8 @@
       return petsBar();
     }
     if (bar.querySelector(".home-pets") && !r.treat) petsBar();
+    if (r.bought) { floatText(me.x, me.y, 1.5, `+${r.bought.n} ${view.crops[r.bought.crop]?.emoji || "🌱"}`); SFX.pop(); }
+    if (bar.querySelector(".home-shop")) shopBar();
     if (r.splash != null) {
       splash = { plot: r.splash, at: performance.now() }; const pr = plotRect(r.splash);
       burst(pr.cx, pr.cy, 0.9, { n: 14, color: ["#7cc8ff", "#b5e3ff", "#4aa3e8"], speed: 60, up: 60, gravity: 420, life: 700, size: 3 }); SFX.water();

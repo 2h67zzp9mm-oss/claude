@@ -500,3 +500,20 @@ button {
 .swatch-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch-row .swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #ffffff33; }
 .swatch-row .swatch.active { outline: 3px solid #4fc3a1; outline-offset: 2px; }
+/* The look editor fills the phone: preview on top, choices scroll in the middle, Back and Save pinned by the thumbs. */
+.player-gate.look-gate { display: block; padding: 0; overflow: hidden; }
+.look-gate .gate-card { display: flex; flex-direction: column; box-sizing: border-box; height: 100%; max-width: 430px; margin: 0 auto; padding: calc(8px + env(safe-area-inset-top)) 12px 0; border: 0; border-radius: 0; }
+.look-gate .eyebrow, .look-gate .gate-error:empty { display: none; }
+.look-gate h3 { margin: 0 0 4px; font-size: 1rem; }
+.look-gate .look-stage { flex: none; margin: 0 0 4px; padding: 4px 8px; border-radius: 16px; }
+.look-gate .look-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; text-align: left; }
+.look-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
+.look-gate .look-label { margin: 8px 0 2px; }
+.look-gate .chip { min-height: 44px; min-width: 44px; }
+.look-gate .swatch-row { gap: 0; justify-content: flex-start; margin: 0; }
+.look-gate .swatch-row .swatch { width: 44px; height: 44px; padding: 0; border: 5px solid transparent; background-clip: padding-box !important; box-shadow: inset 0 0 0 2px #ffffff33; }
+.look-gate .swatch-row .swatch.active { outline: 3px solid #4fc3a1; outline-offset: -4px; box-shadow: none; }
+.look-foot { flex: none; display: flex; gap: 6px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+.look-foot button { min-height: 48px; margin: 0; padding: 4px 8px; border: 0; border-radius: 12px; font: 700 1rem system-ui; }
+.look-foot .look-back { flex: 1 1 0; background: #ffffff1a; color: #fff; }
+.look-foot .wide-button { flex: 2 1 0; width: auto; background: #4fc3a1; color: #06231a; }

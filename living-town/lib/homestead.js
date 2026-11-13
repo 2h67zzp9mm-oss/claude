@@ -335,9 +335,14 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         const crop = CROPS[msg.crop] ? msg.crop : null;
         if (!plot || !crop) return { ok: false, toast: "Pick a bed and a seed." };
         if (plot.crop) return { ok: false, toast: "Something's already growing there." };
-        if (!(h.seeds[crop] > 0)) return { ok: false, toast: `No ${CROPS[crop].name.toLowerCase()} seeds left. The crate sells them.` };
+        let bought = null;
+        if (!(h.seeds[crop] > 0)) {   // no seeds of that kind: buy one on the spot if you can, so planting is one tap
+          const cost = CROPS[crop].seed;
+          if (!cropsOf(h).includes(crop) || (Number(r.stars) || 0) < cost) return { ok: false, toast: `No ${CROPS[crop].name.toLowerCase()} seeds left. You need ${cost} ⭐ for more.` };
+          r.stars -= cost; h.seeds[crop] = 1; bought = { crop, n: 1 };
+        }
         h.seeds[crop]--; Object.assign(plot, { crop, growth: 0, grewAt: now, wateredAt: 0, by: r.id, fast: perk(h, r.id, "grower") ? 1.15 : 1 });
-        return { ok: true, planted: msg.plot, toast: `${CROPS[crop].emoji} Planted ${CROPS[crop].name.toLowerCase()} seeds. Water them to help them grow!` };
+        return { ok: true, planted: msg.plot, ...(bought ? { bought } : {}), toast: `${CROPS[crop].emoji} Planted ${CROPS[crop].name.toLowerCase()} seeds. Water them to help them grow!` };
       }
       case "water": {
         if (!plot?.crop) return { ok: false, toast: "Plant something first." };
@@ -383,7 +388,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         const cost = CROPS[crop].seed;
         if ((Number(r.stars) || 0) < cost) return { ok: false, toast: `You need ${cost} ⭐ for ${CROPS[crop].name.toLowerCase()} seeds.` };
         r.stars -= cost; h.seeds[crop] = (h.seeds[crop] || 0) + 1;
-        return { ok: true, toast: `🌱 Bought ${CROPS[crop].name.toLowerCase()} seeds.` };
+        return { ok: true, bought: { crop, n: 1 }, toast: `🌱 Bought ${CROPS[crop].name.toLowerCase()} seeds.` };
       }
       case "world": {
         if (!WORLDS.includes(msg.world)) return { ok: false, toast: "That world isn't built yet." };

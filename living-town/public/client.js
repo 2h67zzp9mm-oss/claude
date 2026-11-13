@@ -1737,7 +1737,7 @@
   window.LivingTownHome?.init({
     send, toast: showToast, me: () => me?.residentId || null, resident: id => residents.get(id),
     look: id => { const r = residents.get(id); return r ? lookFor(r) : null; },
-    editLook: () => { const r = me && residents.get(me.residentId); if (r) showCharacterEditor(r); },
+    editLook: () => { const r = me && residents.get(me.residentId); if (r) showCharacterEditor(r, () => $("#playerGate")?.remove()); },
     openHouse: () => { window.LivingTownHome.close(); visitPlace("homes"); }
   });
   $("#homeButton").addEventListener("click", () => window.LivingTownHome?.open());
@@ -1827,9 +1827,9 @@
     if (!gate) {
       gate = document.createElement("section");
       gate.id = "playerGate";
-      gate.className = "player-gate";
       $(".app-shell").append(gate);
     }
+    gate.className = "player-gate";
     gate.innerHTML = `<div class="gate-card"><p class="eyebrow">ONE SHARED WORLD</p>${title ? `<h2>${title}</h2>` : ""}${content}<p id="gateError" class="gate-error" role="alert"></p>${closable ? '<button id="closeGate" class="text-button">Just watch the town</button>' : ""}</div>`;
     gate.querySelector("#closeGate")?.addEventListener("click", () => gate.remove());
     return gate;
@@ -1917,7 +1917,7 @@
 
   // --- Character editor: looks for anyone you may edit; name, age and home
   // for residents created in the app (owner only). ---
-  function showCharacterEditor(resident) {
+  function showCharacterEditor(resident, back = showProfileMenu) {
     const isNew = !resident;
     const owner = me?.role === "owner";
     const editDetails = owner && (isNew || resident.custom);
@@ -1936,10 +1936,11 @@
     const chips = (name, values, current, label = v => LOOK_LABELS[v] || v) => `<input type="hidden" name="${name}" value="${escapeHtml(current)}"><div class="chip-row" data-for="${name}">${values.map(v => `<button type="button" class="chip${v === current ? " active" : ""}" data-v="${escapeHtml(v)}">${escapeHtml(label(v))}</button>`).join("")}</div>`;
     const swatchRow = (name, colors, current) => `<input type="hidden" name="${name}" value="${escapeHtml(current)}"><div class="swatch-row" data-for="${name}">${colors.map(c => `<button type="button" class="swatch${c.toLowerCase() === String(current).toLowerCase() ? " active" : ""}" data-v="${c}" style="background:${c}" aria-label="${name} colour"></button>`).join("")}</div>`;
     const title = isNew ? "New resident" : `Customize ${resident.name}`;
-    const gate = gateShell(`<button id="backMenu" class="back-button">‹ Back</button><h3>${escapeHtml(title)}</h3>
+    // Phone layout: the preview stays on top, the choices scroll in the middle, and Back and Save stay put by the thumbs.
+    const gate = gateShell(`<h3>${escapeHtml(title)}</h3>
       <div class="look-stage"><canvas id="lookAvatar" class="look-avatar" width="128" height="160"></canvas><canvas id="lookPreview" class="look-preview" width="16" height="24"></canvas>
         <div class="look-stage-buttons"><button type="button" id="spinLook" class="chip">↻ Turn</button><button type="button" id="worldLook" class="chip">🚀 Sci-fi</button></div></div>
-      <form id="characterForm" class="creator-form">${details}
+      <form id="characterForm" class="creator-form look-form"><div class="look-scroll">${details}
         ${kidAge ? '<input type="hidden" name="body" value="">' : `<p class="look-label">Body</p>${chips("body", ["masc", "fem"], look.body || (/long|pigtails|buns|bunny|ribbons|curls/.test(look.style) ? "fem" : "masc"), v => v === "masc" ? "💪 Man" : "👩 Woman")}`}
         <p class="look-label">Dress-up</p>${chips("outfit", ["", "dress", "witch", "knight"], look.outfit || "", v => ({ "": "👕 Everyday", dress: "👗 Princess", witch: "🧙‍♀️ Witch", knight: "🛡️ Knight" })[v])}
         <p class="look-label">Outfit colour</p>${swatchRow("outfitColor", OUTFIT_COLORS, look.outfitColor || "#f48fb1")}
@@ -1952,8 +1953,10 @@
         <p class="look-label">Pants</p>${swatchRow("pants", CLOTHES, look.pants)}
         <p class="look-label">Shoes</p>${swatchRow("shoes", CLOTHES, look.shoes)}
         <p class="look-label">Extras</p>${chips("accessory", ACCESSORIES, look.accessory)}
-        <button class="wide-button">${isNew ? "Welcome them to town" : "Save"}</button>
-      </form>${editDetails && !isNew ? '<button id="moveAway" class="text-button danger">Move away from town</button>' : ""}`, false, "");
+        ${editDetails && !isNew ? '<button type="button" id="moveAway" class="text-button danger">Move away from town</button>' : ""}</div>
+        <div class="look-foot"><button type="button" id="backMenu" class="look-back">Back</button><button class="wide-button">${isNew ? "Welcome them to town" : "Save"}</button></div>
+      </form>`, false, "");
+    gate.classList.add("look-gate");
     const form = gate.querySelector("#characterForm");
     gate.querySelectorAll('[data-for="wings"] .chip[data-v^="#"]').forEach(b => { b.style.background = b.dataset.v; b.style.color = "#333"; });
     const preview = gate.querySelector("#lookPreview").getContext("2d");
@@ -1985,7 +1988,7 @@
     gate.querySelector("#spinLook").addEventListener("click", () => { facing = (facing + 1) % 8; drawAvatar(); });
     gate.querySelector("#worldLook").addEventListener("click", e => { lookWorld = lookWorld === "clay" ? "scifi" : "clay"; e.target.textContent = lookWorld === "clay" ? "🚀 Sci-fi" : "🤍 Clay"; drawAvatar(); });
     redraw();
-    gate.querySelector("#backMenu").addEventListener("click", showProfileMenu);
+    gate.querySelector("#backMenu").addEventListener("click", back);
     gate.querySelector("#moveAway")?.addEventListener("click", async () => {
       if (!confirm(`Say goodbye to ${resident.name}? They'll move away from town.`)) return;
       try { await api(`/api/residents/${encodeURIComponent(resident.id)}`, { method: "DELETE" }); gate.remove(); showToast(`${resident.name} moved away`); }

@@ -10,13 +10,16 @@ like a finished game, not a web page.
 ## Layout
 - **Thumbs low.** Everything you tap lives in the bottom panel (`.home-bar`) or in the pop-up at your finger (`.home-pop`).
 - **The top is display-only.** Name, level, streak and stars. Never a button up there.
-- The bottom panel hugs the bottom edge and stays under about 60% of the screen. Its buttons never move: if a panel
-  is long, the part above the buttons scrolls and the buttons stay in view.
+- **Clean and compact.** The world is the star, so panels are as small as they can be and still read well: tight
+  rows, short words, no filler sentences. The bottom panel hugs the bottom edge and stays under half the screen.
+  Its buttons never move: if a panel is long, the part above the buttons scrolls and the buttons stay in view.
+- The main bar and the Goals hub are a **dock** (`.home-actions.home-dock`): one row of picture buttons with a small
+  word under each, and a little badge for a count.
 - Nothing runs off the screen or scrolls sideways at 390 px wide. Respect the iPhone safe areas.
 - Keep it uncluttered: at most six buttons on the main bar; deeper things go one tap down.
 
 ## Buttons
-- At least 44x44 px to tap (main buttons are 48 px tall). Labels fit on one or two short lines and are never clipped.
+- At least 44x44 px to tap. Labels fit on one or two short lines and are never clipped.
 - An emoji first, then one to three plain words: `🎣 Again`, `🧺 Give from bag`.
 - One green main button (`.big`) per panel at most: the thing you most likely want.
 - The way out is always the last button, and every panel and pop-up has one: `Back` in the bottom panel, `Done` in a pop-up.
@@ -26,12 +29,18 @@ like a finished game, not a web page.
 ## Panels
 - Built from the shared pieces only: `.home-title`, `.home-actions`, `.home-goals` rows (`.home-goal`, `.done`),
   `.home-meter` progress bars, `.home-say` speech, `.fish-book` / `.fish-card` grids, `.home-chip` pills for things
-  you hold (seeds, crops, fish), `.home-banner` for good news.
+  you hold (seeds, crops, fish), `.home-banner` for good news, `.home-head` for a panel's name with a short note
+  on the right.
 - Rows are made with `row(icon, words, right side, done)` in `public/homestead.js`: the picture in its own column,
   the words, then the meter and the small text. A finished row turns green and its picture becomes ✅. Locked things say `🔒 Level N`.
 - A new menu reuses these. If it truly needs a new piece, add it once in `public/map.css` and list it here.
 - Progress is always shown the same way: `have/need` in small text, plus a meter when there's room.
 - Rewards are always written `+N⭐` (and `🍪` for treats). Prices and what you have are `N⭐`, no space.
+
+## Full-screen editors (the Look editor)
+- The preview stays on top, the choices scroll in the middle, and `Back` and the green `Save` stay pinned at the
+  bottom (`.look-foot`). Saving or going back returns you to where you came from.
+- Colour dots are 44x44 to tap, like everything else.
 
 ## The same in every world
 - Worlds change the scenery, never the UI. No per-world UI colours, fonts, shapes or button names.

@@ -29,8 +29,8 @@ function findChrome() {
 // Every menu the home plot can show: [name, how to open it from the idle bar]. "pop:" taps a thing in the world.
 const SCREENS = [
   ["idle", []], ["goals", ["Goals"]], ["story", ["Goals", "Story"]], ["build", ["Goals", "Build"]], ["book", ["Goals", "Book"]], ["level", ["Goals", "Level"]],
-  ["pets", ["Pets"]], ["bag", ["Bag"]], ["world", ["World"]], ["house", ["World", "Pick house"]],
-  ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]]
+  ["pets", ["Pets"]], ["bag", ["Bag"]], ["look", ["Look"]], ["world", ["World"]], ["house", ["World", "Pick house"]],
+  ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]], ["shop", ["pop:crate", "Seed shop"]]
 ];
 // Every menu is pictured once, in the first world that has it (the menus are the same everywhere); these are pictured in every world, to see them on its colours.
 const PICTURED_EVERYWHERE = ["idle", "goals", "pop-plot"];
@@ -38,13 +38,14 @@ const PICTURED_EVERYWHERE = ["idle", "goals", "pop-plot"];
 // Runs in the page. Helpers to drive the real buttons, and the measuring stick for UI_RULES.md.
 const PAGE = `(() => {
   const w = ms => new Promise(r => setTimeout(r, ms));
-  const bar = () => document.querySelector(".home-bar"), pop = () => document.querySelector(".home-pop:not(.hidden)");
+  const bar = () => document.querySelector(".home-bar"), pop = () => document.querySelector(".home-pop:not(.hidden)"), gate = () => document.querySelector("#playerGate .gate-card");
   const btn = (t, root) => [...(root || bar()).querySelectorAll("button")].find(b => b.innerText.includes(t));
   const T = () => window.LivingTownHome._test, canvas = () => document.querySelector("#homestead canvas");
   const tapAt = (x, y) => { const [sx, sy] = T().screenOf(x, y), r = canvas().getBoundingClientRect(); canvas().dispatchEvent(new MouseEvent("click", { clientX: r.left + sx, clientY: r.top + sy, bubbles: true })); };
   async function home() {   // back to the idle bar, whatever is open
-    for (let i = 0; i < 6 && (pop() || !btn("To town")); i++) { const p = pop(); const b = (p && (btn("Done", p) || btn("Back", p) || btn("Stay", p) || btn("OK", p))) || btn("Back") || btn("Close") || btn("Done") || btn("Thanks") || btn("OK"); if (!b) break; b.click(); await w(250); }
-    return !!btn("To town") && !pop();
+    if (gate()) { document.querySelector("#playerGate #backMenu")?.click(); await w(250); }
+    for (let i = 0; i < 6 && (pop() || !btn("Town")); i++) { const p = pop(); const b = (p && (btn("Done", p) || btn("Back", p) || btn("Stay", p) || btn("OK", p))) || btn("Back") || btn("Close") || btn("Done") || btn("Thanks") || btn("OK"); if (!b) break; b.click(); await w(250); }
+    return !!btn("Town") && !pop();
   }
   async function open(steps) {
     if (!await home()) return "could not get back to the main buttons";
@@ -53,13 +54,17 @@ const PAGE = `(() => {
         const L = T().L(), k = s.slice(4), r = k === "plot" ? T().plotRect(0) : null;
         const at = k === "plot" ? [r.cx, r.cy] : k === "pond" ? [L.pond.x, L.pond.y] : L[k];
         tapAt(at[0], at[1]); await w(450); if (!pop()) return "nothing popped up for the " + k;
+      } else if (pop()) {   // a pop-up button: the player walks over first, then the menu opens
+        const b = btn(s, pop()); if (!b) return "missing"; b.click();
+        for (let i = 0; i < 40 && (pop() || btn("Town")); i++) await w(250);
+        if (btn("Town")) return "nothing opened after tapping " + s;
       } else { const b = btn(s); if (!b) return "missing"; b.click(); await w(450); }
     }
     return "";
   }
   function audit() {
     const bad = [], vw = innerWidth, vh = innerHeight, name = b => JSON.stringify(b.innerText.replace(/\\s+/g, " ").trim().slice(0, 24));
-    const boxes = [[".home-bar", bar()], [".home-pop", pop()]].filter(x => x[1]);
+    const boxes = (gate() ? [["the full-screen editor", gate()]] : [[".home-bar", bar()], [".home-pop", pop()]]).filter(x => x[1]);
     for (const [sel, el] of boxes) {
       const r = el.getBoundingClientRect();
       if (r.left < -0.5 || r.right > vw + 0.5) bad.push(sel + " runs off the side of the screen");
@@ -77,11 +82,13 @@ const PAGE = `(() => {
     // The way out is always the last button, and it is in view without scrolling.
     for (const [sel, el] of boxes) {
       const all = [...el.querySelectorAll(".home-actions button")], last = all[all.length - 1]; if (!last) continue;
-      if (!btn("To town", el) && !/^(Back|Done|Close|OK|Stay|Stop|Thanks!?)$/.test(last.innerText.trim())) bad.push(sel + " has no way out as its last button (it ends with " + name(last) + ")");
+      if (!btn("Town", el) && !/^(Back|Done|Close|OK|Stay|Stop|Thanks!?)$/.test(last.innerText.replace(/^[^A-Za-z]+/, "").trim())) bad.push(sel + " has no way out as its last button (it ends with " + name(last) + ")");
       const r = el.getBoundingClientRect(), q = last.getBoundingClientRect();
       if (q.bottom > r.bottom + 0.5 || q.top < r.top - 0.5) bad.push(sel + " hides its last button " + name(last) + " until you scroll");
     }
-    const b = bar(); if (b) { const r = b.getBoundingClientRect(); if (r.height > vh * 0.62) bad.push(".home-bar covers " + Math.round(100 * r.height / vh) + "% of the screen (keep it under about 60%)"); if (vh - r.bottom > 40) bad.push(".home-bar is not at the bottom by the thumbs"); }
+    // A full-screen editor keeps Back and its main button pinned at the bottom, in view without scrolling.
+    if (gate()) for (const sel of ["#backMenu", ".look-foot .wide-button"]) { const e = gate().querySelector(sel), q = e && e.getBoundingClientRect(); if (!e) bad.push("the full-screen editor has no " + sel + " at the bottom"); else if (q.bottom > vh + 0.5 || q.top < vh * 0.6) bad.push("the full-screen editor's " + name(e) + " is not pinned at the bottom by the thumbs"); }
+    const b = gate() ? null : bar(); if (b) { const r = b.getBoundingClientRect(); if (r.height > vh * 0.5) bad.push(".home-bar covers " + Math.round(100 * r.height / vh) + "% of the screen (clean and compact: keep it under half)"); if (vh - r.bottom > 40) bad.push(".home-bar is not at the bottom by the thumbs"); }
     const top = document.querySelector(".home-top"); if (top && top.querySelector("button, a, input")) bad.push("the top bar has something to tap (the top is display-only)");
     // One look everywhere: the same panel, button and text styles in every world.
     const cs = (e, keys) => e ? keys.map(k => getComputedStyle(e)[k]).join("|") : "";
@@ -92,7 +99,7 @@ const PAGE = `(() => {
   }
   async function worlds() { if (!await home()) return []; btn("World").click(); await w(400); const names = [...bar().querySelectorAll("button")].map(x => x.innerText.trim()).filter(t => !/Back|Pick house/.test(t)); await home(); return names; }
   async function goWorld(label) { if (!await home()) return false; btn("World").click(); await w(400); const b = btn(label); if (!b) return false; b.click(); await w(400); await home(); return true; }
-  window.__ui = { open, audit, home, worlds, goWorld, ready: () => !!(window.LivingTownHome && canvas() && bar() && btn("To town") && T().view()) };
+  window.__ui = { open, audit, home, worlds, goWorld, ready: () => !!(window.LivingTownHome && canvas() && bar() && btn("Town") && T().view()) };
   return true;
 })()`;
 

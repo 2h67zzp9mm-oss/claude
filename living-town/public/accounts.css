@@ -7,6 +7,8 @@
   padding: 20px;
   background: rgba(5, 12, 22, 0.78);
   backdrop-filter: blur(14px);
+  overflow-y: auto;   /* a card taller than the phone scrolls instead of losing its bottom */
+  -webkit-overflow-scrolling: touch;
 }
 .gate-card {
   width: 100%;
@@ -17,6 +19,7 @@
   background: linear-gradient(145deg, #213b58, #0e1b2d);
   box-shadow: 0 25px 90px #000b;
   text-align: center;
+  margin: auto;
 }
 .gate-card h2,
 .gate-card h3 {

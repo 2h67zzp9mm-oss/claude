@@ -242,51 +242,61 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .homestead > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .home-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none;
   color: #fff; font: 600 0.95rem system-ui; text-shadow: 0 1px 3px #0008; }
-.home-bar { position: absolute; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); padding: 10px; border-radius: 18px;
-  background: #0d1929e8; color: #eef3f8; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); max-height: 55vh; overflow: hidden; display: flex; flex-direction: column; }
+.home-bar { position: absolute; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); padding: 8px; border-radius: 16px;
+  background: #0d1929e8; color: #eef3f8; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); max-height: 48vh; overflow: hidden; display: flex; flex-direction: column; }
 /* The buttons stay put by the thumbs; whatever is above them scrolls if it's long. */
 .home-bar > * { flex: none; }
 .home-bar > .home-title, .home-bar > .home-scroll, .home-bar > .home-pets { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
-.home-title { margin: 0 0 8px; font: 500 0.85rem/1.35 system-ui; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.home-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.home-actions button { flex: 1 1 30%; min-height: 48px; padding: 4px 8px; border: 0; border-radius: 14px; background: #ffffff1a; color: #fff; font: 600 0.95rem/1.15 system-ui;
+.home-title { margin: 0 0 6px; font: 500 0.82rem/1.3 system-ui; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The dock: one compact row of picture buttons with a small word under each (the main bar and the goals hub). */
+.home-actions.home-dock { flex-wrap: nowrap; gap: 4px; }
+.home-actions.home-dock button { position: relative; flex: 1 1 0; min-width: 0; min-height: 50px; padding: 5px 1px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: 0.72rem; white-space: nowrap; }
+.home-actions.home-dock button b { font-size: 1.35rem; line-height: 1; font-weight: 400; }
+.home-actions.home-dock button em { position: absolute; top: 3px; right: 3px; padding: 0 5px; border-radius: 999px; background: #ffb547; color: #2a1800; font: 700 0.6rem/1.5 system-ui; }
+.home-actions button { flex: 1 1 30%; min-height: 44px; padding: 3px 8px; border: 0; border-radius: 12px; background: #ffffff1a; color: #fff; font: 600 0.9rem/1.15 system-ui;
   text-wrap: balance; -webkit-tap-highlight-color: transparent; transition: transform 0.08s; }
-.home-actions.wide button { flex-basis: 45%; }   /* two across, for long names */
+.home-actions.wide button { flex-basis: 45%; }
+.home-actions button small { font-size: 0.75rem; opacity: 0.7; }   /* how many you have */   /* two across, for long names */
 .home-actions button.big { background: #4fc3a1; color: #06231a; }
 .home-actions button:disabled { opacity: 0.5; }
 .home-actions button:active:not(:disabled) { transform: scale(0.96); }
 .home-actions button.pulse { animation: home-pulse 0.25s ease-in-out infinite alternate; background: #ffb547; color: #2a1800; }
 @keyframes home-pulse { to { transform: scale(1.06); } }
-.fish-book { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
-.fish-card { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 10px; background: #ffffff10; font-size: 0.7rem; text-align: center; }
+.fish-book { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 6px; }
+.fish-card { display: flex; flex-direction: column; align-items: center; padding: 4px 2px; border-radius: 10px; background: #ffffff10; font-size: 0.66rem; line-height: 1.2; text-align: center; }
 .fish-card small { opacity: 0.7; }
 .fish-card.unknown .home-icon { filter: brightness(0) opacity(0.45); }
 .home-icon { display: inline-flex; align-items: center; justify-content: center; }
 .home-icon i { display: block; background-repeat: no-repeat; }
 
 /* home plot: the menu that pops up right where you tapped */
-.home-pop { position: absolute; z-index: 5; width: min(270px, calc(100% - 16px)); padding: 10px; border-radius: 18px; background: rgba(22, 26, 44, 0.94);
+.home-pop { position: absolute; z-index: 5; width: min(250px, calc(100% - 16px)); padding: 8px; border-radius: 16px; background: rgba(22, 26, 44, 0.94);
   box-shadow: 0 8px 28px rgba(0,0,0,0.45), 0 0 0 2px rgba(255,226,122,0.55); color: #fff; animation: home-pop-in 0.14s ease-out; }
 .home-pop.hidden { display: none; }
-.home-pop .home-actions button { flex: 1 1 45%; min-height: 46px; }
+.home-pop .home-actions button { flex: 1 1 45%; min-height: 44px; }
 @keyframes home-pop-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* home plot: daily goals, banners and flying stars */
 .home-right { display: flex; gap: 10px; align-items: center; }
 .home-stars, .home-streak { display: inline-block; padding: 3px 9px; border-radius: 999px; background: #0d192999; }
-.home-goals { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.home-goals > b { padding: 0 2px; font-size: 1rem; }
+.home-goals { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.home-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px; }   /* a panel's name, with a short note on the right */
+.home-head b { font-size: 0.95rem; white-space: nowrap; }
+.home-head small { font-size: 0.74rem; opacity: 0.75; text-align: right; }
+.home-goals > b { padding: 0 2px; font-size: 0.95rem; }
 .home-goals > span:not([class]) { padding: 0 2px; }   /* a plain line of words between the rows */
-.home-goal { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: #ffffff12; font-size: 0.95rem; line-height: 1.25; }
+.home-goal { display: flex; gap: 7px; align-items: center; padding: 5px 9px; border-radius: 10px; background: #ffffff12; font-size: 0.88rem; line-height: 1.2; }
 .home-goal > .home-ico { flex: none; width: 1.4em; text-align: center; font-style: normal; }   /* the picture sits in its own column, so long words wrap neatly beside it */
 .home-goal > span { min-width: 0; }
-.home-goal small { flex: none; margin-left: auto; white-space: nowrap; font-size: 0.8rem; opacity: 0.75; }
+.home-goal small { flex: none; margin-left: auto; white-space: nowrap; font-size: 0.76rem; opacity: 0.75; }
 .home-goal.done { background: #4fc3a133; }
 .home-goals .fish-book { width: 100%; margin-bottom: 2px; }
 .home-chip { padding: 3px 9px; border-radius: 999px; background: #ffffff14; white-space: nowrap; }   /* a thing you hold: seeds, crops, fish */
 .home-scroll > :last-child { margin-bottom: 8px; }
-.home-say { padding: 8px 10px; border-radius: 12px; background: #fff8dc; color: #2a1d00; font-size: 0.95rem; line-height: 1.35; }
-.home-meter { flex: 1 1 40px; min-width: 40px; height: 8px; border-radius: 999px; background: #ffffff22; overflow: hidden; display: inline-block; }
+.home-say { padding: 6px 9px; border-radius: 10px; background: #fff8dc; color: #2a1d00; font-size: 0.88rem; line-height: 1.3; }
+.home-meter { flex: 1 1 40px; min-width: 40px; height: 6px; border-radius: 999px; background: #ffffff22; overflow: hidden; display: inline-block; }
 .home-meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4fc3a1, #ffe27a); }
 .home-emoji { line-height: 1; }
 .home-flystar { position: absolute; z-index: 8; font-size: 22px; pointer-events: none; }
@@ -298,9 +308,9 @@ ul.today-list li { grid-template-columns: auto 1fr; }
   16% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { transform: translate(-50%, -10px); opacity: 0; } }
 
 /* Pets panel */
-.home-pets { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; margin-bottom: 8px; }
+.home-pets { max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; align-items: center; margin-bottom: 6px; }
 .home-pets .home-title { text-align: center; }
-.pet-big { width: 150px; height: 120px; }
+.pet-big { width: 120px; height: 96px; }
 .pet-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .pet-kind { min-height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: #ffffff1f; color: inherit; font: 700 1rem system-ui; }
 .pet-kind.on { background: #4fc3a1; color: #10231c; }
