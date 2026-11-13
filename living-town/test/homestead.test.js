@@ -8,6 +8,9 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   const hs = createHomestead({ random: () => roll });
   const state = { residents: [{ id: "dad", name: "Sean", stars: 0 }, { id: "nova", name: "Nova" }] };
   const me = state.residents[0], t0 = Date.parse("2026-11-11T10:00:00");
+  // Goals, level-ups and story chapters pay stars on top; keep count so the prices can be checked exactly.
+  let extra = 0; const real = hs.act;
+  hs.act = (...a) => { const r = real(...a); extra += (r.goals || []).reduce((t, g) => t + g.stars, 0) + (r.allGoals?.bonus || 0) + (r.levelUp?.stars || 0) + (r.story?.stars || 0); return r; };
   assert.equal(hs.act(state, "home-1", me, { action: "plant", plot: 0, crop: "carrot" }, t0).ok, true);
   assert.equal(hs.act(state, "home-1", me, { action: "plant", plot: 0, crop: "carrot" }, t0).ok, false, "one crop per bed");
   hs.act(state, "home-1", me, { action: "water", plot: 0 }, t0);
@@ -17,7 +20,7 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   hs.act(state, "home-1", me, { action: "plant", plot: 1, crop: "carrot" }, t0);
   assert.ok(hs.view(state, "home-1", me, t0 + 21 * 60_000).plots[1].growth < 0.5);
   const sold = hs.act(state, "home-1", me, { action: "sell" }, t0 + 22 * 60_000);
-  assert.equal(sold.ok, true); assert.equal(me.stars - (sold.goals || []).reduce((t, g) => t + g.stars, 0) - (sold.allGoals?.bonus || 0), 6, "6 stars for 2 carrots (plus any goal stars)");
+  assert.equal(sold.ok, true); assert.equal(me.stars - extra, 6, "6 stars for 2 carrots (plus any goal, level and story stars)");
   assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "pumpkin" }, t0).ok, false, "pumpkins need a bigger garden");
   assert.equal(hs.act(state, "home-1", me, { action: "plant", plot: 5, crop: "carrot" }, t0).ok, false, "start with 4 beds");
   assert.equal(hs.act(state, "home-1", me, { action: "upgrade" }, t0).ok, false, "upgrades cost stars");
@@ -195,10 +198,97 @@ test("pets: a free starter, treats to find, tame today's visitor, the travelling
   assert.equal(v.owned.length, 2); assert.equal(v.wild, null); assert.equal(v.treats, 0); assert.equal(v.spots.length, 0);
   assert.equal(hs.act(state, "home-1", kid, { action: "petBuy" }, t0).ok, false, "seller pets cost stars");
   kid.stars = 45; const buy = hs.act(state, "home-1", kid, { action: "petBuy" }, t0);
-  assert.equal(buy.ok, true); assert.ok(["unicorn", "dragon"].includes(buy.pet.species)); assert.equal(kid.stars, 5);
+  assert.equal(buy.ok, true); assert.ok(["unicorn", "dragon"].includes(buy.pet.species)); assert.equal(kid.stars - (buy.levelUp?.stars || 0), 5);
   assert.equal(hs.act(state, "home-1", kid, { action: "petName", id: 1, name: "Sprinkles<script>" }, t0).ok, true);
   v = hs.view(state, "home-1", kid, t0).pets; assert.equal(v.owned[0].name, "Sprinklesscript");
   assert.equal(hs.act(state, "home-1", kid, { action: "petActive", id: 3 }, t0).ok, true); assert.equal(hs.view(state, "home-1", kid, t0).pets.active, 3);
   // A new day brings new treats, a new visitor and the seller again.
   v = hs.view(state, "home-1", kid, t0 + 86400_000).pets; assert.equal(v.spots.length, 3); assert.ok(v.wild); assert.ok(v.seller);
+});
+
+test("levels: doing things earns XP, levels pay stars and unlock perks and new fish", () => {
+  const Q = require("../lib/quests");
+  assert.deepEqual(Q.levelOf(0), { level: 1, into: 0, need: 20 }); assert.equal(Q.levelOf(20).level, 2); assert.equal(Q.levelOf(20 + 35).level, 3);
+  assert.equal(Q.titleOf(1), "Sprout"); assert.equal(Q.titleOf(12), "Explorer");
+  const hs = createHomestead({ random: () => 0.99 }); const me = { id: "dad", stars: 0 }, state = { residents: [me] }, t0 = Date.parse("2026-11-11T10:00:00");
+  let v = hs.view(state, "h", me, t0);
+  assert.equal(v.me.level, 1); assert.equal(v.fish.rainbow.level, 2); assert.ok(v.me.perks.length > 10);
+  const first = hs.act(state, "h", me, { action: "fish" }, t0);
+  assert.ok(first.xp >= 4 + 8, "XP for the cast and for a new kind of fish");
+  for (let i = 1; i < 30; i++) assert.ok(hs.act(state, "h", me, { action: "fish" }, t0 + i * 4000).fish !== "rainbow" || hs.view(state, "h", me, t0).me.level >= 2, "level fish only bite once unlocked");
+  // Push the player up and check the perks really change the game.
+  const h = hs.home(state, "h"); h.players.dad.xp = 19;
+  const up = hs.act(state, "h", me, { action: "plant", plot: 0, crop: "carrot" }, t0);
+  assert.equal(up.levelUp.level, 2); assert.equal(up.levelUp.stars, 9); assert.ok(up.levelUp.perks[0].text.includes("Rainbow Trout"));
+  h.players.dad.xp = 5000; v = hs.view(state, "h", me, t0);
+  assert.ok(v.me.level >= 20); assert.equal(v.me.title, "Legend"); assert.equal(v.goalStars, 4, "goal getter");
+  assert.equal(v.pets.spots.length, 4, "treat nose finds one more treat");
+  hs.act(state, "h", me, { action: "water", plot: 0 }, t0);
+  assert.equal(hs.view(state, "h", me, t0 + 8 * 3600_000).plots[0].wet, true, "the big watering can lasts 9 hours");
+  h.plots[1].crop = null; hs.act(state, "h", me, { action: "plant", plot: 1, crop: "carrot" }, t0); hs.act(state, "h", me, { action: "water", plot: 1 }, t0);
+  assert.equal(hs.act(state, "h", me, { action: "harvest", plot: 1 }, t0 + 18 * 60_000).ok, true, "fast grower: 20 minute carrots are ready sooner");
+  // Reaching level 20 brings the golden baby dragon.
+  const kid = { id: "hazel", stars: 0 }; state.residents.push(kid); hs.view(state, "h", kid, t0);
+  hs.home(state, "h").players.hazel = { xp: [...Array(19)].reduce((t, _, i) => t + 20 + 15 * i, 0) - 1 };   // one XP short of level 20
+  const gold = hs.act(state, "h", kid, { action: "mail" }, t0);
+  assert.equal(gold.levelUp.level, 20); assert.equal(gold.pet.species, "dragon"); assert.equal(gold.pet.color, "gold");
+});
+
+test("story: each world tells its own story a chapter at a time, and the family shares it", () => {
+  const hs = createHomestead({ random: () => 0.99 }); const me = { id: "dad", stars: 0 }, kid = { id: "hazel", stars: 0 }, state = { residents: [me, kid] }, t0 = Date.parse("2026-11-11T10:00:00");
+  let s = hs.view(state, "h", me, t0).story;
+  assert.equal(s.title, "The Blank World"); assert.equal(s.ch, 1); assert.equal(s.total, 6); assert.equal(s.job, "Plant 3 seeds");
+  hs.act(state, "h", me, { action: "plant", plot: 0, crop: "carrot" }, t0); hs.act(state, "h", me, { action: "plant", plot: 1, crop: "carrot" }, t0);
+  assert.equal(hs.view(state, "h", kid, t0).story.have, 2, "the family shares the story");
+  const before = kid.stars, done = hs.act(state, "h", kid, { action: "plant", plot: 2, crop: "carrot" }, t0);
+  assert.equal(done.story.stars, 8); assert.ok(kid.stars >= before + 8); assert.equal(hs.view(state, "h", me, t0).story.ch, 2);
+  // Another world has another story, and coming back keeps your place.
+  hs.act(state, "h", me, { action: "world", world: "pirate" }, t0);
+  s = hs.view(state, "h", me, t0).story; assert.equal(s.title, "Captain Marigold's Treasure"); assert.equal(s.ch, 1);
+  const mail = hs.act(state, "h", me, { action: "mail" }, t0); assert.ok(mail.story && !mail.story.end);
+  hs.act(state, "h", me, { action: "world", world: "clay" }, t0); assert.equal(hs.view(state, "h", me, t0).story.ch, 2);
+  // The last chapter pays big and the story ends.
+  const h = hs.home(state, "h"); h.story.clay = { ch: 5, have: 1 }; h.bag.carrot = 1;
+  const end = hs.act(state, "h", me, { action: "sell" }, t0);
+  assert.equal(end.story.end, true); assert.equal(end.story.stars, 50); assert.equal(end.story.treats, 3);
+  s = hs.view(state, "h", me, t0).story; assert.equal(s.done, true); assert.equal(s.job, null);
+});
+
+test("family build: everyone gives crops, fish and stars, and a finished stage pays the whole family", () => {
+  const hs = createHomestead({ random: () => 0.99 }); const me = { id: "dad", stars: 0 }, kid = { id: "hazel", stars: 0 }, state = { residents: [me, kid] }, t0 = Date.parse("2026-11-11T10:00:00");
+  hs.act(state, "h", kid, { action: "pos", x: 5, y: 5, dir: 0 }, t0);   // Hazel has played, so she shares the prize
+  let b = hs.view(state, "h", me, t0).build;
+  assert.equal(b.name, "Clubhouse"); assert.equal(b.stage, 1); assert.equal(b.total, 6); assert.deepEqual(b.needs.map(n => [n.k, n.need]), [["carrot", 6], ["tomato", 4]]);
+  assert.equal(hs.act(state, "h", me, { action: "give" }, t0).ok, false, "nothing to give yet");
+  assert.equal(hs.act(state, "h", me, { action: "giveStars" }, t0).ok, false, "no stars to give yet");
+  const h = hs.home(state, "h"); h.bag = { carrot: 9, tomato: 3, minnow: 2 };
+  const gave = hs.act(state, "h", me, { action: "give" }, t0);
+  assert.equal(gave.gave, 9); assert.deepEqual(h.bag, { carrot: 3, minnow: 2 }, "only what's needed is taken");
+  h.bag.tomato = 1; hs.act(state, "h", kid, { action: "give" }, t0);
+  me.stars = 12; hs.act(state, "h", me, { action: "giveStars" }, t0); assert.equal(me.stars, 2); assert.equal(hs.view(state, "h", me, t0).build.stars.have, 10);
+  kid.stars = 30; const fin = hs.act(state, "h", kid, { action: "giveStars" }, t0);
+  assert.equal(fin.gaveStars, 5, "only what the stage still needs"); assert.equal(fin.stage.stage, 1); assert.equal(fin.stage.stars, 20);
+  assert.ok(me.stars >= 22 && kid.stars >= 45, "everyone in the family gets the prize");
+  b = hs.view(state, "h", me, t0).build; assert.equal(b.stage, 2); assert.equal(b.stars.have, 0);
+  // "Any fish" takes the cheapest fish first.
+  h.build = { stage: 2, given: {} }; h.bag = { golden: 1, minnow: 2 }; hs.act(state, "h", me, { action: "give" }, t0);
+  assert.equal(h.build.given.fish, 3); h.build = { stage: 6, given: {} };
+  assert.equal(hs.view(state, "h", me, t0).build.done, true); assert.equal(hs.act(state, "h", me, { action: "give" }, t0).ok, false);
+});
+
+test("collection book: fish, crops and pets fill pages, and a full page pays the family", () => {
+  const hs = createHomestead({ random: () => 0.99 }); const me = { id: "dad", stars: 0 }, state = { residents: [me] }, t0 = Date.parse("2026-11-11T10:00:00");
+  let b = hs.view(state, "h", me, t0).book;
+  assert.deepEqual([b.fish.length, b.crops.length, b.pets.length], [0, 0, 0]); assert.equal(b.totals.crops, 8); assert.equal(b.totals.fish, 12);
+  const h = hs.home(state, "h"); Object.assign(h.plots[0], { crop: "carrot", growth: 1 });
+  const pick = hs.act(state, "h", me, { action: "harvest", plot: 0 }, t0);
+  assert.equal(pick.newCrop, true); assert.deepEqual(hs.view(state, "h", me, t0).book.crops, ["carrot"]);
+  hs.act(state, "h", me, { action: "petStart", species: "bunny", color: "pink" }, t0);
+  assert.deepEqual(hs.view(state, "h", me, t0).book.pets, ["bunny"]);
+  for (const k of ["tomato", "strawberry", "corn", "blueberry", "sunflower", "watermelon"]) h.grown[k] = 1;
+  Object.assign(h.plots[1], { crop: "pumpkin", growth: 1 }); const stars = me.stars;
+  const last = hs.act(state, "h", me, { action: "harvest", plot: 1 }, t0);
+  assert.equal(last.book.page, "crops"); assert.equal(last.book.stars, 60); assert.ok(me.stars >= stars + 60);
+  assert.equal(hs.view(state, "h", me, t0).book.done.crops, true);
+  Object.assign(h.plots[1], { crop: "pumpkin", growth: 1 }); assert.equal(hs.act(state, "h", me, { action: "harvest", plot: 1 }, t0).book, undefined, "a page pays once");
 });

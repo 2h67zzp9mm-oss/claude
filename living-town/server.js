@@ -1142,7 +1142,7 @@ function validateClientMessage(raw) {
   }
   if (msg.type === "home") {
     // The home plot (lib/homestead.js): only known actions and plain fields get through.
-    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName"];
+    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "give", "giveStars", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName"];
     if (!HOME.includes(msg.action)) return null;
     const word = v => typeof v === "string" && v.length <= 32 ? v : undefined;
     const num = v => Number.isFinite(v) ? v : undefined;
@@ -1459,6 +1459,8 @@ function handleHome(ws, msg) {
     for (const other of state.residents) if (other !== r && householdOf(other) === id) for (const sock of socketsOf(other.id)) send(sock, { type: "home-state", home: homestead.view(state, id, other, now), result: null });
     if (result.fish && result.first) addEvent(`🎣 ${r.name} caught their first ${homestead.FISH[result.fish].name}!`, now, r.id);
     if (result.harvested === "pumpkin") addEvent(`🎃 ${r.name} grew a pumpkin at home!`, now, r.id);
+    if (result.levelUp && result.levelUp.level % 5 === 0) addEvent(`⭐ ${r.name} reached level ${result.levelUp.level} at home!`, now, r.id);
+    if (result.stage) addEvent(`🔨 ${r.name}'s family finished a stage of their big build: ${result.stage.name}!`, now, r.id);
   }
 }
 

@@ -272,6 +272,12 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .home-goal { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-radius: 12px; background: #ffffff12; font-size: 0.95rem; }
 .home-goal small { margin-left: auto; opacity: 0.7; }
 .home-goal.done { background: #4fc3a133; }
+.home-quest { max-height: 44vh; overflow-y: auto; }
+.home-quest .fish-book { width: 100%; margin-bottom: 2px; }
+.home-say { padding: 8px 10px; border-radius: 12px; background: #fff8dc; color: #2a1d00; font-size: 0.95rem; line-height: 1.35; }
+.home-meter { flex: 1 1 40px; min-width: 40px; height: 8px; border-radius: 999px; background: #ffffff22; overflow: hidden; display: inline-block; }
+.home-meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4fc3a1, #ffe27a); }
+.home-emoji { line-height: 1; }
 .home-flystar { position: absolute; z-index: 8; font-size: 22px; pointer-events: none; }
 .home-banner { position: absolute; z-index: 7; left: 50%; top: calc(56px + env(safe-area-inset-top)); transform: translateX(-50%); max-width: calc(100% - 32px);
   padding: 10px 16px; border-radius: 16px; background: #fff8dc; color: #2a1d00; font: 600 0.95rem/1.35 system-ui; text-align: center; pointer-events: none;

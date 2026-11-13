@@ -10,6 +10,8 @@
  * Saved in state.homesteads[householdId]; everything is optional on old saves.
  */
 
+const Q = require("./quests");   // levels, story, family build and collection book
+
 const CROPS = {
   carrot: { name: "Carrot", emoji: "🥕", minutes: 20, seed: 1, sell: 3 },
   strawberry: { name: "Strawberry", emoji: "🍓", minutes: 60, seed: 2, sell: 6 },
@@ -29,7 +31,12 @@ const FISH = {
   trout: { name: "Trout", sell: 8, weight: 9, hours: [5, 11] },
   koi: { name: "Koi", sell: 12, weight: 6 },
   pike: { name: "Pike", sell: 15, weight: 4, hours: [15, 22] },
-  golden: { name: "Golden Fish", sell: 40, weight: 1 }
+  golden: { name: "Golden Fish", sell: 40, weight: 1 },
+  // these only bite once you reach a level (lib/quests.js)
+  rainbow: { name: "Rainbow Trout", sell: 20, weight: 5, level: 2, emoji: "🌈" },
+  eel: { name: "Moon Eel", sell: 28, weight: 4, hours: [19, 5], level: 6, emoji: "🌙" },
+  dragonkoi: { name: "Dragon Koi", sell: 45, weight: 3, level: 9, emoji: "🐉" },
+  crystal: { name: "Crystal Fish", sell: 70, weight: 2, level: 14, emoji: "💎" }
 };
 const PLOTS = 16;
 const WORLDS = ["clay", "scifi", "castle", "night", "pirate"];
@@ -92,6 +99,8 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     if (!h.seeds || typeof h.seeds !== "object") h.seeds = { carrot: 4, strawberry: 2 };
     if (!h.bag || typeof h.bag !== "object") h.bag = {};
     if (!h.caught || typeof h.caught !== "object") h.caught = {};
+    if (!h.grown || typeof h.grown !== "object") h.grown = {};
+    if (!h.players || typeof h.players !== "object") h.players = {};
     return h;
   }
 
@@ -107,10 +116,10 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       if (!p.crop || p.growth >= 1) continue;
       const last = Number(p.grewAt) || now;
       let ms = Math.max(0, now - last);
-      const wetUntil = Number(p.wateredAt || 0) + WATER_HOURS * 3600_000;
+      const wetUntil = Number(p.wateredAt || 0) + (Number(p.wetH) || WATER_HOURS) * 3600_000;
       const wetMs = Math.max(0, Math.min(now, wetUntil) - last);
       const dryMs = ms - wetMs;
-      const total = CROPS[p.crop].minutes * 60_000;
+      const total = CROPS[p.crop].minutes * 60_000 / (Number(p.fast) || 1);
       p.growth = Math.min(1, (Number(p.growth) || 0) + (wetMs + dryMs * DRY_SPEED) / total);
       p.grewAt = now;
     }
@@ -143,6 +152,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     const rnd = seeded(id + rid + day + "pets");
     const pick = (pool) => { let roll = rnd() * pool.reduce((s, k) => s + PETS[k].weight, 0); for (const k of pool) { roll -= PETS[k].weight; if (roll <= 0) return k; } return pool[0]; };
     const spots = Array.from({ length: TREATS_PER_DAY }, (_, i) => ({ i, u: rnd(), v: rnd() }));
+    if (perk(h, rid, "nose")) { const more = seeded(id + rid + day + "nose"); spots.push({ i: TREATS_PER_DAY, u: more(), v: more() }); }
     const ws = pick(Object.keys(PETS)), wild = { species: ws, color: PETS[ws].colors[Math.floor(rnd() * PETS[ws].colors.length)], u: rnd(), v: rnd() };
     const ss = rnd() < 0.5 ? "unicorn" : "dragon", seller = { species: ss, color: PETS[ss].colors[Math.floor(rnd() * PETS[ss].colors.length)], cost: SELLER_COST };
     return { p, spots, wild, seller };
@@ -162,9 +172,82 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     };
   }
 
+  // --- levels, story, family build and collection book (lib/quests.js) ---
+  const goalStars = (h, rid) => GOAL_STARS + (perk(h, rid, "getter") ? 1 : 0);
+  function player(h, rid) { if (!h.players || typeof h.players !== "object") h.players = {}; const p = h.players[rid] ||= {}; p.xp = Math.max(0, Number(p.xp) || 0); return p; }
+  const lvl = (h, rid) => Q.levelOf(player(h, rid).xp).level;
+  const perk = (h, rid, id) => Q.has(lvl(h, rid), id);
+  const family = (state, h, r) => [...new Set([r, ...(state.residents || []).filter(x => h.players?.[x.id])])];   // everyone at home who has played
+  function addXp(h, r, n, res) {
+    const p = player(h, r.id), before = Q.levelOf(p.xp).level; p.xp += n; res.xp = n;
+    const after = Q.levelOf(p.xp).level; if (after === before) return;
+    let stars = 0; const perks = [];
+    for (let l = before + 1; l <= after; l++) {
+      stars += Q.levelStars(l);
+      for (const k of Q.PERKS.filter(x => x.level === l)) { perks.push({ icon: k.icon, text: k.text }); if (k.id === "golden") res.pet = adopt(petsOf(h, r.id), "dragon", "gold"); }
+    }
+    r.stars = (Number(r.stars) || 0) + stars;
+    res.levelUp = { level: after, stars, perks, title: Q.titleOf(after) };
+  }
+  const worldOf = h => WORLDS.includes(h.world) ? h.world : "clay";
+  function storyOf(h) { if (!h.story || typeof h.story !== "object") h.story = {}; const w = worldOf(h), s = h.story[w] ||= { ch: 0, have: 0 }; return { s, tale: Q.STORIES[w] }; }
+  // One more step of this world's story; pays the chapter's stars when its job is done.
+  function storyStep(h, r, kind, res) {
+    const { s, tale } = storyOf(h), c = tale.chapters[s.ch];
+    if (!c || c.kind !== kind) return 0;
+    s.have = (Number(s.have) || 0) + 1; if (s.have < c.n) return 0;
+    const total = tale.chapters.length, stars = Q.chapterStars(s.ch, total), end = s.ch === total - 1;
+    s.ch++; s.have = 0; r.stars = (Number(r.stars) || 0) + stars;
+    if (end) petsOf(h, r.id).treats += Q.STORY_END_TREATS;
+    res.story = { stars, end, title: tale.title, guide: tale.guide, treats: end ? Q.STORY_END_TREATS : 0 };
+    return Q.XP_CHAPTER;
+  }
+  function storyView(h) {
+    const { s, tale } = storyOf(h), c = tale.chapters[s.ch], total = tale.chapters.length;
+    return { title: tale.title, guide: tale.guide, ch: Math.min(total, s.ch + 1), total, done: !c, text: c ? c.text : tale.end, job: c ? Q.JOBS[c.kind](c.n) : null, have: c ? Number(s.have) || 0 : 0, n: c ? c.n : 0, stars: c ? Q.chapterStars(s.ch, total) : 0 };
+  }
+  function buildOf(h) {
+    if (!h.build || typeof h.build !== "object") h.build = { stage: 0, given: {} };
+    if (!h.build.given || typeof h.build.given !== "object") h.build.given = {};
+    h.build.stage = Math.max(0, Number(h.build.stage) || 0); return h.build;
+  }
+  function buildView(h) {
+    const b = buildOf(h), st = Q.BUILD.stages[b.stage], [icon, name] = Q.BUILD.names[worldOf(h)];
+    const label = k => k === "fish" ? { emoji: "🐟", name: "Any fish" } : CROPS[k] ? { emoji: CROPS[k].emoji, name: CROPS[k].name } : { emoji: FISH[k].emoji || "🐟", name: FISH[k].name };
+    return { icon, name, stage: Math.min(Q.BUILD.stages.length, b.stage + 1), total: Q.BUILD.stages.length, done: !st, stageName: st ? st.name : "All built!",
+      needs: st ? Object.entries(st.needs).map(([k, n]) => ({ k, ...label(k), have: Math.min(n, b.given[k] || 0), need: n })) : [],
+      stars: st ? { have: Math.min(st.stars, b.given.stars || 0), need: st.stars } : null, prize: st ? Q.stagePrize(b.stage) : 0, gift: Q.STAR_GIFT };
+  }
+  // When a stage has everything it needs, it's built: everyone in the family gets the prize.
+  function stageCheck(state, h, r, res) {
+    const b = buildOf(h), st = Q.BUILD.stages[b.stage]; if (!st) return 0;
+    if ((b.given.stars || 0) < st.stars || Object.entries(st.needs).some(([k, n]) => (b.given[k] || 0) < n)) return 0;
+    const prize = Q.stagePrize(b.stage);
+    for (const x of family(state, h, r)) { x.stars = (Number(x.stars) || 0) + prize; petsOf(h, x.id).treats += 2; }
+    res.stage = { stage: b.stage + 1, name: st.name, stars: prize, treats: 2, last: b.stage === Q.BUILD.stages.length - 1 };
+    b.stage++; b.given = {};
+    return Q.XP_STAGE;
+  }
+  function bookView(h) {
+    const pets = [...new Set(Object.values(h.pets || {}).flatMap(p => (p.owned || []).map(x => x.species)))].filter(k => PETS[k]);
+    return { fish: Object.keys(h.caught).filter(k => FISH[k]), crops: Object.keys(h.grown).filter(k => CROPS[k]), pets,
+      totals: { fish: Object.keys(FISH).length, crops: Object.keys(CROPS).length, pets: Object.keys(PETS).length }, done: h.bookDone || {}, prizes: Q.BOOK_PRIZE };
+  }
+  function bookCheck(state, h, r, res) {
+    const v = bookView(h); let xp = 0;
+    if (!h.bookDone || typeof h.bookDone !== "object") h.bookDone = {};
+    for (const page of ["fish", "crops", "pets"]) {
+      if (h.bookDone[page] || v[page].length < v.totals[page]) continue;
+      h.bookDone[page] = true;
+      for (const x of family(state, h, r)) x.stars = (Number(x.stars) || 0) + Q.BOOK_PRIZE[page];
+      res.book = { page, stars: Q.BOOK_PRIZE[page] }; xp += Q.XP_PAGE;
+    }
+    return xp;
+  }
+
   // Count a finished job toward today's goals. Returns what just got finished.
   function bump(h, id, r, kind, amount, now) {
-    const d = daily(h, id, now), done = [];
+    const d = daily(h, id, now), done = [], GOAL_STARS = goalStars(h, r.id);
     for (const g of d.goals) {
       if (g.k !== kind || g.have >= g.n) continue;
       g.have = Math.min(g.n, g.have + amount);
@@ -188,24 +271,26 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     const others = [...positions.entries()].filter(([rid, p]) => p.household === id && rid !== me?.id && now - p.at < 15_000)
       .map(([rid, p]) => ({ id: rid, name: state.residents.find(r => r.id === rid)?.name || "", x: p.x, y: p.y, dir: p.dir, moving: p.moving }));
     return {
-      plots: h.plots.map(p => p.crop ? { crop: p.crop, growth: Math.round(p.growth * 100) / 100, wet: now < Number(p.wateredAt || 0) + WATER_HOURS * 3600_000 } : { crop: null }),
+      plots: h.plots.map(p => p.crop ? { crop: p.crop, growth: Math.round(p.growth * 100) / 100, wet: now < Number(p.wateredAt || 0) + (Number(p.wetH) || WATER_HOURS) * 3600_000 } : { crop: null }),
       beds: bedsOf(h), level: levelOf(h) + 1, shop: cropsOf(h),
       upgrade: LEVELS[levelOf(h) + 1] ? { cost: LEVELS[levelOf(h) + 1].cost, beds: LEVELS[levelOf(h) + 1].beds, crops: LEVELS[levelOf(h) + 1].crops } : null,
       world: WORLDS.includes(h.world) ? h.world : "clay", house: houseOf(h),
       seeds: h.seeds, bag: h.bag, caught: h.caught, stars: me?.stars || 0,
       pets: me ? petView(h, id, me.id, now) : null,
+      me: me ? (() => { const l = Q.levelOf(player(h, me.id).xp); return { ...l, title: Q.titleOf(l.level), nextStars: Q.levelStars(l.level + 1), perks: Q.PERKS.map(k => ({ level: k.level, icon: k.icon, text: k.text })) }; })() : null,
+      story: storyView(h), build: buildView(h), book: bookView(h),
       mail: h.mailDay !== dayKey(now), others,
       goals: daily(h, id, now).goals.map(g => ({ icon: GOALS[g.k].icon, text: GOALS[g.k].text(g.n), have: g.have, n: g.n })),
-      streak: streakOf(h, now), streakToday: h.streakDay === dayKey(now), goalStars: GOAL_STARS, allBonus: ALL_BONUS,
-      crops: CROPS, fish: Object.fromEntries(Object.entries(FISH).map(([k, f]) => [k, { name: f.name, sell: f.sell, biting: inWindow(f.hours, hour) }]))
+      streak: streakOf(h, now), streakToday: h.streakDay === dayKey(now), goalStars: me ? goalStars(h, me.id) : GOAL_STARS, allBonus: ALL_BONUS,
+      crops: CROPS, fish: Object.fromEntries(Object.entries(FISH).map(([k, f]) => [k, { name: f.name, sell: f.sell, biting: inWindow(f.hours, hour), level: f.level || 1, emoji: f.emoji }]))
     };
   }
 
   function dayKey(now) { const d = new Date(now); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
 
-  function pickFish(now) {
+  function pickFish(now, level = 1) {
     const hour = new Date(now).getHours();
-    const pool = Object.entries(FISH).filter(([, f]) => inWindow(f.hours, hour));
+    const pool = Object.entries(FISH).filter(([, f]) => inWindow(f.hours, hour) && (f.level || 1) <= level);
     let roll = random() * pool.reduce((s, [, f]) => s + f.weight, 0);
     for (const [k, f] of pool) { roll -= f.weight; if (roll <= 0) return k; }
     return pool[0][0];
@@ -215,10 +300,23 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
   function act(state, id, r, msg, now) {
     const res = doAct(state, id, r, msg, now);
     if (!res.ok || res.quiet) return res;
-    const h = home(state, id);
+    const h = home(state, id); player(h, r.id);
+    let xp = Q.XP[msg.action] || 0;
     const kind = { plant: "plant", water: "water", harvest: "harvest", fish: "fish", sell: "sell", mail: "mail" }[msg.action];
-    if (kind) { const g = bump(h, id, r, kind, 1, now); if (g.done.length) res.goals = g.done; if (g.all) { res.allGoals = g.all; petsOf(h, r.id).treats += 2; res.allGoals.treats = 2; } }
-    if (msg.action === "fish" && random() < 0.3) { petsOf(h, r.id).treats += 1; res.treat = true; res.toast += " It had a 🍪 treat on the hook!"; }
+    if (kind) {
+      const g = bump(h, id, r, kind, 1, now);
+      if (g.done.length) { res.goals = g.done; xp += Q.XP_GOAL * g.done.length; }
+      if (g.all) { res.allGoals = g.all; petsOf(h, r.id).treats += 2; res.allGoals.treats = 2; xp += Q.XP_ALL; }
+    }
+    if (msg.action === "fish" && random() < (perk(h, r.id, "hook") ? 0.5 : 0.3)) { petsOf(h, r.id).treats += 1; res.treat = true; res.toast += " It had a 🍪 treat on the hook!"; }
+    if (res.first || res.newCrop) xp += Q.XP_NEW;
+    if (res.pet) xp += Q.XP_PET;
+    // the same jobs move this world's story on, and giving can finish a stage of the family build
+    const job = kind || { treat: "treat", give: "give", giveStars: "give" }[msg.action];
+    if (job) xp += storyStep(h, r, job, res);
+    if (job === "give") xp += stageCheck(state, h, r, res);
+    xp += bookCheck(state, h, r, res);
+    if (xp) addXp(h, r, xp, res);
     return res;
   }
   function doAct(state, id, r, msg, now) {
@@ -238,28 +336,29 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         if (!plot || !crop) return { ok: false, toast: "Pick a bed and a seed." };
         if (plot.crop) return { ok: false, toast: "Something's already growing there." };
         if (!(h.seeds[crop] > 0)) return { ok: false, toast: `No ${CROPS[crop].name.toLowerCase()} seeds left. The crate sells them.` };
-        h.seeds[crop]--; Object.assign(plot, { crop, growth: 0, grewAt: now, wateredAt: 0, by: r.id });
+        h.seeds[crop]--; Object.assign(plot, { crop, growth: 0, grewAt: now, wateredAt: 0, by: r.id, fast: perk(h, r.id, "grower") ? 1.15 : 1 });
         return { ok: true, planted: msg.plot, toast: `${CROPS[crop].emoji} Planted ${CROPS[crop].name.toLowerCase()} seeds. Water them to help them grow!` };
       }
       case "water": {
         if (!plot?.crop) return { ok: false, toast: "Plant something first." };
         if (plot.growth >= 1) return { ok: false, toast: "It's ready to pick!" };
-        plot.wateredAt = now;
+        plot.wateredAt = now; plot.wetH = perk(h, r.id, "can") ? 9 : WATER_HOURS;
         return { ok: true, toast: "💧 Watered. It'll grow faster for a while.", splash: msg.plot };
       }
       case "harvest": {
         if (!plot?.crop) return { ok: false, toast: "Nothing growing there yet." };
         if (plot.growth < 1) return { ok: false, toast: `Not ready yet (${Math.round(plot.growth * 100)}% grown).` };
-        const c = plot.crop, n = { strawberry: 3, blueberry: 3, carrot: 2, tomato: 2 }[c] || 1;
-        h.bag[c] = (h.bag[c] || 0) + n;
+        const c = plot.crop, extra = perk(h, r.id, "thumb2") ? random() < 0.5 : perk(h, r.id, "thumb") && random() < 0.25;
+        const n = ({ strawberry: 3, blueberry: 3, carrot: 2, tomato: 2 }[c] || 1) + (extra ? 1 : 0), newCrop = !h.grown[c];
+        h.bag[c] = (h.bag[c] || 0) + n; h.grown[c] = (h.grown[c] || 0) + n;
         Object.assign(plot, { crop: null, growth: 0, wateredAt: 0 });
-        return { ok: true, toast: `${CROPS[c].emoji} Picked ${n} ${CROPS[c].name.toLowerCase()}${n > 1 ? "s" : ""}!`, harvested: c, plot: msg.plot, count: n };
+        return { ok: true, toast: `${CROPS[c].emoji} Picked ${n} ${CROPS[c].name.toLowerCase()}${n > 1 ? "s" : ""}!`, harvested: c, plot: msg.plot, count: n, newCrop };
       }
       case "fish": {
         // The phone runs the timing game; this records the catch.
         if (now - (lastCast.get(r.id) || 0) < 3000) return { ok: false, toast: "Let the water settle a moment." };
         lastCast.set(r.id, now);
-        const k = pickFish(now), f = FISH[k];
+        const k = pickFish(now, lvl(h, r.id)), f = FISH[k];
         h.bag[k] = (h.bag[k] || 0) + 1;
         const first = !h.caught[k];
         h.caught[k] = (h.caught[k] || 0) + 1;
@@ -273,6 +372,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
           stars += price * n; count += n; delete h.bag[k];
         }
         if (!count) return { ok: false, toast: "The crate is empty. Grow or catch something to sell!" };
+        if (perk(h, r.id, "trader")) stars = Math.round(stars * 1.1);
         r.stars = (Number(r.stars) || 0) + stars;
         return { ok: true, sold: stars, toast: `📦 Sold ${count} thing${count > 1 ? "s" : ""} for ${stars} ⭐` };
       }
@@ -308,9 +408,30 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         const friends = state.residents.filter(o => o.id !== r.id && !o.away && (o.destinationId || "little-town") === "little-town" && !isPlayer(o));
         const from = friends.length ? friends[Math.floor(random() * friends.length)] : null;
         const keys = cropsOf(h); const gift = keys[Math.floor(random() * keys.length)];
-        h.seeds[gift] = (h.seeds[gift] || 0) + 2;
+        const many = perk(h, r.id, "penpal") ? 4 : 2;
+        h.seeds[gift] = (h.seeds[gift] || 0) + many;
         const lines = ["I had extra seeds and thought of you!", "Your garden is looking lovely. Here's something for it!", "Found these in my shed. Happy planting!", "A little something to grow. Say hi next time you're in town!"];
-        return { ok: true, letter: { from: from?.name || "A neighbour", text: lines[Math.floor(random() * lines.length)], gift: `2 ${CROPS[gift].name.toLowerCase()} seeds ${CROPS[gift].emoji}` } };
+        return { ok: true, letter: { from: from?.name || "A neighbour", text: lines[Math.floor(random() * lines.length)], gift: `${many} ${CROPS[gift].name.toLowerCase()} seeds ${CROPS[gift].emoji}` } };
+      }
+      case "give": {   // hand over everything in the bag that the family build needs right now
+        const b = buildOf(h), st = Q.BUILD.stages[b.stage];
+        if (!st) return { ok: false, toast: "It's all built! What a family." };
+        let count = 0;
+        for (const [k, need] of Object.entries(st.needs)) {
+          let want = need - (b.given[k] || 0);
+          const from = k === "fish" ? Object.keys(h.bag).filter(x => FISH[x]).sort((a, c) => FISH[a].sell - FISH[c].sell) : [k];
+          for (const x of from) { const n = Math.min(want, h.bag[x] || 0); if (n <= 0) continue; h.bag[x] -= n; if (!h.bag[x]) delete h.bag[x]; b.given[k] = (b.given[k] || 0) + n; want -= n; count += n; }
+        }
+        if (!count) return { ok: false, toast: "Nothing in your bag is needed right now. Check the list, then grow or catch it!" };
+        return { ok: true, gave: count, toast: `🔨 You gave ${count} thing${count > 1 ? "s" : ""} to the family build!` };
+      }
+      case "giveStars": {
+        const b = buildOf(h), st = Q.BUILD.stages[b.stage];
+        if (!st) return { ok: false, toast: "It's all built! What a family." };
+        const n = Math.min(Q.STAR_GIFT, Number(r.stars) || 0, st.stars - (b.given.stars || 0));
+        if (n <= 0) return { ok: false, toast: (b.given.stars || 0) >= st.stars ? "This stage has all the ⭐ it needs." : "You don't have any ⭐ to give yet." };
+        r.stars -= n; b.given.stars = (b.given.stars || 0) + n;
+        return { ok: true, gaveStars: n, toast: `🔨 You gave ${n} ⭐ to the family build!` };
       }
       case "petStart": {
         const p = petsOf(h, r.id), kind = PETS[msg.species];

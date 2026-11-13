@@ -296,8 +296,46 @@
     const g = view?.goals || [];
     const rows = g.map(x => `<span class="home-goal ${x.have >= x.n ? "done" : ""}">${x.have >= x.n ? "✅" : x.icon} ${esc(x.text)} <small>${x.have}/${x.n} · +${view.goalStars}⭐</small></span>`).join("");
     const streak = view?.streak ? `🔥 ${view.streak} day${view.streak > 1 ? "s" : ""} in a row${view.streakToday ? "" : ". Finish today to keep it going!"}` : "Finish all three to start a 🔥 streak!";
-    setBar(`<span class="home-goals"><b>Today’s goals</b>${rows}<span>🎉 All three: +${view?.allBonus ?? 5}⭐ bonus (more for a streak)</span><span>${streak}</span></span>`,
-      [{ label: soundOn ? "🔊 Sound on" : "🔈 Sound off", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "Back", big: true, go: idleBar }]);
+    const st = view?.story, m = view?.me, bd = view?.build;
+    const more = (st ? `<span class="home-goal">📖 ${st.done ? "Story finished here. Try another world!" : `${esc(st.job)} <small>${st.have}/${st.n} · +${st.stars}⭐</small>`}</span>` : "")
+      + (m ? `<span class="home-goal">⭐ Level ${m.level} · ${esc(m.title)} ${meter(m.into, m.need)}</span>` : "");
+    setBar(`<span class="home-goals"><b>Today’s goals</b>${rows}<span>🎉 All three: +${view?.allBonus ?? 5}⭐ bonus (more for a streak)</span><span>${streak}</span>${more}</span>`,
+      [{ label: "📖 Story", big: !!st && !st.done, go: () => questBar("story") }, { label: `🔨 ${bd ? bd.icon : ""} Build`, go: () => questBar("build") }, { label: "📚 Book", go: () => questBar("book") }, { label: "⭐ Level", go: () => questBar("level") },
+        { label: soundOn ? "🔊 Sound on" : "🔈 Sound off", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "Back", big: true, go: idleBar }]);
+  }
+  // --- reasons to keep playing: your level, this world's story, the family build and the collection book ---
+  const meter = (have, need) => `<i class="home-meter"><i style="width:${Math.round(100 * Math.min(1, have / Math.max(1, need)))}%"></i></i>`;
+  const fishIcon = (k, size = 44) => sprIcon("fish_" + k, size) || `<span class="home-icon home-emoji" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.7)}px">${view?.fish[k]?.emoji || "🐟"}</span>`;
+  function questBar(p) {
+    if (!view?.me) return idleBar();
+    const m = view.me, st = view.story, b = view.build, bk = view.book; let html = "", buttons = [];
+    if (p === "level") {
+      const next = m.perks.filter(k => k.level > m.level).slice(0, 3), got = m.perks.filter(k => k.level <= m.level);
+      html = `<b>⭐ Level ${m.level} · ${esc(m.title)}</b><span class="home-goal">${m.into}/${m.need} XP ${meter(m.into, m.need)}<small>next level +${m.nextStars}⭐</small></span>`
+        + `<span>Everything you do earns XP: planting, watering, picking, fishing, goals and stories.</span>`
+        + next.map(k => `<span class="home-goal">🔒 ${k.icon} ${esc(k.text)}<small>Level ${k.level}</small></span>`).join("")
+        + got.map(k => `<span class="home-goal done">✅ ${k.icon} ${esc(k.text)}</span>`).join("");
+    } else if (p === "story") {
+      html = `<b>📖 ${esc(st.title)}</b><span>${st.done ? "The end" : `Chapter ${st.ch} of ${st.total}`} · ${esc(st.guide)} says:</span><span class="home-say">“${esc(st.text)}”</span>`
+        + (st.done ? "" : `<span class="home-goal">👉 ${esc(st.job)} ${meter(st.have, st.n)}<small>${st.have}/${st.n} · +${st.stars}⭐</small></span>`)
+        + `<span>Your whole family shares this story. Every world has its own.</span>`;
+    } else if (p === "build") {
+      html = `<b>🔨 ${b.icon} ${esc(b.name)}</b>` + (b.done ? `<span class="home-say">It’s all built. What a family! 🎉</span>`
+        : `<span>Stage ${b.stage} of ${b.total}: ${esc(b.stageName)}</span>`
+          + b.needs.map(n => `<span class="home-goal ${n.have >= n.need ? "done" : ""}">${n.have >= n.need ? "✅" : n.emoji} ${esc(n.name)} ${meter(n.have, n.need)}<small>${n.have}/${n.need}</small></span>`).join("")
+          + `<span class="home-goal ${b.stars.have >= b.stars.need ? "done" : ""}">${b.stars.have >= b.stars.need ? "✅" : "⭐"} Stars ${meter(b.stars.have, b.stars.need)}<small>${b.stars.have}/${b.stars.need}</small></span>`
+          + `<span>🎁 When it’s done, everyone in the family gets +${b.prize}⭐ and 2 🍪</span>`);
+      if (!b.done) buttons = [{ label: "🧺 Give from bag", big: true, go: () => act("give") }, { label: `⭐ Give ${b.gift}`, go: () => act("giveStars") }];
+    } else {
+      const C = view.crops, K = view.pets?.kinds || {}, page = (k, title, cards) => `<span><b>${title} · ${bk[k].length}/${bk.totals[k]}</b> ${bk.done[k] ? "✅ page finished!" : `· fill the page: +${bk.prizes[k]}⭐ for everyone`}</span><div class="fish-book">${cards}</div>`;
+      const card = (known, icon, name, note = "") => `<div class="fish-card ${known ? "" : "unknown"}">${icon}<b>${known ? esc(name) : "???"}</b><small>${note}</small></div>`;
+      const em = e => `<span class="home-icon home-emoji" style="width:44px;height:44px;font-size:30px">${e}</span>`;
+      html = `<b>📚 Collection book</b>`
+        + page("fish", "🐟 Fish", Object.entries(view.fish).map(([k, f]) => card(bk.fish.includes(k), fishIcon(k), f.name, bk.fish.includes(k) ? `caught ${view.caught[k] || 1}` : f.level > m.level ? `🔒 Level ${f.level}` : f.biting ? "biting now" : "not biting now")).join(""))
+        + page("crops", "🌱 Crops", Object.entries(C).map(([k, c]) => card(bk.crops.includes(k), em(c.emoji), c.name, bk.crops.includes(k) ? "grown" : "grow one")).join(""))
+        + page("pets", "🐾 Pets", Object.entries(K).map(([k, c]) => card(bk.pets.includes(k), em(c.emoji), c.name, bk.pets.includes(k) ? "in the family" : "not yet")).join(""));
+    }
+    setBar(`<span class="home-goals home-quest" data-p="${p}">${html}</span>`, [...buttons, { label: "Back", big: !buttons.length, go: goalsBar }]);
   }
   function worldBar() {
     setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); HOUSE_NAMES[k] ? houseBar(k) : idleBar(); } })),
@@ -450,7 +488,7 @@
     const C = view.crops, F = view.fish;
     const seeds = Object.entries(view.seeds).filter(([, n]) => n > 0).map(([k, n]) => `${C[k].emoji} ${C[k].name} seeds ×${n}`).join(" · ") || "none";
     const bag = Object.entries(view.bag).filter(([, n]) => n > 0).map(([k, n]) => `${C[k]?.emoji || "🐟"} ${(C[k] || F[k])?.name || k} ×${n}`).join(" · ") || "empty";
-    const book = Object.entries(F).map(([k, f]) => `<div class="fish-card ${view.caught[k] ? "" : "unknown"}">${sprIcon("fish_" + k)}<b>${view.caught[k] ? esc(f.name) : "???"}</b><small>${view.caught[k] ? `caught ${view.caught[k]}` : f.biting ? "biting now" : "not biting now"}</small></div>`).join("");
+    const book = Object.entries(F).map(([k, f]) => `<div class="fish-card ${view.caught[k] ? "" : "unknown"}">${fishIcon(k)}<b>${view.caught[k] ? esc(f.name) : "???"}</b><small>${view.caught[k] ? `caught ${view.caught[k]}` : f.level > (view.me?.level || 1) ? `🔒 Level ${f.level}` : f.biting ? "biting now" : "not biting now"}</small></div>`).join("");
     bar.innerHTML = `<p class="home-title">🎒 Seeds: ${seeds}</p><p class="home-title">Bag: ${bag}</p><p class="home-title">🐟 Fish book · ${Object.keys(view.caught).length}/${Object.keys(F).length}</p><div class="fish-book">${book}</div><div class="home-actions"><button>Close</button></div>`;
     bar.querySelector(".home-actions button").onclick = idleBar;
   }
@@ -467,9 +505,23 @@
     }
     for (const [id, o] of others) if (performance.now() - o.seen > 6000) others.delete(id);
     if (bar.querySelector("button")?.textContent.startsWith("🎯")) idleBar();   // keep the goals count fresh
+    const quest = bar.querySelector(".home-quest"); if (quest) questBar(quest.dataset.p);   // keep an open level, story, build or book panel fresh
     const r = msg.result;
     if (!r) return;
     if (r.toast) opts.toast(r.toast);
+    if (r.xp) floatText(me.x, me.y, 2.1, `+${r.xp} XP`, "#b5e3ff");
+    if (r.gave || r.gaveStars) { SFX.coin(); burst(me.x, me.y, 1.2, { n: 8, emoji: r.gave ? "🔨" : "⭐", speed: 50, up: 180, life: 900, size: 5 }); }
+    if (r.story) {
+      banner(r.story.end ? `📖 The end! <b>${esc(r.story.title)}</b><br>+${r.story.stars}⭐ and ${r.story.treats} 🍪` : `📖 Chapter done! <b>+${r.story.stars}⭐</b>`, r.story.end ? "big" : "");
+      if (!view.story.done) banner(`${esc(view.story.guide)}: “${esc(view.story.text)}”`);
+      flyStars(me.x, me.y, 1.4, Math.min(8, r.story.stars));
+    }
+    if (r.stage) { banner(`🔨 Built: <b>${esc(r.stage.name)}!</b><br>Everyone gets +${r.stage.stars}⭐ and ${r.stage.treats} 🍪`, "big"); SFX.goal(); burst(me.x, me.y, 1.6, { n: 30, color: CONFETTI, speed: 160, up: 170, life: 1400, size: 4 }); }
+    if (r.book) { banner(`📚 Page finished: <b>${{ fish: "Fish", crops: "Crops", pets: "Pets" }[r.book.page]}!</b><br>Everyone gets +${r.book.stars}⭐`, "big"); SFX.goal(); }
+    if (r.levelUp) {
+      banner(`⭐ Level ${r.levelUp.level}! <b>+${r.levelUp.stars}⭐</b>${r.levelUp.perks.map(k => `<br>${k.icon} ${esc(k.text)}`).join("")}`, "big");
+      SFX.goal(); burst(me.x, me.y, 1.6, { n: 30, color: CONFETTI, speed: 160, up: 170, life: 1400, size: 4 }); navigator.vibrate?.([30, 40, 30]);
+    }
     if (r.treat && !r.fish) { burst(me.x, me.y, 0.6, { n: 3, emoji: "🍪", speed: 40, up: 200, life: 900, size: 5 }); floatText(me.x, me.y, 1.5, "+1 🍪"); SFX.pop(); navigator.vibrate?.(20); }
     if (r.fed) burst(me.x, me.y, 0.8, { n: 4, emoji: "💕", speed: 40, up: 140, life: 900, size: 4 });
     if (r.pet) {
@@ -500,7 +552,7 @@
     if (r.letter) {
       return setBar(`✉️ From ${esc(r.letter.from)}: “${esc(r.letter.text)}”<br>🎁 ${esc(r.letter.gift)}`, [{ label: "Thanks!", big: true, go: idleBar }]);
     }
-    if (r.fish) { fishing = null; return setBar(`${sprIcon("fish_" + r.fish, 64)} ${esc(view.fish[r.fish].name)}${r.first ? " · new!" : ""}`, [{ label: "🎣 Again", big: true, go: () => startFishing(me.target) }, { label: "Done", go: idleBar }]); }
+    if (r.fish) { fishing = null; return setBar(`${fishIcon(r.fish, 64)} ${esc(view.fish[r.fish].name)}${r.first ? " · new!" : ""}`, [{ label: "🎣 Again", big: true, go: () => startFishing(me.target) }, { label: "Done", go: idleBar }]); }
   }
 
   // --- drawing ---
@@ -623,7 +675,7 @@
       if (bite) { ctx.font = "700 34px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#e5484d"; ctx.fillText("!", sx, sy - 18); if (fishing.phase === "wait") { fishing.phase = "bite"; navigator.vibrate?.(80); bar.querySelector("button.big")?.classList.add("pulse"); } }
       if (t > fishing.biteAt + 1000 && fishing.phase !== "caught") { fishing = null; opts.toast("It got away! Try again."); idleBar(); }
     }
-    const topHtml = `<b>🏡 Home</b><span class="home-right">${view?.streak ? `<span class="home-streak">🔥 ${view.streak}</span>` : ""}<span class="home-stars">⭐ ${view?.stars ?? 0}</span></span>`;
+    const topHtml = `<b>🏡 Home</b><span class="home-right">${view?.streak ? `<span class="home-streak">🔥 ${view.streak}</span>` : ""}${view?.me ? `<span class="home-streak">Lv ${view.me.level}</span>` : ""}<span class="home-stars">⭐ ${view?.stars ?? 0}</span></span>`;
     if (top.dataset.html !== topHtml) { top.innerHTML = topHtml; top.dataset.html = topHtml; }
   }
 
