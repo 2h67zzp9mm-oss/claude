@@ -69,14 +69,20 @@ def reset(w, h, scale, centre):
         rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
         gl.inputs['Type'].default_value = 'Bloom'; gl.inputs['Threshold'].default_value = 0.7; gl.inputs['Strength'].default_value = 0.8; gl.inputs['Size'].default_value = 0.6
         nt.links.new(rl.outputs['Image'], gl.inputs['Image']); nt.links.new(gl.outputs['Image'], out.inputs[0])
-    if THEME == 'pirate':   # bright tropical sun, sea-blue fill light, a little bloom
-        sun.color = (1.0, 0.78, 0.55); sun.energy = 1.9; so.rotation_euler = (R(57), 0, R(-30))
-        rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 0.8; rim.color = (0.42, 0.62, 0.95); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))
-        wd.node_tree.nodes['Background'].inputs[1].default_value = 0.4
+    if THEME == 'pirate':   # a dark moonlit night with ink outlines, like a hand-drawn pirate cartoon; strong bloom so fires and windows glow
+        sun.color = (0.50, 0.63, 1.0); sun.energy = 1.4; so.rotation_euler = (R(54), 0, R(-32))
+        if os.environ.get('INK', '1') == '1':
+            sc.render.use_freestyle = True; sc.render.line_thickness_mode = 'ABSOLUTE'; sc.render.line_thickness = float(os.environ.get('INKW', '1.5'))
+            fs = bpy.context.view_layer.freestyle_settings; fs.crease_angle = R(125)
+            ls = fs.linesets[0] if fs.linesets else fs.linesets.new('ink'); ls.select_silhouette = True; ls.select_border = True; ls.select_crease = True; ls.select_external_contour = True
+            if ls.linestyle is None: ls.linestyle = bpy.data.linestyles.new('ink')
+            ls.linestyle.color = (0.02, 0.02, 0.06); ls.linestyle.thickness = float(os.environ.get('INKW', '1.5'))
+        rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 0.45; rim.color = (0.62, 0.42, 0.95); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))
+        wd.node_tree.nodes['Background'].inputs[1].default_value = 0.22
         nt = bpy.data.node_groups.new('comp', 'CompositorNodeTree'); sc.compositing_node_group = nt
         nt.interface.new_socket('Image', in_out='OUTPUT', socket_type='NodeSocketColor')
         rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
-        gl.inputs['Type'].default_value = 'Bloom'; gl.inputs['Threshold'].default_value = 0.95; gl.inputs['Strength'].default_value = 0.4; gl.inputs['Size'].default_value = 0.5
+        gl.inputs['Type'].default_value = 'Bloom'; gl.inputs['Threshold'].default_value = 0.75; gl.inputs['Strength'].default_value = 0.8; gl.inputs['Size'].default_value = 0.6
         nt.links.new(rl.outputs['Image'], gl.inputs['Image']); nt.links.new(gl.outputs['Image'], out.inputs[0])
     if THEME == 'scifi':
         sun.color = (1.0, 0.86, 0.78); sun.energy = 2.7
