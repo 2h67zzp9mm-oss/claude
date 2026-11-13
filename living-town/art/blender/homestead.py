@@ -436,8 +436,9 @@ if mode in ('all', 'scene'):
     o, ax, ay, az = (project(sc, cam, p) for p in ((0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)))
     json.dump({'size': [W, H], 'ppm': PPM, 'origin': o, 'ex': [ax[0] - o[0], ax[1] - o[1]], 'ey': [ay[0] - o[0], ay[1] - o[1]], 'ez': [az[0] - o[0], az[1] - o[1]]},
               open(os.path.join(OUT, 'camera.json'), 'w'), indent=1)
-if mode in ('all', 'sprites'):
+if mode in ('all', 'sprites', 'tree'):
     sf = THEME == 'scifi'
+    if mode == 'tree': sprite('tree', c_tree, 4.6); sys.exit(0)
     anchors['tree'] = sprite('tree', c_tree if CS else alien_tree if sf else tree, 4.6)
     anchors['bush'] = sprite('bush', c_crystals if CS else crystals if sf else bush, 2.0)
     anchors['mailbox_up'] = sprite('mailbox_up', lambda: c_mailbox(True) if CS else beacon(True) if sf else mailbox(True), 2.4)

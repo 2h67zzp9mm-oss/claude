@@ -7,7 +7,7 @@ TEX = os.path.join(os.path.dirname(__file__), '..', 'textures', 'castle')
 CASTLE = {
     'grass': ((0.42, 0.72, 0.22), 0, 0, 'grass', 0.16), 'stone': ((0.80, 0.76, 0.86), 0, 0, 'stone', 0.55),
     'roof': ((0.55, 0.32, 0.80), 0, 0, 'roof', 0.85), 'wood': ((0.75, 0.48, 0.22), 0, 0, 'wood', 0.7),
-    'cliff': ((0.50, 0.42, 0.36), 0, 0, 'cliff', 0.35), 'soil': ((0.22, 0.13, 0.08), 0, 0, 'soil', 0.9),
+    'cliff': ((0.50, 0.42, 0.36), 0, 0, 'cliff', 0.35), 'dirt': ((0.55, 0.34, 0.19), 0, 0, None, 0), 'soil': ((0.22, 0.13, 0.08), 0, 0, 'soil', 0.9),
     'cream': ((0.96, 0.91, 0.87), 0, 0, None, 0), 'gold': ((1.0, 0.70, 0.22), 0, 0.85, None, 0),
     'door': ((0.58, 0.36, 0.78), 0, 0, None, 0), 'window': ((1.0, 0.78, 0.38), 1.6, 0, None, 0),
     'water': ((0.08, 0.62, 0.86), 0.5, 0, None, 0), 'sparkle': ((1.0, 1.0, 1.0), 2.0, 0, None, 0),
@@ -86,18 +86,24 @@ def ground_castle():
     o.data.materials.append(mat('grass')); bpy.context.view_layer.objects.active = o; o.select_set(True); bpy.ops.object.shade_smooth()
     # grassy lip, then the rocky cliff of the floating island, tapering down into clouds
     box(0, 0, -0.56, S, S, -0.47, 'grass')   # keep its top below the pond so the water shows
-    box(0, -0.02, -0.5, S, 0.02, 0.0, 'grass'); box(S - 0.02, 0, -0.5, S + 0.02, S, 0.0, 'grass')   # the visible grass edges
-    box(0.15, 0.15, -2.2, S - 0.15, S - 0.15, -0.5, 'cliff'); box(1.2, 1.2, -3.4, S - 1.2, S - 1.2, -2.0, 'cliff')
+    # one smooth island underside: a dirt band under the grass, then a rounded rock cone tapering into the clouds
+    def rring(bm, inset, z, cr, n=24):
+        pts = []; x0, y0, x1, y1 = inset, inset, S - inset, S - inset
+        for (cx, cy, a0) in ((x1 - cr, y0 + cr, -90), (x1 - cr, y1 - cr, 0), (x0 + cr, y1 - cr, 90), (x0 + cr, y0 + cr, 180)):
+            for k in range(n): a = R(a0 + 90 * k / n); pts.append(bm.verts.new((cx + cr * math.cos(a), cy + cr * math.sin(a), z)))
+        return pts
+    def loft(levels, col):
+        bm = bmesh.new(); rings = [rring(bm, *lv) for lv in levels]
+        for r0, r1 in zip(rings, rings[1:]):
+            m = len(r0)
+            for k in range(m): bm.faces.new((r0[k], r0[(k + 1) % m], r1[(k + 1) % m], r1[k]))
+        bm.faces.new(rings[-1][::-1])
+        me = bpy.data.meshes.new(col); bm.to_mesh(me)
+        for f in me.polygons: f.use_smooth = True
+        o = bpy.data.objects.new(col, me); bpy.context.scene.collection.objects.link(o); o.data.materials.append(mat(col)); return o
+    loft([(0.0, -0.02, 0.05), (0.0, -0.5, 0.05), (0.04, -0.62, 0.12)], 'dirt')
+    loft([(0.04, -0.6, 0.12)] + [(0.04 + 2.6 * t ** 1.6, -0.6 - 3.0 * t, 0.12 + 2.0 * t) for t in (0.1, 0.25, 0.4, 0.55, 0.7, 0.82, 0.92, 1.0)], 'cliff')
     import random as _r; rr = _r.Random(5)
-    for k in range(int(S / 0.8)):
-        t = (k + 0.5) * 0.8
-        for (x, y) in ((t, 0.1), (S - 0.1, t)):
-            ball(x, y, -0.9 - 0.4 * rr.random(), 0.5 + 0.2 * rr.random(), 0.5 + 0.2 * rr.random(), 0.6, 'cliff')
-            ball(x + rr.uniform(-0.3, 0.3), y + rr.uniform(-0.3, 0.3), -2.0, 0.45, 0.45, 0.6, 'cliff')
-            ball(x, y, -0.12, 0.16, 0.16, 0.14, 'leaf2' if k % 2 else 'leaf')                    # grass tufts on the lip
-    for k in range(int(S / 0.9)):                                                                # tapering rock under the cliff
-        t = (k + 0.5) * 0.9
-        for (x, y) in ((t, 1.1), (S - 1.1, t)): ball(x, y, -2.9 - 0.3 * rr.random(), 0.6, 0.6, 0.7, 'cliff')
     for k in range(int(S / 0.7)):                                                                # soft clouds hugging the bottom
         t = (k + 0.3) * 0.7 - 1.0
         for (x, y) in ((t, -0.9 + rr.uniform(-0.6, 0.6)), (S + 0.9 + rr.uniform(-0.6, 0.6), t)):
@@ -242,13 +248,46 @@ def castle_scene():
         ball(x, y, 0.35, 0.3, 0.2, 0.35, 'leaf'); [ball(x + 0.18 * math.cos(j * 1.3), y - 0.12, 0.3 + 0.12 * (j % 3), 0.06, 0.05, 0.06, 'blossom') for j in range(5)]
 
 # ---------- small things ----------
+def leaf_mesh(name, L=0.26, W=0.11):
+    # one pointed, gently cupped leaf with a raised middle vein, shared by every leaf on the tree
+    bm = bmesh.new(); n = 7; top, bot = [], []
+    for k in range(n + 1):
+        t = k / n; x = (t - 0.5) * L; w = W * math.sin(math.pi * t) ** 0.8
+        top.append(bm.verts.new((x, w, -0.012 * (w / W) ** 2 * 3))); bot.append(bm.verts.new((x, -w, -0.012 * (w / W) ** 2 * 3)))
+    mid = [bm.verts.new(((k / n - 0.5) * L, 0, 0.008 * math.sin(math.pi * k / n))) for k in range(n + 1)]
+    for k in range(n):
+        bm.faces.new((mid[k], mid[k + 1], top[k + 1], top[k])); bm.faces.new((mid[k], bot[k], bot[k + 1], mid[k + 1]))
+    me = bpy.data.meshes.new(name); bm.to_mesh(me)
+    for f in me.polygons: f.use_smooth = True
+    return me
 def c_tree():
-    cyl(0, 0, 0, 0.2, 1.3, 'trunk'); cyl(0, 0, 0, 0.3, 0.2, 'trunk')
-    for (x, y, z, r) in ((0, 0, 2.15, 1.05), (0.5, -0.35, 2.55, 0.7), (-0.55, 0.2, 2.5, 0.68), (0.1, 0.45, 2.8, 0.62), (0.15, -0.2, 3.0, 0.6)):
-        ball(x, y, z, r, r, r * 0.92, 'leaf2' if r < 0.7 else 'leaf')
     import random as _r; rr = _r.Random(2)
+    cyl(0, 0, 0, 0.2, 1.5, 'trunk'); cyl(0, 0, 0, 0.3, 0.2, 'trunk')
+    for (a, tilt) in ((0.4, 40), (2.6, 35), (4.4, 45)):   # a few branches up into the leaves
+        bpy.ops.mesh.primitive_cylinder_add(vertices=10, radius=0.07, depth=0.8, location=(0.22 * math.cos(a), 0.22 * math.sin(a), 1.7), rotation=(R(tilt) * math.sin(a), -R(tilt) * math.cos(a), 0)); put(bpy.context.object, 'trunk', True)
+    blobs = ((0, 0, 2.15, 1.05), (0.5, -0.35, 2.55, 0.7), (-0.55, 0.2, 2.5, 0.68), (0.1, 0.45, 2.8, 0.62), (0.15, -0.2, 3.0, 0.6))
+    for (x, y, z, r) in blobs: ball(x, y, z, r * 0.86, r * 0.86, r * 0.8, (0.08, 0.26, 0.07))   # dark inside so gaps look deep
+    meshes = [leaf_mesh('leafA'), leaf_mesh('leafB', 0.23, 0.1), leaf_mesh('leafC', 0.28, 0.12)]
+    for me, col in zip(meshes, ('leaf', 'leaf2', (0.38, 0.66, 0.2))): me.materials.append(mat(col))
+    col = bpy.context.scene.collection
+    for (bx, by, bz, r) in blobs:
+        cnt = int(520 * r * r)
+        for k in range(cnt):   # spread leaves over each blob's outside, skipping spots buried in another blob
+            zz = 1 - 2 * (k + 0.5) / cnt; ph = k * 2.39996; rad = math.sqrt(1 - zz * zz)
+            nx, ny, nz = rad * math.cos(ph), rad * math.sin(ph), zz
+            px, py, pz = bx + nx * r, by + ny * r, bz + nz * r * 0.92
+            if any(((px - ox) ** 2 + (py - oy) ** 2 + ((pz - oz) / 0.92) ** 2) < (orr * 0.97) ** 2 for (ox, oy, oz, orr) in blobs if (ox, oy, oz, orr) != (bx, by, bz, r)): continue
+            light = nz * 0.6 - ny * 0.5 + rr.uniform(-0.4, 0.4)   # lighter leaves on top and facing the camera
+            me = meshes[2] if light > 0.45 else meshes[1] if light > -0.1 else meshes[0]
+            o = bpy.data.objects.new('leaf', me); col.objects.link(o)
+            o.location = (px + rr.uniform(-0.04, 0.04), py + rr.uniform(-0.04, 0.04), pz + rr.uniform(-0.03, 0.03))
+            o.rotation_mode = 'QUATERNION'
+            from mathutils import Vector
+            nrm = Vector((nx + rr.uniform(-0.5, 0.5), ny + rr.uniform(-0.5, 0.5), nz + 0.4 + rr.uniform(-0.3, 0.3))).normalized()
+            q = nrm.to_track_quat('Z', 'X'); from mathutils import Quaternion
+            o.rotation_quaternion = q @ Quaternion((0, 0, 1), rr.uniform(0, 6.283)); s = rr.uniform(0.85, 1.25); o.scale = (s, s, s)
     for k in range(26):   # pink blossoms on the camera side
-        a = rr.uniform(-2.2, 0.6); z = rr.uniform(1.7, 3.2); rad = 1.0 - abs(z - 2.4) * 0.35
+        a = rr.uniform(-2.2, 0.6); z = rr.uniform(1.7, 3.2); rad = 1.08 - abs(z - 2.4) * 0.35
         x, y = math.cos(a) * rad, math.sin(a) * rad
         for j in range(5): ball(x + 0.06 * math.cos(j * 1.256), y + 0.06 * math.sin(j * 1.256), z, 0.05, 0.05, 0.05, 'blossom')
         ball(x, y, z, 0.03, 0.03, 0.03, 'f3')

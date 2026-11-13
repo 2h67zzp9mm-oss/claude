@@ -1813,7 +1813,14 @@
     if (freshLogin) reconnect();
     setMode("play");
     showToast(`Playing as ${profile.name}`);
+    // The home plot is the start screen; the old town is one tap away (To town). ?town skips it.
+    if (!homeStarted && !new URLSearchParams(location.search).has("town")) {
+      homeStarted = true;
+      const go = (n = 0) => socket?.readyState === 1 ? window.LivingTownHome?.open() : n < 40 && setTimeout(() => go(n + 1), 250);
+      go();
+    }
   }
+  let homeStarted = false;
 
   function gateShell(content, closable = false, title = "Who’s visiting town?") {
     let gate = $("#playerGate");

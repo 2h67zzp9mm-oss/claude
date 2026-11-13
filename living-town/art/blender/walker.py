@@ -39,10 +39,30 @@ def blob(parent, loc, size, m, rot=(0, 0, 0)):  # smooth ellipsoid body part
     o = bpy.context.object; o.scale = size; o.rotation_euler = rot; bpy.ops.object.shade_smooth()
     o.parent = parent; o.location = loc; o.data.materials.append(m); return o
 
-def limb(parent, length, r0, r1, m):  # tapered segment hanging down from a joint
-    r0, r1 = r0 * 1.35, r1 * 1.35
-    blob(parent, (0, 0, -length / 2), (r0 * 0.5 + r1 * 0.5, r0 * 0.5 + r1 * 0.5, length / 2 + 0.02), m)
-    blob(parent, (0, 0, 0), (r0, r0, r0), m)
+def lathe(parent, loc, prof, m, seg=28):  # one smooth body piece: elliptical rings (z, rx, ry) joined top to bottom, closed at both ends
+    import bmesh
+    bm = bmesh.new(); rings = []
+    for (z, rx, ry) in prof:
+        rings.append([bm.verts.new((rx * math.cos(2 * math.pi * k / seg), ry * math.sin(2 * math.pi * k / seg), z)) for k in range(seg)])
+    for a, b in zip(rings, rings[1:]):
+        for k in range(seg): bm.faces.new((a[k], a[(k + 1) % seg], b[(k + 1) % seg], b[k]))
+    for ring, z, flip in ((rings[0], prof[0][0], False), (rings[-1], prof[-1][0], True)):
+        c = bm.verts.new((0, 0, z + (0.004 if prof[-1][0] > prof[0][0] else -0.004) * (1 if flip else -1)))
+        for k in range(seg): bm.faces.new((ring[(k + 1) % seg], ring[k], c) if not flip else (ring[k], ring[(k + 1) % seg], c))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new('part'); bm.to_mesh(me)
+    for f in me.polygons: f.use_smooth = True
+    o = bpy.data.objects.new('part', me); bpy.context.scene.collection.objects.link(o)
+    o.parent = parent; o.location = loc; o.data.materials.append(m); return o
+
+def cap(r0, r1, z0, z1, n=4):  # rounded ends for a tapered tube from z0 (radius r0) down to z1 (radius r1)
+    top = [(z0 + r0 * math.cos(math.pi / 2 * k / n), r0 * math.sin(math.pi / 2 * k / n)) for k in range(1, n + 1)]
+    bot = [(z1 - r1 * math.sin(math.pi / 2 * k / n), r1 * math.cos(math.pi / 2 * k / n)) for k in range(0, n)]
+    return [(z, r, r) for z, r in top + [((z0 * 2 + z1) / 3, r0 * 0.96 + r1 * 0.04), ((z0 + z1 * 2) / 3, r0 * 0.4 + r1 * 0.6)] + bot]
+
+def limb(parent, length, r0, r1, m):  # smooth tapered segment hanging down from a joint, rounded at both ends so joints don't show
+    r0, r1 = r0 * 1.2, r1 * 1.2
+    lathe(parent, (0, 0, 0), cap(r0, r1, 0, -length), m)
 
 OUTFITS = {  # colours per body region; 'clay' is the plain white template
   'clay': dict(skin=(0.82, 0.80, 0.76), shirt=(0.82, 0.80, 0.76), pants=(0.82, 0.80, 0.76), boots=(0.82, 0.80, 0.76), belt=(0.82, 0.80, 0.76),
@@ -92,9 +112,10 @@ def build(sex, O):
     if F:
         for sx in (-1, 1): blob(hips, (sx * 0.08, 0.06, -0.02), (0.1, 0.09, 0.1), pants)          # seat
     spine = empty('spine', hips, (0, 0, 0.08)); J['spine'] = spine
-    blob(spine, (0, 0, 0.12), (0.12 if F else 0.16, 0.10 if F else 0.12, 0.14), shirt)  # waist
     if 'clay' not in O.get('name', ''): blob(spine, (0, 0, 0.02), (0.165 if not F else 0.13, 0.125 if not F else 0.105, 0.03), belt)  # belt
-    blob(spine, (0, 0, 0.33), (0.18 if F else (0.27 if BUFF else 0.22), 0.14 if not BUFF else 0.17, 0.18 if not BUFF else 0.2), shirt)  # chest (broad for grown men)
+    wx, wy = (0.12, 0.10) if F else (0.16, 0.12); cx, cy = (0.18, 0.13) if F else ((0.27, 0.17) if BUFF else (0.22, 0.14))
+    lathe(spine, (0, 0, 0), [(-0.08, wx * 0.5, wy * 0.5), (-0.05, wx * 0.9, wy * 0.9), (0.02, wx, wy), (0.12, wx * 1.02, wy), (0.22, (wx + cx) / 2, (wy + cy) / 2),
+          (0.32, cx, cy), (0.40, cx * 0.97, cy * 0.95), (0.46, cx * 0.82, cy * 0.85), (0.50, cx * 0.55, cy * 0.62), (0.52, cx * 0.25, cy * 0.3)], shirt)  # one smooth body, waist to shoulders
     if BUFF:
         for sx in (-1, 1): blob(spine, (sx * 0.2, 0, 0.42), (0.1, 0.1, 0.09), shirt)             # shoulders
     if F:
