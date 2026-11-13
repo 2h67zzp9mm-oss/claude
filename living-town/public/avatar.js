@@ -50,9 +50,11 @@
     g.drawImage(base, 0, 0); const px = g.getImageData(0, 0, W, H);
     const mc = document.createElement("canvas"); mc.width = W; mc.height = H; const mg = mc.getContext("2d", { willReadFrequently: true });
     mg.drawImage(mask, 0, 0); const mp = mg.getImageData(0, 0, W, H).data;
-    // under a dress the arms are bare; a witch's robe has long sleeves; armour is steel all over
-    const shirt = look.outfit === "dress" ? look.skin : look.outfit === "witch" ? (look.outfitColor || look.shirt) : look.outfit === "knight" ? "#b8bcc6" : look.shirt;
-    const col = { skin: hex(look.skin), shirt: hex(shirt), pants: hex(look.outfit === "knight" ? "#9aa0ab" : look.pants), shoes: hex(look.shoes) };
+    // under a gown or robe everything is the outfit's colour (long sleeves, nothing peeks through); armour is steel all over
+    const oc = look.outfitColor || look.shirt;
+    const shirt = look.outfit === "dress" || look.outfit === "witch" ? oc : look.outfit === "knight" ? "#b8bcc6" : look.shirt;
+    const pants = look.outfit === "dress" || look.outfit === "witch" ? oc : look.outfit === "knight" ? "#9aa0ab" : look.pants;
+    const col = { skin: hex(look.skin), shirt: hex(shirt), pants: hex(pants), shoes: hex(look.shoes) };
     const d = px.data;
     for (let i = 0; i < d.length; i += 4) {
       if (!d[i + 3]) continue;
