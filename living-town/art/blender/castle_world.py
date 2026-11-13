@@ -237,7 +237,7 @@ def castle_scene():
     for k, (d, z) in enumerate(((0.0, 0.28), (0.3, 0.19), (0.6, 0.1))):
         rbox(x1 + d - 0.05, dy - 0.75 + k * 0.0, 0, x1 + d + 0.32, dy + 0.75, z, 'stone', 0.03)
     for s in (-1, 1):   # flowers either side of the door
-        ball(x1 + 0.25, dy + s * 0.95, 0.25, 0.28, 0.24, 0.25, 'leaf'); [ball(x1 + 0.25 + 0.15 * math.cos(j), dy + s * 0.95 + 0.15 * math.sin(j), 0.42, 0.06, 0.06, 0.05, 'blossom') for j in range(5)]
+        leafy([(x1 + 0.25, dy + s * 0.95, 0.25, 0.27)], ls=0.45); [ball(x1 + 0.25 + 0.15 * math.cos(j), dy + s * 0.95 + 0.15 * math.sin(j), 0.42, 0.06, 0.06, 0.05, 'blossom') for j in range(5)]
     # more towers: tall one at the back, small one at the front corner, a turret behind the big tower
     tower(x0 + 0.75, y1 - 0.75, 0.75, 5.6, 0.95, 2.2)
     tower(x0 + 0.7, y0 + 0.7, 0.62, 4.0, 0.8, 1.8, flag=False)
@@ -245,7 +245,7 @@ def castle_scene():
     arch_window(x0 + 0.7, y0 + 0.7, 2.4, R(-70), 0.62, 0.3, 0.5)
     arch_window(x0 + 0.75, y1 - 0.75, 3.6, R(-30), 0.75, 0.3, 0.5)
     for (x, y) in ((x0 + 1.6, y0 - 0.05), (x0 + 3.0, y0 - 0.05), (x1 - 0.2, y0 + 0.4)):   # climbing flowers at the base
-        ball(x, y, 0.35, 0.3, 0.2, 0.35, 'leaf'); [ball(x + 0.18 * math.cos(j * 1.3), y - 0.12, 0.3 + 0.12 * (j % 3), 0.06, 0.05, 0.06, 'blossom') for j in range(5)]
+        leafy([(x, y, 0.3, 0.28), (x, y, 0.5, 0.2)], ls=0.45); [ball(x + 0.18 * math.cos(j * 1.3), y - 0.12, 0.3 + 0.12 * (j % 3), 0.06, 0.05, 0.06, 'blossom') for j in range(5)]
 
 # ---------- small things ----------
 def leaf_mesh(name, L=0.26, W=0.11):
@@ -260,6 +260,33 @@ def leaf_mesh(name, L=0.26, W=0.11):
     me = bpy.data.meshes.new(name); bm.to_mesh(me)
     for f in me.polygons: f.use_smooth = True
     return me
+_leaf_meshes = []
+def leafy(blobs, dens=520, ls=1.0, dark=0.86):
+    # cover round blobs (x, y, z, r) in little pointy leaves, lighter on top and facing the camera, dark inside
+    from mathutils import Vector, Quaternion
+    import random as _r; rr = _r.Random(int(sum(b[0] * 7 + b[1] * 13 + b[3] * 31 for b in blobs) * 100))
+    if _leaf_meshes:
+        try: _leaf_meshes[0].name
+        except ReferenceError: _leaf_meshes.clear()   # the scene was reset between renders
+    if not _leaf_meshes:
+        _leaf_meshes.extend([leaf_mesh('leafA'), leaf_mesh('leafB', 0.23, 0.1), leaf_mesh('leafC', 0.28, 0.12)])
+        for me, c in zip(_leaf_meshes, ('leaf', 'leaf2', (0.38, 0.66, 0.2))): me.materials.append(mat(c))
+    for (x, y, z, r) in blobs: ball(x, y, z, r * dark, r * dark, r * dark * 0.93, (0.08, 0.26, 0.07))
+    col = bpy.context.scene.collection
+    for (bx, by, bz, r) in blobs:
+        cnt = max(12, int(dens * r * r / (ls * ls)))
+        for k in range(cnt):
+            zz = 1 - 2 * (k + 0.5) / cnt; ph = k * 2.39996; rad = math.sqrt(1 - zz * zz)
+            nx, ny, nz = rad * math.cos(ph), rad * math.sin(ph), zz
+            if nz < -0.6 and bz - r < 0.15: continue   # nothing under the ground
+            px, py, pz = bx + nx * r, by + ny * r, bz + nz * r * 0.92
+            if any(((px - ox) ** 2 + (py - oy) ** 2 + ((pz - oz) / 0.92) ** 2) < (orr * 0.97) ** 2 for (ox, oy, oz, orr) in blobs if (ox, oy, oz, orr) != (bx, by, bz, r)): continue
+            light = nz * 0.6 - ny * 0.5 + rr.uniform(-0.4, 0.4)
+            o = bpy.data.objects.new('leaf', _leaf_meshes[2] if light > 0.45 else _leaf_meshes[1] if light > -0.1 else _leaf_meshes[0]); col.objects.link(o)
+            j = 0.04 * ls; o.location = (px + rr.uniform(-j, j), py + rr.uniform(-j, j), pz + rr.uniform(-j, j))
+            o.rotation_mode = 'QUATERNION'
+            nrm = Vector((nx + rr.uniform(-0.5, 0.5), ny + rr.uniform(-0.5, 0.5), nz + 0.4 + rr.uniform(-0.3, 0.3))).normalized()
+            o.rotation_quaternion = nrm.to_track_quat('Z', 'X') @ Quaternion((0, 0, 1), rr.uniform(0, 6.283)); sc = ls * rr.uniform(0.85, 1.25); o.scale = (sc, sc, sc)
 def c_tree():
     import random as _r; rr = _r.Random(2)
     cyl(0, 0, 0, 0.2, 1.5, 'trunk'); cyl(0, 0, 0, 0.3, 0.2, 'trunk')
@@ -267,25 +294,7 @@ def c_tree():
         bpy.ops.mesh.primitive_cylinder_add(vertices=10, radius=0.07, depth=0.8, location=(0.22 * math.cos(a), 0.22 * math.sin(a), 1.7), rotation=(R(tilt) * math.sin(a), -R(tilt) * math.cos(a), 0)); put(bpy.context.object, 'trunk', True)
     blobs = ((0, 0, 2.15, 1.05), (0.5, -0.35, 2.55, 0.7), (-0.55, 0.2, 2.5, 0.68), (0.1, 0.45, 2.8, 0.62), (0.15, -0.2, 3.0, 0.6))
     for (x, y, z, r) in blobs: ball(x, y, z, r * 0.86, r * 0.86, r * 0.8, (0.08, 0.26, 0.07))   # dark inside so gaps look deep
-    meshes = [leaf_mesh('leafA'), leaf_mesh('leafB', 0.23, 0.1), leaf_mesh('leafC', 0.28, 0.12)]
-    for me, col in zip(meshes, ('leaf', 'leaf2', (0.38, 0.66, 0.2))): me.materials.append(mat(col))
-    col = bpy.context.scene.collection
-    for (bx, by, bz, r) in blobs:
-        cnt = int(520 * r * r)
-        for k in range(cnt):   # spread leaves over each blob's outside, skipping spots buried in another blob
-            zz = 1 - 2 * (k + 0.5) / cnt; ph = k * 2.39996; rad = math.sqrt(1 - zz * zz)
-            nx, ny, nz = rad * math.cos(ph), rad * math.sin(ph), zz
-            px, py, pz = bx + nx * r, by + ny * r, bz + nz * r * 0.92
-            if any(((px - ox) ** 2 + (py - oy) ** 2 + ((pz - oz) / 0.92) ** 2) < (orr * 0.97) ** 2 for (ox, oy, oz, orr) in blobs if (ox, oy, oz, orr) != (bx, by, bz, r)): continue
-            light = nz * 0.6 - ny * 0.5 + rr.uniform(-0.4, 0.4)   # lighter leaves on top and facing the camera
-            me = meshes[2] if light > 0.45 else meshes[1] if light > -0.1 else meshes[0]
-            o = bpy.data.objects.new('leaf', me); col.objects.link(o)
-            o.location = (px + rr.uniform(-0.04, 0.04), py + rr.uniform(-0.04, 0.04), pz + rr.uniform(-0.03, 0.03))
-            o.rotation_mode = 'QUATERNION'
-            from mathutils import Vector
-            nrm = Vector((nx + rr.uniform(-0.5, 0.5), ny + rr.uniform(-0.5, 0.5), nz + 0.4 + rr.uniform(-0.3, 0.3))).normalized()
-            q = nrm.to_track_quat('Z', 'X'); from mathutils import Quaternion
-            o.rotation_quaternion = q @ Quaternion((0, 0, 1), rr.uniform(0, 6.283)); s = rr.uniform(0.85, 1.25); o.scale = (s, s, s)
+    leafy(blobs)
     for k in range(26):   # pink blossoms on the camera side
         a = rr.uniform(-2.2, 0.6); z = rr.uniform(1.7, 3.2); rad = 1.08 - abs(z - 2.4) * 0.35
         x, y = math.cos(a) * rad, math.sin(a) * rad
@@ -343,7 +352,7 @@ def c_plant(kind, c):
     elif kind == 'shroom':      # small crystal cluster
         c_crystals(0.45, (('crystal', 'crystal1', 'crystal2')[c % 3], 'crystal', ('crystal1', 'crystal2', 'crystal')[c % 3]))
     elif kind == 'succulent':   # round bush with blossoms
-        ball(0, 0, 0.2, 0.26, 0.24, 0.22, 'leaf'); ball(0.12, -0.08, 0.28, 0.16, 0.15, 0.14, 'leaf2')
+        leafy([(0, 0, 0.2, 0.24), (0.12, -0.08, 0.3, 0.15)], ls=0.4)
         for j in range(8): a = j * 0.8 - 1.5; ball(0.22 * math.cos(a), 0.22 * math.sin(a), 0.2 + 0.1 * (j % 3), 0.04, 0.04, 0.04, 'f%d' % (c % 5))
     else:                       # tall bell flowers
         for k in range(3):
