@@ -5,7 +5,9 @@
   "use strict";
   let BASE = "homestead/";
   // Worlds: same plot and gameplay, different paint. Art for each lives in homestead/worlds/<id>/.
-  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/" }, castle: { name: "Cloud Castle", icon: "🏰", dir: "homestead/worlds/castle/" } };
+  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/" }, castle: { name: "Cloud Castle", icon: "🏰", dir: "homestead/worlds/castle/" }, night: { name: "Night Forest", icon: "🌙", dir: "homestead/worlds/night/" } };
+  const HOUSE_NAMES = { stump: "🪵 Stump House", shroom: "🍄 Mushroom House", willow: "🌳 Willow Treehouse", moon: "🌙 Moon Crystal Cottage" };
+  let houseId = "stump";
   let world = "clay";
   const SPEED = 5;            // metres per second (2.6 felt far too slow on a phone)
   const CELL = 0.25;          // walk grid
@@ -23,7 +25,7 @@
     const img = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = BASE + src + ver; });
     ready = Promise.all([fetch("homestead/layout.json", { cache: "no-cache" }).then(r => r.json()), fetch(BASE + "art.json", { cache: "no-cache" }).then(r => r.json())]).then(async ([layout, art]) => {
       ver = "?v=" + (art.version || Date.now());   // new art = new URLs, so phones never mix old pictures with new
-      const names = ["ground", "house", "sprites", ...Object.keys(art.walkers).map(k => "walk_" + k), ...(art.sky ? ["sky"] : [])];
+      const names = ["ground", "house", "sprites", ...Object.keys(art.walkers).map(k => "walk_" + k), ...(art.sky ? ["sky"] : []), ...Object.keys(art.houses || {}).map(k => "house_" + k)];
       const loaded = await Promise.all(names.map(n => img(n + ".webp")));
       L = layout; A = art; imgs = {}; names.forEach((n, i) => { imgs[n] = loaded[i]; });
       buildGrid();
@@ -158,7 +160,7 @@
     for (const t of petTargets()) { const [sx, sy] = P(t.hx, t.hy, 0.25); if (Math.hypot(px - sx, py - sy) < t.r) return t; }
     if (spriteHit(view?.mail ? "mailbox_up" : "mailbox", L.mailbox[0], L.mailbox[1], px, py)) return { kind: "mailbox", x: L.mailbox[0] + 0.3, y: L.mailbox[1] - 0.6 };
     if (spriteHit("crate", L.crate[0], L.crate[1], px, py)) return { kind: "crate", x: L.crate[0] + 0.9, y: L.crate[1] };
-    const h = A.house; if (px > h.x && px < h.x + h.w && py > h.y && py < h.y + h.h) {
+    const h = houseArt().r; if (px > h.x && px < h.x + h.w && py > h.y && py < h.y + h.h) {
       const d = L.house.door; return { kind: "door", x: d[0] + 0.7, y: d[1] };
     }
     for (let k = 0; k < L.garden.plots.length; k++) { const r = plotRect(k); if (w.x > r.x0 - 0.1 && w.x < r.x1 + 0.1 && w.y > r.y0 - 0.1 && w.y < r.y1 + 0.1) return { kind: "plot", plot: k, x: r.cx + 0.2, y: r.y0 - 0.25 }; }
@@ -297,8 +299,14 @@
       [{ label: soundOn ? "🔊 Sound on" : "🔈 Sound off", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "Back", big: true, go: idleBar }]);
   }
   function worldBar() {
-    setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); idleBar(); } })), { label: "Back", go: idleBar }]);
+    setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); k === "night" ? houseBar() : idleBar(); } })),
+      ...(world === "night" ? [{ label: "🏠 Pick house", go: houseBar }] : []), { label: "Back", go: idleBar }]);
   }
+  // Night Forest has four houses; the family picks one (everyone sees the same)
+  function houseBar() {
+    setBar("Which house do you want to live in?", [...Object.entries(HOUSE_NAMES).map(([k, n]) => ({ label: n, big: k === houseId, go: () => { act("house", { house: k }); idleBar(); } })), { label: "Back", go: idleBar }]);
+  }
+  function houseArt() { const k = A.houses && A.houses[houseId] ? houseId : null; return k ? { r: A.houses[k], img: imgs["house_" + k] } : { r: A.house, img: imgs.house }; }
   function setWorld(k) {
     if (!WORLDS[k] || k === world) return;
     world = k; BASE = WORLDS[k].dir; const keep = { ...me }; ready = null;
@@ -451,6 +459,7 @@
     if (msg.error) return opts.toast(msg.error);
     view = msg.home;
     if (view.world) setWorld(view.world);
+    if (view.house) houseId = view.house;
     for (const o of view.others || []) {
       const cur = others.get(o.id) || { x: o.x, y: o.y, dir: o.dir, step: 0, name: o.name, id: o.id };
       Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, seen: performance.now() }); others.set(o.id, cur);
@@ -592,7 +601,7 @@
     }
     const people = [{ id: opts.me(), p: me }, ...[...others.values()].map(o => ({ id: o.id, p: o }))];
     people.forEach(({ id, p }) => items.push({ d: p.x - p.y, person: p, draw: () => drawWalker(id, p) }));
-    const H = L.house, house = { house: true, draw: () => { const [sx, sy] = toScreen(A.house.x, A.house.y); ctx.drawImage(imgs.house, sx, sy, A.house.w * cam.z, A.house.h * cam.z); } };
+    const H = L.house, ha = houseArt(), house = { house: true, draw: () => { const [sx, sy] = toScreen(ha.r.x, ha.r.y); ctx.drawImage(ha.img, sx, sy, ha.r.w * cam.z, ha.r.h * cam.z); } };
     items.sort((a, b) => a.d - b.d);
     // the house goes in just before the first thing standing in front of it
     const inFront = it => { const p = it.person; const x = p ? p.x : it.d, y = p ? p.y : 0; return p ? (x >= H.x1 || y <= H.y0) : it.d > H.x1 - H.y0; };

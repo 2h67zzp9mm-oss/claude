@@ -1142,11 +1142,11 @@ function validateClientMessage(raw) {
   }
   if (msg.type === "home") {
     // The home plot (lib/homestead.js): only known actions and plain fields get through.
-    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName"];
+    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName"];
     if (!HOME.includes(msg.action)) return null;
     const word = v => typeof v === "string" && v.length <= 32 ? v : undefined;
     const num = v => Number.isFinite(v) ? v : undefined;
-    return { type: "home", action: msg.action, plot: Number.isInteger(msg.plot) ? msg.plot : undefined, crop: word(msg.crop), world: word(msg.world),
+    return { type: "home", action: msg.action, plot: Number.isInteger(msg.plot) ? msg.plot : undefined, crop: word(msg.crop), world: word(msg.world), house: word(msg.house),
       x: num(msg.x), y: num(msg.y), dir: num(msg.dir), moving: msg.moving === true,
       species: word(msg.species), color: word(msg.color), spot: Number.isInteger(msg.spot) ? msg.spot : undefined,
       id: msg.id === null ? null : Number.isInteger(msg.id) ? msg.id : undefined, name: typeof msg.name === "string" ? msg.name.slice(0, 40) : undefined };

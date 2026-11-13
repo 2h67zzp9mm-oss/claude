@@ -32,7 +32,8 @@ const FISH = {
   golden: { name: "Golden Fish", sell: 40, weight: 1 }
 };
 const PLOTS = 16;
-const WORLDS = ["clay", "scifi", "castle"];
+const WORLDS = ["clay", "scifi", "castle", "night"];
+const HOUSES = ["stump", "shroom", "willow", "moon"];   // Night Forest: each family picks its house
 const WATER_HOURS = 6;
 const DRY_SPEED = 0.35;
 // Start small, then upgrade: each garden level opens more beds and better seeds.
@@ -184,7 +185,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       plots: h.plots.map(p => p.crop ? { crop: p.crop, growth: Math.round(p.growth * 100) / 100, wet: now < Number(p.wateredAt || 0) + WATER_HOURS * 3600_000 } : { crop: null }),
       beds: bedsOf(h), level: levelOf(h) + 1, shop: cropsOf(h),
       upgrade: LEVELS[levelOf(h) + 1] ? { cost: LEVELS[levelOf(h) + 1].cost, beds: LEVELS[levelOf(h) + 1].beds, crops: LEVELS[levelOf(h) + 1].crops } : null,
-      world: WORLDS.includes(h.world) ? h.world : "clay",
+      world: WORLDS.includes(h.world) ? h.world : "clay", house: HOUSES.includes(h.house) ? h.house : "stump",
       seeds: h.seeds, bag: h.bag, caught: h.caught, stars: me?.stars || 0,
       pets: me ? petView(h, id, me.id, now) : null,
       mail: h.mailDay !== dayKey(now), others,
@@ -281,7 +282,12 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       case "world": {
         if (!WORLDS.includes(msg.world)) return { ok: false, toast: "That world isn't built yet." };
         h.world = msg.world;
-        return { ok: true, toast: { scifi: "🚀 Welcome to your space colony!", castle: "🏰 Welcome to Cloud Castle!" }[msg.world] || "🤍 Back to the clay world." };
+        return { ok: true, toast: { scifi: "🚀 Welcome to your space colony!", castle: "🏰 Welcome to Cloud Castle!", night: "🌙 Welcome to the Night Forest!" }[msg.world] || "🤍 Back to the clay world." };
+      }
+      case "house": {
+        if (!HOUSES.includes(msg.house)) return { ok: false, toast: "That house isn't built yet." };
+        h.house = msg.house;
+        return { ok: true, toast: "🏠 Moved into your new house!" };
       }
       case "upgrade": {
         const next = LEVELS[levelOf(h) + 1];
