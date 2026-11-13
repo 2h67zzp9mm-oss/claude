@@ -82,6 +82,23 @@ test("home plot: the family can switch worlds", () => {
   assert.equal(hs.act(state, "h", me, { action: "world", world: "nope" }, 0).ok, false);
 });
 
+test("home plot: worlds with several houses remember the family's pick per world", () => {
+  const { createHomestead } = require("../lib/homestead");
+  const hs = createHomestead(); const state = { residents: [] }; const me = { id: "dad", stars: 0 };
+  assert.equal(hs.view(state, "h", me, 0).house, null, "the clay world has one house");
+  assert.equal(hs.act(state, "h", me, { action: "house", house: "ship" }, 0).ok, false, "no house picker outside those worlds");
+  assert.equal(hs.act(state, "h", me, { action: "world", world: "pirate" }, 0).ok, true, "Pirate Cove is built");
+  assert.equal(hs.view(state, "h", me, 0).house, "shack");
+  assert.equal(hs.act(state, "h", me, { action: "house", house: "stump" }, 0).ok, false, "a Night Forest house isn't in Pirate Cove");
+  assert.equal(hs.act(state, "h", me, { action: "house", house: "ship" }, 0).ok, true);
+  assert.equal(hs.view(state, "h", me, 0).house, "ship");
+  hs.act(state, "h", me, { action: "world", world: "night" }, 0);
+  assert.equal(hs.view(state, "h", me, 0).house, "stump");
+  hs.act(state, "h", me, { action: "house", house: "moon" }, 0);
+  hs.act(state, "h", me, { action: "world", world: "pirate" }, 0);
+  assert.equal(hs.view(state, "h", me, 0).house, "ship", "each world keeps its own house");
+});
+
 // Playtest bot: a real server, a signed-in phone, every home plot action over the real connection.
 test("on a real server: the playtest bot plays the whole home plot", async () => {
   const { tempDir, freePort, spawnServer, waitForStart, api, connectClient, until, stop } = require("./helpers");

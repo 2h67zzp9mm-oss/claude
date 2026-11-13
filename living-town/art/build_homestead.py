@@ -5,14 +5,14 @@ import sys, os, json
 from PIL import Image, ImageEnhance
 # sci-fi: punch up colour so it pops on a phone (walkers are left alone)
 def pop(im):
-    if WORLD not in ('scifi', 'castle', 'night'): return im
+    if WORLD not in ('scifi', 'castle', 'night', 'pirate'): return im
     a = im.getchannel('A'); rgb = ImageEnhance.Contrast(ImageEnhance.Color(im.convert('RGB')).enhance(1.3 if WORLD == 'castle' else 1.2)).enhance(1.1)
     rgb = ImageEnhance.Brightness(rgb).enhance(1.05); out = rgb.convert('RGBA'); out.putalpha(a); return out
 RD, WD = sys.argv[1], sys.argv[2]
 WORLD = sys.argv[3] if len(sys.argv) > 3 else ''   # e.g. scifi -> public/homestead/worlds/scifi/
 OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'homestead', *(['worlds', WORLD] if WORLD else [])); os.makedirs(OUT, exist_ok=True)
 cam = json.load(open(os.path.join(RD, 'camera.json')))
-art = {'camera': cam, 'sprites': {}, 'walkers': {}, 'bg': {'scifi': '#2b1d47', 'castle': '#e7b3d3', 'night': '#1d1a4a'}.get(WORLD, '#7d8fae')}
+art = {'camera': cam, 'sprites': {}, 'walkers': {}, 'bg': {'scifi': '#2b1d47', 'castle': '#e7b3d3', 'night': '#1d1a4a', 'pirate': '#3ec6d0'}.get(WORLD, '#7d8fae')}
 # a painted sky behind the island (Cloud Castle)
 SKY = os.path.join(os.path.dirname(__file__), 'textures', WORLD, 'sky.jpg') if WORLD else ''
 if SKY and os.path.exists(SKY): Image.open(SKY).convert('RGB').save(os.path.join(OUT, 'sky.webp'), quality=85, method=6); art['sky'] = True
@@ -21,7 +21,7 @@ g = pop(Image.open(os.path.join(RD, 'ground.png')).convert('RGBA'))
 g.save(os.path.join(OUT, 'ground.webp'), quality=88, method=6)
 # one house, or (Night Forest) several the family picks from: house_<id>.png -> house_<id>.webp, the first is also house.webp
 hs = sorted(f[6:-4] for f in os.listdir(RD) if f.startswith('house_') and f.endswith('.png'))
-order = ['stump', 'shroom', 'willow', 'moon']; hs.sort(key=lambda k: order.index(k) if k in order else 99)
+order = ['stump', 'shroom', 'willow', 'moon', 'shack', 'ship', 'light', 'chest']; hs.sort(key=lambda k: order.index(k) if k in order else 99)
 for k in (hs or [None]):
     h = pop(Image.open(os.path.join(RD, 'house_%s.png' % k if k else 'house.png')).convert('RGBA')); bb = h.getbbox(); rect = {'x': bb[0], 'y': bb[1], 'w': bb[2] - bb[0], 'h': bb[3] - bb[1]}
     if k: h.crop(bb).save(os.path.join(OUT, 'house_%s.webp' % k), quality=90, method=6); art.setdefault('houses', {})[k] = rect

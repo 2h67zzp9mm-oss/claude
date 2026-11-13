@@ -36,7 +36,7 @@ SCIFI = {
     'lampglow': ((1.0, 0.85, 0.55), 3.5, 0), 'paving': ((0.26, 0.18, 0.28), 0, 0),
     'c_watermelon': ((0.3, 1.0, 0.4), 2.4, 0), 'c_pumpkin': ((1.0, 0.5, 0.05), 2.4, 0), 'leaf': ((0.12, 0.55, 0.40), 0.15, 0),
 }
-SKY = {'clay': (0.62, 0.68, 0.78), 'scifi': (0.42, 0.30, 0.62), 'castle': (0.86, 0.72, 0.86), 'night': (0.16, 0.16, 0.40)}[THEME]
+SKY = {'clay': (0.62, 0.68, 0.78), 'scifi': (0.42, 0.30, 0.62), 'castle': (0.86, 0.72, 0.86), 'night': (0.16, 0.16, 0.40), 'pirate': (0.70, 0.86, 0.98)}[THEME]
 
 def reset(w, h, scale, centre):
     bpy.ops.wm.read_factory_settings(use_empty=True); _mats.clear()
@@ -68,6 +68,15 @@ def reset(w, h, scale, centre):
         nt.interface.new_socket('Image', in_out='OUTPUT', socket_type='NodeSocketColor')
         rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
         gl.inputs['Type'].default_value = 'Bloom'; gl.inputs['Threshold'].default_value = 0.7; gl.inputs['Strength'].default_value = 0.8; gl.inputs['Size'].default_value = 0.6
+        nt.links.new(rl.outputs['Image'], gl.inputs['Image']); nt.links.new(gl.outputs['Image'], out.inputs[0])
+    if THEME == 'pirate':   # bright tropical sun, sea-blue fill light, a little bloom
+        sun.color = (1.0, 0.95, 0.82); sun.energy = 2.7; so.rotation_euler = (R(46), 0, R(-30))
+        rim = bpy.data.lights.new('rim', 'SUN'); rim.energy = 0.9; rim.color = (0.60, 0.88, 1.0); ro = bpy.data.objects.new('rim', rim); sc.collection.objects.link(ro); ro.rotation_euler = (R(60), 0, R(150))
+        wd.node_tree.nodes['Background'].inputs[1].default_value = 0.6
+        nt = bpy.data.node_groups.new('comp', 'CompositorNodeTree'); sc.compositing_node_group = nt
+        nt.interface.new_socket('Image', in_out='OUTPUT', socket_type='NodeSocketColor')
+        rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
+        gl.inputs['Type'].default_value = 'Bloom'; gl.inputs['Threshold'].default_value = 0.95; gl.inputs['Strength'].default_value = 0.4; gl.inputs['Size'].default_value = 0.5
         nt.links.new(rl.outputs['Image'], gl.inputs['Image']); nt.links.new(gl.outputs['Image'], out.inputs[0])
     if THEME == 'scifi':
         sun.color = (1.0, 0.86, 0.78); sun.energy = 2.7
@@ -433,15 +442,16 @@ def sprite(name, build, size=2.0, pxsize=None, side=False):
     sc.render.filepath = os.path.join(OUT, 'sprites', name + '.png'); bpy.ops.render.render(write_still=True)
     return project(sc, cam, (0, 0, 0))
 
-CS = THEME in ('castle', 'night')
+CS = THEME in ('castle', 'night', 'pirate')
 if CS: exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'castle_world.py')).read())
-if THEME == 'night': exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'night_world.py')).read())
+if THEME in ('night', 'pirate'):   # worlds with several houses to pick from
+    for _f in ('smooth_shapes.py', THEME + '_world.py'): exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), _f)).read())
 anchors = {}
 mode = sys.argv[sys.argv.index('--') + 2] if len(sys.argv) > sys.argv.index('--') + 2 else 'all'
 S = L['size']; centre = (S / 2, S / 2, 1.6)
 if mode in ('all', 'scene', 'house'):
     parts = [('ground', ground_castle if CS else ground_scifi if THEME == 'scifi' else ground_scene), ('house', castle_scene if CS else dome_scene if THEME == 'scifi' else house_scene)]
-    if THEME == 'night': parts = parts[:1] + [('house_' + k, fn) for k, fn in HOUSES if os.environ.get('HOUSE', k) == k]   # four houses to pick from
+    if THEME in ('night', 'pirate'): parts = parts[:1] + [('house_' + k, fn) for k, fn in HOUSES if os.environ.get('HOUSE', k) == k]   # four houses to pick from
     if mode == 'house': parts = parts[1:]
     for part, fn in parts:
         sc, cam = reset(W, H, W / PPM, centre); fn()

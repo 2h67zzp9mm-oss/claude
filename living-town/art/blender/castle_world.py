@@ -71,21 +71,8 @@ def flower_dot(x, y, c, s=1.0):
         a = k * 1.256; ball(x + 0.045 * s * math.cos(a), y + 0.045 * s * math.sin(a), 0.035, 0.035 * s, 0.035 * s, 0.018 * s, 'f%d' % c)
     ball(x, y, 0.045, 0.022 * s, 0.022 * s, 0.015 * s, 'f3' if c != 3 else 'f4')
 
-def ground_castle():
-    S = L['size']; P = L['pond']
-    bm = bmesh.new(); N = 84; verts = {}
-    for i in range(N + 1):
-        for j in range(N + 1):
-            x, y = i * S / N, j * S / N
-            e = ((x - P['x']) / P['rx']) ** 2 + ((y - P['y']) / P['ry']) ** 2
-            z = -0.45 * max(0, 1 - e) ** 0.6 if e < 1 else 0.025 * math.sin(x * 1.1) * math.cos(y * 0.9)
-            verts[i, j] = bm.verts.new((x, y, z))
-    for i in range(N):
-        for j in range(N): bm.faces.new((verts[i, j], verts[i + 1, j], verts[i + 1, j + 1], verts[i, j + 1]))
-    me = bpy.data.meshes.new('ground'); bm.to_mesh(me); o = bpy.data.objects.new('ground', me); bpy.context.scene.collection.objects.link(o)
-    o.data.materials.append(mat('grass')); bpy.context.view_layer.objects.active = o; o.select_set(True); bpy.ops.object.shade_smooth()
-    # grassy lip, then the rocky cliff of the floating island, tapering down into clouds
-    box(0, 0, -0.56, S, S, -0.47, 'grass')   # keep its top below the pond so the water shows
+def island_under(rr):
+    S = L['size']
     # one smooth island underside: a dirt band under the grass, then a rounded rock cone tapering into the clouds
     def rring(bm, inset, z, cr, n=24):
         pts = []; x0, y0, x1, y1 = inset, inset, S - inset, S - inset
@@ -103,12 +90,42 @@ def ground_castle():
         o = bpy.data.objects.new(col, me); bpy.context.scene.collection.objects.link(o); o.data.materials.append(mat(col)); return o
     loft([(0.0, -0.02, 0.05), (0.0, -0.5, 0.05), (0.04, -0.62, 0.12)], 'dirt')
     loft([(0.04, -0.6, 0.12)] + [(0.04 + 2.6 * t ** 1.6, -0.6 - 3.0 * t, 0.12 + 2.0 * t) for t in (0.1, 0.25, 0.4, 0.55, 0.7, 0.82, 0.92, 1.0)], 'cliff')
-    import random as _r; rr = _r.Random(5)
     for k in range(int(S / 0.7)):                                                                # soft clouds hugging the bottom
         t = (k + 0.3) * 0.7 - 1.0
         for (x, y) in ((t, -0.9 + rr.uniform(-0.6, 0.6)), (S + 0.9 + rr.uniform(-0.6, 0.6), t)):
             r = 0.7 + 0.9 * rr.random(); ball(x, y, -2.4 - 0.9 * rr.random(), r * 1.3, r * 1.3, r * 0.75, 'cloud' if k % 3 else 'cloud2')
             ball(x + rr.uniform(-0.5, 0.5), y + rr.uniform(-0.5, 0.5), -1.9 - 0.4 * rr.random(), r * 0.7, r * 0.7, r * 0.5, 'cloud')
+def garden_fence(ax, ay, bx, by):
+    Lf = math.hypot(bx - ax, by - ay); n = max(1, int(Lf / 1.15)); horiz = abs(bx - ax) > abs(by - ay)
+    for k in range(n + 1):
+        t = k / n; x, y = ax + (bx - ax) * t, ay + (by - ay) * t
+        rbox(x - 0.1, y - 0.1, 0, x + 0.1, y + 0.1, 0.78, 'cream', 0.03); rbox(x - 0.13, y - 0.13, 0.74, x + 0.13, y + 0.13, 0.82, 'cream', 0.02)
+        bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.12, depth=0.22, location=(x, y, 0.93), rotation=(0, 0, R(45))); put(bpy.context.object, 'gold')
+    m = max(1, int(Lf / 0.2))
+    for k in range(m):
+        t = (k + 0.5) / m; x, y = ax + (bx - ax) * t, ay + (by - ay) * t
+        box(x - 0.035, y - 0.035, 0, x + 0.035, y + 0.035, 0.52, 'cream')
+        bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.05, depth=0.1, location=(x, y, 0.57), rotation=(0, 0, R(45))); put(bpy.context.object, 'cream')
+    for z in (0.16, 0.4):
+        if horiz: box(min(ax, bx), ay - 0.025, z, max(ax, bx), ay + 0.025, z + 0.06, 'cream')
+        else: box(ax - 0.025, min(ay, by), z, ax + 0.025, max(ay, by), z + 0.06, 'cream')
+def ground_castle():
+    S = L['size']; P = L['pond']
+    bm = bmesh.new(); N = 84; verts = {}
+    for i in range(N + 1):
+        for j in range(N + 1):
+            x, y = i * S / N, j * S / N
+            e = ((x - P['x']) / P['rx']) ** 2 + ((y - P['y']) / P['ry']) ** 2
+            z = -0.45 * max(0, 1 - e) ** 0.6 if e < 1 else 0.025 * math.sin(x * 1.1) * math.cos(y * 0.9)
+            verts[i, j] = bm.verts.new((x, y, z))
+    for i in range(N):
+        for j in range(N): bm.faces.new((verts[i, j], verts[i + 1, j], verts[i + 1, j + 1], verts[i, j + 1]))
+    me = bpy.data.meshes.new('ground'); bm.to_mesh(me); o = bpy.data.objects.new('ground', me); bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(mat('grass')); bpy.context.view_layer.objects.active = o; o.select_set(True); bpy.ops.object.shade_smooth()
+    # grassy lip, then the rocky cliff of the floating island, tapering down into clouds
+    box(0, 0, -0.56, S, S, -0.47, 'grass')   # keep its top below the pond so the water shows
+    import random as _r; rr = _r.Random(5)
+    island_under(rr)   # the island's underside (other worlds swap this)
     # pond: clear blue water, ring of boulders, lily pads with lotus, sparkles, a little waterfall at the back
     bpy.ops.mesh.primitive_circle_add(vertices=64, radius=1, fill_type='NGON', location=(P['x'], P['y'], -0.08))
     w = bpy.context.object; w.scale = (P['rx'] * 0.96, P['ry'] * 0.96, 1); put(w, 'water')
@@ -144,20 +161,7 @@ def ground_castle():
             o = bpy.context.object; o.scale = (1.15, 1, 1); put(o, 'path'); m = o.modifiers.new('b', 'BEVEL'); m.width = 0.03; m.segments = 2
     # garden: grass inside, cream picket fence, chunky posts with gold tips
     G = L['garden']; gx, gy, gw = G['gate']
-    def fence(ax, ay, bx, by):
-        Lf = math.hypot(bx - ax, by - ay); n = max(1, int(Lf / 1.15)); horiz = abs(bx - ax) > abs(by - ay)
-        for k in range(n + 1):
-            t = k / n; x, y = ax + (bx - ax) * t, ay + (by - ay) * t
-            rbox(x - 0.1, y - 0.1, 0, x + 0.1, y + 0.1, 0.78, 'cream', 0.03); rbox(x - 0.13, y - 0.13, 0.74, x + 0.13, y + 0.13, 0.82, 'cream', 0.02)
-            bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.12, depth=0.22, location=(x, y, 0.93), rotation=(0, 0, R(45))); put(bpy.context.object, 'gold')
-        m = max(1, int(Lf / 0.2))
-        for k in range(m):
-            t = (k + 0.5) / m; x, y = ax + (bx - ax) * t, ay + (by - ay) * t
-            box(x - 0.035, y - 0.035, 0, x + 0.035, y + 0.035, 0.52, 'cream')
-            bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.05, depth=0.1, location=(x, y, 0.57), rotation=(0, 0, R(45))); put(bpy.context.object, 'cream')
-        for z in (0.16, 0.4):
-            if horiz: box(min(ax, bx), ay - 0.025, z, max(ax, bx), ay + 0.025, z + 0.06, 'cream')
-            else: box(ax - 0.025, min(ay, by), z, ax + 0.025, max(ay, by), z + 0.06, 'cream')
+    fence = garden_fence
     x0, y0, x1, y1 = G['x0'], G['y0'], G['x1'], G['y1']
     fence(x0, y0, x1, y0); fence(x0, y1, x1, y1); fence(x0, y0, x0, y1)
     fence(x1, y0, x1, gy - gw / 2); fence(x1, gy + gw / 2, x1, y1)

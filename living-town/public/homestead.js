@@ -5,8 +5,9 @@
   "use strict";
   let BASE = "homestead/";
   // Worlds: same plot and gameplay, different paint. Art for each lives in homestead/worlds/<id>/.
-  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/" }, castle: { name: "Cloud Castle", icon: "🏰", dir: "homestead/worlds/castle/" }, night: { name: "Night Forest", icon: "🌙", dir: "homestead/worlds/night/" } };
-  const HOUSE_NAMES = { stump: "🪵 Stump House", shroom: "🍄 Mushroom House", willow: "🌳 Willow Treehouse", moon: "🌙 Moon Crystal Cottage" };
+  const WORLDS = { clay: { name: "Clay", icon: "🤍", dir: "homestead/" }, scifi: { name: "Sci-fi", icon: "🚀", dir: "homestead/worlds/scifi/" }, castle: { name: "Cloud Castle", icon: "🏰", dir: "homestead/worlds/castle/" }, night: { name: "Night Forest", icon: "🌙", dir: "homestead/worlds/night/" }, pirate: { name: "Pirate Cove", icon: "🏴‍☠️", dir: "homestead/worlds/pirate/" } };
+  const HOUSE_NAMES = { night: { stump: "🪵 Stump House", shroom: "🍄 Mushroom House", willow: "🌳 Willow Treehouse", moon: "🌙 Moon Crystal Cottage" },
+    pirate: { shack: "🛖 Beach Shack", ship: "⛵ Pirate Ship", light: "🗼 Lighthouse", chest: "💰 Treasure Chest" } };
   let houseId = "stump";
   let world = "clay";
   const SPEED = 5;            // metres per second (2.6 felt far too slow on a phone)
@@ -299,12 +300,12 @@
       [{ label: soundOn ? "🔊 Sound on" : "🔈 Sound off", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "Back", big: true, go: idleBar }]);
   }
   function worldBar() {
-    setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); k === "night" ? houseBar() : idleBar(); } })),
-      ...(world === "night" ? [{ label: "🏠 Pick house", go: houseBar }] : []), { label: "Back", go: idleBar }]);
+    setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); HOUSE_NAMES[k] ? houseBar(k) : idleBar(); } })),
+      ...(HOUSE_NAMES[world] ? [{ label: "🏠 Pick house", go: () => houseBar() }] : []), { label: "Back", go: idleBar }]);
   }
-  // Night Forest has four houses; the family picks one (everyone sees the same)
-  function houseBar() {
-    setBar("Which house do you want to live in?", [...Object.entries(HOUSE_NAMES).map(([k, n]) => ({ label: n, big: k === houseId, go: () => { act("house", { house: k }); idleBar(); } })), { label: "Back", go: idleBar }]);
+  // Night Forest and Pirate Cove have four houses each; the family picks one (everyone sees the same)
+  function houseBar(w = world) {
+    setBar("Which house do you want to live in?", [...Object.entries(HOUSE_NAMES[w] || {}).map(([k, n]) => ({ label: n, big: k === houseId, go: () => { act("house", { house: k }); idleBar(); } })), { label: "Back", go: idleBar }]);
   }
   function houseArt() { const k = A.houses && A.houses[houseId] ? houseId : null; return k ? { r: A.houses[k], img: imgs["house_" + k] } : { r: A.house, img: imgs.house }; }
   function setWorld(k) {
