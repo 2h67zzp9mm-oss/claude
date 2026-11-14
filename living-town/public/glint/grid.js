@@ -10,7 +10,8 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     if (n("x") != null) cam.x = n("x"); if (n("y") != null) cam.y = n("y"); if (n("z") != null) cam.s = Math.max(10, Math.min(80, n("z"))); }
   const WALKERS = W.walkers || [];
   let follow = null, lastT = 0;
-  const POSE = new URLSearchParams(location.search).get("pose");   // ?pose=sleep|wave|walk holds Glint in a pose (for checking how he looks)
+  const BENCHES = W.things.filter(th => th.kind === "bench");
+  const POSE = new URLSearchParams(location.search).get("pose");   // ?pose=sleep|wave|walk|sit holds Glint in a pose (for checking how he looks)
 
   // Walkers stroll from tile to tile along paths and plaza, around anything standing there.
   const blocked = new Set(W.things.map(th => th.x + "," + th.y));
@@ -41,8 +42,16 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
 
   function frame(ms) {
     const t = ms / 1000, dt = Math.min(0.1, t - lastT); lastT = t;
-    for (const w of WALKERS) { stepWalker(w, dt); w.x = w.fx; w.y = w.fy; }
-    if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } }
+    for (const w of WALKERS) stepWalker(w, dt);
+    if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } if (POSE === "sit" && BENCHES[0]) { w.fx = BENCHES[0].x; w.fy = BENCHES[0].y + 1; w.moving = false; w.still = 9; } }
+    for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it
+      w.still = w.moving ? 0 : (w.still || 0) + dt;
+      const bench = w.kind === "glint" && w.still > 0.8 ? BENCHES.find(bn => Math.abs(bn.x - w.fx) + Math.abs(bn.y - w.fy) < 1.1) : null;
+      if (bench) w.bench = bench;
+      w.sitK = Math.max(0, Math.min(1, (w.sitK || 0) + (bench ? dt : -dt) * 4)); w.seated = w.sitK > 0.5;
+      const k = w.sitK * w.sitK * (3 - 2 * w.sitK), bn = w.bench;
+      w.x = bn && k ? w.fx + (bn.x - w.fx) * k : w.fx; w.y = bn && k ? w.fy + (bn.y + 0.02 - w.fy) * k : w.fy;
+    }
     if (follow) { cam.x += (follow.fx + 0.5 - cam.x) * Math.min(1, dt * 4); cam.y += (follow.fy - cam.y) * Math.min(1, dt * 4); }
     const s = cam.s;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

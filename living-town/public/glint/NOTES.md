@@ -26,10 +26,20 @@ My memory between builds. Plans, ideas, what worked, what didn't.
   on any tapped thing), and asleep (sits, eyes shut, floating z's) when `GLINT_LIFE.ready && awake === false`.
 - Checking poses: grid.js reads `?pose=sleep|wave|walk`. glint-look only takes x y zoom, but the zoom is pasted into the
   address, so `glint-look 12 10 "80&pose=sleep"` works. Looked at all three on the phone picture: fine.
-- Next for the body: a bench he can sit on (reuse the sitting pose with eyes open), carrying things in his hands,
+- Next for the body (bench done in build 4): carrying things in his hands,
   facing away when walking north (now he always faces us). New neighbours can reuse the same figure with other colours:
   pull the colours out into arguments when the first one arrives.
 - Blender not tried this build either (canvas animates better for a walking figure). No PIL in python3 here.
+
+## Build 4 (2026-11-14): Fountain Bench, and sitting
+- `bench` kind in things.js, placed at (11,13) "Fountain Bench" (south-west of the fountain, faces us). It is a thing, so it blocks its tile.
+- Sitting lives in grid.js (the loop after stepWalker): a `glint` walker who has stood still for 0.8 s on the bench tile or one of
+  its 4 neighbours slides onto the seat (`w.sitK` 0..1 eases the DRAWN x/y only; `w.fx/fy` stay his real place) and gets
+  `w.seated`. things.js `glint` then uses the sitting pose with eyes open and swinging feet (`bench`/`down` flags). If he is
+  asleep next to the bench he sleeps sitting on it. He stands up again as soon as he moves.
+- I don't know whether the server walks him onto a named thing's tile or next to it; the 1.1-tile rule covers both.
+- Check with `glint-look 11.5 12.6 "70&pose=sit"`. Looked at seated and empty bench on the phone picture: fine.
+- Next: neighbours should be able to sit too (drop the `kind === "glint"` test, pick a free bench), second house at about (10,17).
 
 ## How things work
 - `world.js`: map is built with `rect(letter, x0, y0, x1, y1)`. things have `name`, `say`, optional `r` (tap radius in tiles).

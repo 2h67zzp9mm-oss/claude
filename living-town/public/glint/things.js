@@ -125,6 +125,26 @@
       }
     },
 
+    // A bench for sitting on. It faces us; whoever sits on it is drawn just after it, on the seat.
+    bench(ctx, x, y, s, t) {
+      const b = y + s * 0.3, w = s * 0.46, seat = b - s * 0.2, top = b - s * 0.56;
+      shadow(ctx, x, b + s * 0.02, s * 0.5, s * 0.1);
+      glow(ctx, x, seat, s * 0.75, "150,120,255", 0.16);
+      ctx.fillStyle = "#3b2f7a";                                                                    // back legs and back posts
+      for (const d of [-1, 1]) ctx.fillRect(x + d * w * 0.86 - s * 0.03, top + s * 0.05, s * 0.06, b - top - s * 0.1);
+      poly(ctx, [[x - w, top + s * 0.03], [x - w * 0.5, top - s * 0.03], [x + w * 0.5, top - s * 0.03], [x + w, top + s * 0.03], [x + w, top + s * 0.2], [x - w, top + s * 0.2]], "#6d55c9");   // back rest
+      poly(ctx, [[x - w, top + s * 0.03], [x - w * 0.5, top - s * 0.03], [x + w * 0.5, top - s * 0.03], [x + w, top + s * 0.03], [x + w, top + s * 0.07], [x - w, top + s * 0.07]], "#a48cff");
+      for (const d of [-1, 0, 1]) gem(ctx, x + d * w * 0.55, top + s * 0.13, s * 0.035, s * 0.05, "#fff3c9", "#ffd166", "#d99a2b");
+      poly(ctx, [[x - w, seat - s * 0.07], [x + w, seat - s * 0.07], [x + w * 1.08, seat + s * 0.03], [x - w * 1.08, seat + s * 0.03]], "#33508f");      // seat
+      poly(ctx, [[x - w * 1.08, seat + s * 0.03], [x + w * 1.08, seat + s * 0.03], [x + w * 1.08, seat + s * 0.09], [x - w * 1.08, seat + s * 0.09]], "#1a2c63");
+      ctx.fillStyle = "#57e1ff"; ctx.fillRect(x - w * 1.08, seat + s * 0.02, w * 2.16, Math.max(1, s * 0.025));
+      for (const d of [-1, 1]) {                                                                    // front legs with gold feet
+        ctx.fillStyle = "#2a3f7a"; ctx.fillRect(x + d * w * 0.9 - s * 0.035, seat + s * 0.09, s * 0.07, b - seat - s * 0.1);
+        ctx.fillStyle = "#ffd166"; ctx.fillRect(x + d * w * 0.9 - s * 0.05, b - s * 0.03, s * 0.1, s * 0.04);
+        glow(ctx, x + d * w * 1.08, seat, s * 0.1 * (0.8 + 0.2 * Math.sin(t * 2 + d)), "87,225,255", 0.7);
+      }
+    },
+
     sign(ctx, x, y, s) {
       const b = y + s * 0.3;
       shadow(ctx, x, b, s * 0.22, s * 0.08);
@@ -138,9 +158,10 @@
     // and when GLINT_LIFE says he's asleep he sits down with his eyes shut.
     glint(ctx, x, y, s, t, th) {
       const life = window.GLINT_LIFE, asleep = !!(life && life.ready && life.awake === false) || th.asleep;
-      const walk = th.moving && !asleep, ph = t * 9, dir = th.dx || 0, look = asleep ? 0 : dir * s * 0.05;
+      const walk = th.moving && !asleep && !th.seated, ph = t * 9, dir = th.dx || 0, look = asleep || th.seated ? 0 : dir * s * 0.05;
       const wave = !asleep && th.tapped != null && t - th.tapped >= 0 && t - th.tapped < 2.2;
-      const b = y + s * 0.3, sit = asleep ? s * 0.16 : 0;
+      const bench = th.seated && !th.moving, down = asleep || bench;     // down: sitting, on the ground (asleep) or on a bench
+      const b = y + s * 0.3, sit = bench ? s * 0.03 : asleep ? s * 0.16 : 0;
       const bob = asleep ? Math.sin(t * 1.2) * s * 0.012 : walk ? Math.abs(Math.sin(ph)) * s * 0.04 : Math.sin(t * 2.2) * s * 0.015;
       const hip = b - s * 0.2 + sit - bob, sh = hip - s * 0.3, hy = sh - s * 0.25 + (asleep ? s * 0.03 : 0), lw = Math.max(1.5, s * 0.07);
       shadow(ctx, x, b, s * 0.3, s * 0.1);
@@ -150,15 +171,16 @@
       // legs and feet
       for (const d of [-1, 1]) {
         const sw = walk ? Math.sin(ph + (d > 0 ? Math.PI : 0)) : 0, hx = x + d * s * 0.075;
-        const fx = asleep ? hx + d * s * 0.16 : hx + sw * s * 0.09 * (dir || 0), fy = asleep ? b - s * 0.02 : b - s * 0.03 - Math.max(0, sw) * s * 0.07;
+        const kick = bench && !asleep ? Math.sin(t * 2.4 + d) * s * 0.025 : 0;                                   // feet swing a little on the bench
+        const fx = down ? hx + d * s * (bench ? 0.07 : 0.16) + kick : hx + sw * s * 0.09 * (dir || 0), fy = down ? b - s * 0.02 : b - s * 0.03 - Math.max(0, sw) * s * 0.07;
         ctx.strokeStyle = "#2f8fd8"; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(hx, hip - s * 0.02); ctx.lineTo(fx, fy); ctx.stroke();
-        ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.ellipse(fx + (asleep ? d : dir) * s * 0.025, fy, s * 0.075, s * 0.045, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.ellipse(fx + (down ? d : dir) * s * 0.025, fy, s * 0.075, s * 0.045, 0, 0, TAU); ctx.fill();
       }
       // far arm (behind the tunic), tunic, belt
       const arm = (d, front) => {
         const sw = walk ? Math.sin(ph + (d > 0 ? 0 : Math.PI)) : 0, ax = x + d * s * 0.13, ay = sh + s * 0.05;
         let hx2 = ax + d * s * 0.1 + sw * s * 0.08 * (dir || 0), hy2 = ay + s * 0.2 - Math.abs(sw) * s * 0.03;
-        if (asleep) { hx2 = ax + d * s * 0.05; hy2 = ay + s * 0.2; }
+        if (down) { hx2 = ax + d * s * 0.05; hy2 = ay + s * 0.2; }
         if (wave && d > 0) { const a = -1.0 + Math.sin(t * 11) * 0.4; hx2 = ax + Math.cos(a) * s * 0.27; hy2 = ay + Math.sin(a) * s * 0.27; }
         ctx.strokeStyle = front ? "#8fefff" : "#2f8fd8"; ctx.lineWidth = lw * 0.85; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(hx2, hy2); ctx.stroke();
         glow(ctx, hx2, hy2, s * 0.13, "255,250,200", 0.8);

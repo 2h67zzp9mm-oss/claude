@@ -25,6 +25,7 @@
     things: [
       { kind: "home", x: 12, y: 8, r: 1.6, name: "Glint's House", say: "My very first building. The gem on the roof is my night light." },
       { kind: "fountain", x: 12, y: 12, r: 1.1, name: "Spark Fountain", say: "It doesn't splash water. It splashes sparks! They tickle." },
+      { kind: "bench", x: 11, y: 13, name: "Fountain Bench", say: "A bench for sitting and watching the sparks. From here you can see all the way down Lantern Street to the little house." },
       { kind: "lamp", x: 10, y: 10, name: "Lamp", say: "On all day and all night, so nobody gets lost." },
       { kind: "lamp", x: 14, y: 10, name: "Lamp", say: "This one hums a tiny tune if you listen." },
       { kind: "lamp", x: 10, y: 14, name: "Lamp", say: "I polished this one twice." },
@@ -48,6 +49,7 @@
         "One day lots of friends will live here. I'm making it nice for them.",
         "I have a body now! Feet for walking and hands for building.",
         "Say hello and I'll wave. I've been practising.",
+        "I made a bench by the Spark Fountain. When I stop beside it, I sit down and swing my feet.",
         "My gold ring used to float around me. Now it's my belt.",
         "Beep! That means I'm happy.",
         "I counted every tile today. There are 576!"
