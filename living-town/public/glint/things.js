@@ -56,10 +56,10 @@
     // A little house with a round window. th.flip puts the door on the right (for the west side of the street),
     // th.roof = [left, right, shine] gives it its own roof colours, th.stage "walls" is a house with no roof or door yet.
     cottage(ctx, x, y, s, t, th = {}) {
-      const m = th.flip ? -1 : 1, walls = th.stage === "walls", roof = th.roof || ["#27c9c2", "#178f96", "#6dffc6"];
+      const m = th.flip ? -1 : 1, walls = th.stage === "walls", nodoor = walls || th.stage === "roof", roof = th.roof || ["#27c9c2", "#178f96", "#6dffc6"];
       const b = y + s * 0.45, w = s * 0.88, h = s * 0.95, dx = x - m * w * 0.42, wx = x + m * w * 0.4, wy = b - h * 0.56;
       shadow(ctx, x, b, w * 1.15, s * 0.22);
-      if (!walls) glow(ctx, dx, b + s * 0.15, s * 1.0, "255,200,90", 0.22);
+      if (!nodoor) glow(ctx, dx, b + s * 0.15, s * 1.0, "255,200,90", 0.22);
       poly(ctx, [[x - w * 1.08, b], [x + w * 1.08, b], [x + w * 1.08, b - s * 0.1], [x - w * 1.08, b - s * 0.1]], "#33508f");
       const rt = b - h - s * 0.85;
       if (walls) {   // no roof yet: we see the back wall's top edge and the dark inside, with two bare roof beams
@@ -81,12 +81,18 @@
         poly(ctx, [[x, b - h], [x + w * 1.25, b - h], [x, rt]], roof[1]);
         poly(ctx, [[x - w * 1.25, b - h], [x - w * 0.6, b - h], [x, rt]], roof[2]);
         const p = 0.75 + 0.25 * Math.sin(t * 2 + 1);
-        glow(ctx, x, rt - s * 0.12, s * 0.55 * p, "255,110,190", 0.5);
-        gem(ctx, x, rt - s * 0.12, s * 0.11, s * 0.18, "#ffe3f3", "#ff78c4", "#d0419a");
+        const g = th.gem || ["255,110,190", "#ffe3f3", "#ff78c4", "#d0419a"];
+        glow(ctx, x, rt - s * 0.12, s * 0.55 * p, g[0], 0.5);
+        gem(ctx, x, rt - s * 0.12, s * 0.11, s * 0.18, g[1], g[2], g[3]);
+        if (th.gem) {   // a freshly set gem throws off a slow twinkle
+          const k = (t * 0.5 + (th.x || 0) * 0.37) % 1, a = Math.sin(k * Math.PI), L = s * 0.3 * a;
+          ctx.strokeStyle = "rgba(255,246,214," + (0.9 * a).toFixed(2) + ")"; ctx.lineWidth = Math.max(1, s * 0.025);
+          ctx.beginPath(); ctx.moveTo(x - L, rt - s * 0.12); ctx.lineTo(x + L, rt - s * 0.12); ctx.moveTo(x, rt - s * 0.12 - L); ctx.lineTo(x, rt - s * 0.12 + L); ctx.stroke();
+        }
       }
       // door (an open doorway with a gold frame until the door is hung)
       const doorway = () => { ctx.beginPath(); ctx.moveTo(dx - s * 0.19, b - s * 0.1); ctx.lineTo(dx - s * 0.19, b - s * 0.5); ctx.arc(dx, b - s * 0.5, s * 0.19, Math.PI, 0); ctx.lineTo(dx + s * 0.19, b - s * 0.1); };
-      if (walls) { ctx.fillStyle = "#0d1838"; doorway(); ctx.fill(); ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.035); doorway(); ctx.stroke(); }
+      if (nodoor) { ctx.fillStyle = "#0d1838"; doorway(); ctx.fill(); ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.035); doorway(); ctx.stroke(); }
       else { ctx.fillStyle = "#ffd166"; doorway(); ctx.fill(); ctx.fillStyle = "#b9791f"; ctx.beginPath(); ctx.arc(dx + m * s * 0.1, b - s * 0.36, s * 0.03, 0, TAU); ctx.fill(); }
       // the round window, with a soft light that breathes
       const R = s * 0.25, q = 0.8 + 0.2 * Math.sin(t * 1.3 + (th.x || 0));

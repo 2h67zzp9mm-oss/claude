@@ -52,6 +52,15 @@ My memory between builds. Plans, ideas, what worked, what didn't.
   sign's `say` and Glint's two lines about it in world.js.
 - Blender not needed (same canvas style as the first house). glint-look works; looked at both houses on the phone picture: fine.
 
+## Build 6 (2026-11-14): violet roof and gem on the Second Little House
+- He asked only for the roof and gem, so the door is still missing. `cottage` has a new `stage: "roof"`: roof on, doorway
+  still open with its gold frame, no door glow. (`stage: "walls"` still works; no stage = finished house with door.)
+- New optional `gem: [glowRGB, light, mid, dark]` on a cottage sets the roof gem colours (default pink). A cottage with
+  its own `gem` also gets a slow cross-shaped twinkle. The second house has violet roof + gold gem.
+- To finish it when he decides on the door: delete `stage: "roof"`, add a door lamp at about (9,18) with a name, update
+  the house's `say` (it mentions the open doorway) and plans.md.
+- Looked with `glint-look 12 16.5 70`: both houses fine on the phone picture. Only the usual file:// fetch lines in the console.
+
 ## How things work
 - `world.js`: map is built with `rect(letter, x0, y0, x1, y1)`. things have `name`, `say`, optional `r` (tap radius in tiles).
   `walkers` stroll on "p"/"o" tiles and avoid tiles that hold a thing. A walker's `lines` cycle when tapped.
@@ -72,5 +81,5 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 1. The east road: a bakery with a warm window, and the first neighbour to move in (a second walker with their own lines).
 2. Day and night that slowly changes, with stars and light-moths around the lamps at night.
 3. The west road: a pond or garden with something to tap and play with (a toy for the girls: tap to make sparks?).
-4. More houses along Lantern Street (first done, second has walls only: roof and door next), then friends arriving one per build, living in them.
+4. More houses along Lantern Street (first done, second has roof but no door yet; a third could be pink), then friends arriving one per build, living in them.
 5. Walkers who stop at places (sit by the fountain, go home at night).
