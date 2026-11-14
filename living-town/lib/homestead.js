@@ -11,6 +11,7 @@
  */
 
 const Q = require("./quests");   // levels, story, family build and collection book
+const Decor = require("./decor");   // inside the house: today's shop, stored things and the room
 
 const CROPS = {
   // The economy: every seed is worth planting. Quick crops are for when you're playing; slow ones pay the most
@@ -282,7 +283,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       seeds: h.seeds, bag: h.bag, caught: h.caught, stars: me?.stars || 0,
       pets: me ? petView(h, id, me.id, now) : null,
       me: me ? (() => { const l = Q.levelOf(player(h, me.id).xp); return { ...l, title: Q.titleOf(l.level), nextStars: Q.levelStars(l.level + 1), perks: Q.PERKS.map(k => ({ level: k.level, icon: k.icon, text: k.text })) }; })() : null,
-      story: storyView(h), build: buildView(h), book: bookView(h),
+      story: storyView(h), build: buildView(h), book: bookView(h), decor: Decor.view(h, { world: worldOf(h), householdId: id, now }),
       mail: h.mailDay !== dayKey(now), others,
       goals: daily(h, id, now).goals.map(g => ({ icon: GOALS[g.k].icon, text: GOALS[g.k].text(g.n), have: g.have, n: g.n })),
       streak: streakOf(h, now), streakToday: h.streakDay === dayKey(now), goalStars: me ? goalStars(h, me.id) : GOAL_STARS, allBonus: ALL_BONUS,
@@ -328,6 +329,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     grow(h, now);
     const plot = Number.isInteger(msg.plot) && msg.plot >= 0 && msg.plot < PLOTS ? h.plots[msg.plot] : null;
     if (plot && msg.plot >= bedsOf(h) && ["plant", "water", "harvest"].includes(msg.action)) return { ok: false, toast: "That bed isn't dug yet. Upgrade your garden at the crate!" };
+    if (Decor.ACTIONS.includes(msg.action)) return Decor.act(h, r, msg, { world: worldOf(h), householdId: id, now });   // lib/decor.js
     switch (msg.action) {
       case "pos": {
         const x = Number(msg.x), y = Number(msg.y);

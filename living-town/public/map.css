@@ -349,3 +349,10 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .home-ring .ring-btn.nudge { animation: ring-nudge .35s; }
 @keyframes ring-in { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes ring-nudge { 25% { translate: -4px 0; } 75% { translate: 4px 0; } }
+/* Inside your house (public/house-room.js): the room's canvas sits over the garden, under the top, bar and pop-up. */
+.homestead > canvas.house-room { touch-action: none; }
+.homestead > canvas.house-room.hidden { display: none; }
+.home-bar .room-picks { margin-top: 6px; }   /* stored things to put out, in the part of the panel that scrolls */
+.home-pop.room-ring { width: auto; max-width: calc(100% - 16px); }   /* Turn, Store, Done on the thing you picked */
+.home-pop.room-ring .home-actions { flex-wrap: nowrap; }
+.home-pop.room-ring .home-actions button { flex: 0 0 auto; min-width: 70px; }

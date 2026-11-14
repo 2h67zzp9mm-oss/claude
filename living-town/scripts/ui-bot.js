@@ -30,10 +30,11 @@ function findChrome() {
 const SCREENS = [
   ["idle", []], ["goals", ["Goals"]], ["story", ["Goals", "Story"]], ["build", ["Goals", "Build"]], ["book", ["Goals", "Book"]], ["level", ["Goals", "Level"]],
   ["pets", ["Pets"]], ["bag", ["Bag"]], ["look", ["Look"]], ["world", ["World"]], ["house", ["World", "Pick house"]],
-  ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]], ["shop", ["pop:crate", "Seed shop"]]
+  ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]], ["shop", ["pop:crate", "Seed shop"]],
+  ["pop-door", ["pop:door"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]]
 ];
 // Every menu is pictured once, in the first world that has it (the menus are the same everywhere); these are pictured in every world, to see them on its colours.
-const PICTURED_EVERYWHERE = ["idle", "goals", "pop-plot"];
+const PICTURED_EVERYWHERE = ["idle", "goals", "pop-plot", "room"];
 
 // Runs in the page. Helpers to drive the real buttons, and the measuring stick for UI_RULES.md.
 const PAGE = `(() => {
@@ -41,7 +42,7 @@ const PAGE = `(() => {
   const bar = () => document.querySelector(".home-bar"), pop = () => document.querySelector(".home-pop:not(.hidden)"), gate = () => document.querySelector("#playerGate .gate-card");
   const btn = (t, root) => [...(root || bar()).querySelectorAll("button")].find(b => b.innerText.includes(t));
   const T = () => window.LivingTownHome._test, canvas = () => document.querySelector("#homestead canvas");
-  const tapAt = (x, y) => { const [sx, sy] = T().screenOf(x, y), r = canvas().getBoundingClientRect(); canvas().dispatchEvent(new MouseEvent("click", { clientX: r.left + sx, clientY: r.top + sy, bubbles: true })); };
+  const tapAt = (x, y, up = 0) => { const [sx, sy] = T().screenOf(x, y), r = canvas().getBoundingClientRect(); canvas().dispatchEvent(new MouseEvent("click", { clientX: r.left + sx, clientY: r.top + sy - up, bubbles: true })); };
   async function home() {   // back to the idle bar, whatever is open
     if (gate()) { document.querySelector("#playerGate #backMenu")?.click(); await w(250); }
     for (let i = 0; i < 6 && (pop() || !btn("Town")); i++) { const p = pop(); const b = (p && (btn("Done", p) || btn("Back", p) || btn("Stay", p) || btn("OK", p))) || btn("Back") || btn("Close") || btn("Done") || btn("Thanks") || btn("OK"); if (!b) break; b.click(); await w(250); }
@@ -52,8 +53,8 @@ const PAGE = `(() => {
     for (const s of steps) {
       if (s.startsWith("pop:")) {
         const L = T().L(), k = s.slice(4), r = k === "plot" ? T().plotRect(0) : null;
-        const at = k === "plot" ? [r.cx, r.cy] : k === "pond" ? [L.pond.x, L.pond.y] : L[k];
-        tapAt(at[0], at[1]); await w(450); if (!pop()) return "nothing popped up for the " + k;
+        const at = k === "plot" ? [r.cx, r.cy] : k === "pond" ? [L.pond.x, L.pond.y] : k === "door" ? [L.house.door[0] + 0.3, L.house.door[1]] : L[k];
+        tapAt(at[0], at[1], k === "door" ? 70 : 0); await w(450);   // the door: tap the house above it, clear of the mailbox if (!pop()) return "nothing popped up for the " + k;
       } else if (pop()) {   // a pop-up button: the player walks over first, then the menu opens
         const b = btn(s, pop()); if (!b) return "missing"; b.click();
         for (let i = 0; i < 40 && (pop() || btn("Town")); i++) await w(250);
