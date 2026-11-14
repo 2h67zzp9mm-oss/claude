@@ -323,3 +323,11 @@ ul.today-list li { grid-template-columns: auto 1fr; }
 .pet-card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 2px solid transparent; border-radius: 14px; background: #ffffff14; color: inherit; font: 600 0.78rem system-ui; }
 .pet-card.on { border-color: #ffe27a; background: #ffe27a22; }
 .pet-card canvas { width: 72px; height: 58px; }
+
+/* Inside your house (public/house-room.js): the room's canvas sits over the garden, under the top, bar and pop-up. */
+.homestead > canvas.house-room { touch-action: none; }
+.homestead > canvas.house-room.hidden { display: none; }
+.home-bar .room-picks { margin-top: 6px; }   /* stored things to put out, in the part of the panel that scrolls */
+.home-pop.room-ring { width: auto; max-width: calc(100% - 16px); }   /* Turn, Store, Done on the thing you picked */
+.home-pop.room-ring .home-actions { flex-wrap: nowrap; }
+.home-pop.room-ring .home-actions button { flex: 0 0 auto; min-width: 70px; }

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node --test --test-timeout=120000 test/life.test.js test/mind.test.js test/mre.test.js test/integration.test.js test/accounts.test.js test/playable-spine.test.js test/town.test.js test/viewer.test.js test/troupe.test.js test/crowd.test.js test/will.test.js test/scenery.test.js test/social.test.js test/events.test.js test/speech.test.js test/updater.test.js test/cognition.test.js test/local-ai.test.js test/cognition-integration.test.js test/awareness.test.js test/interiors.test.js test/tron.test.js test/homestead.test.js test/glint-grid.test.js test/glint-life.test.js",
+    "test": "node --test --test-timeout=120000 test/life.test.js test/mind.test.js test/mre.test.js test/integration.test.js test/accounts.test.js test/playable-spine.test.js test/town.test.js test/viewer.test.js test/troupe.test.js test/crowd.test.js test/will.test.js test/scenery.test.js test/social.test.js test/events.test.js test/speech.test.js test/updater.test.js test/cognition.test.js test/local-ai.test.js test/cognition-integration.test.js test/awareness.test.js test/interiors.test.js test/tron.test.js test/homestead.test.js test/decor.test.js test/glint-grid.test.js test/glint-life.test.js",
     "viewer-link": "node scripts/viewer-link.js",
     "ui": "node scripts/ui-bot.js",
     "lint": "eslint .",

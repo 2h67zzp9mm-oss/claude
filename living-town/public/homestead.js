@@ -362,6 +362,13 @@
     return menu;
   }
   function contextBar(t) { contextBarInner(t); }
+  // Inside your house (public/house-room.js): the room borrows this screen's top, bottom bar and pop-up.
+  function goInside() {
+    if (!window.LivingTownRoom) return opts.openHouse();
+    hidePop();
+    window.LivingTownRoom.open({ el, bar, top, pop, setBar: (...a) => setBar(...a), act, view: () => view, world: () => world, toast: m => opts.toast(m), sfx: SFX, onClose: idleBar,
+      person: () => { const id = opts.me(), key = walkerFor(id), av = avatarFor(id); return { w: av || A.walkers[key], img: av ? av.canvas : imgs["walk_" + key] }; } });
+  }
   // The seed shop stays open while you buy: every tap buys one, and the stars and counts update in place.
   function shopBar() {
     if (!view) return idleBar();
@@ -405,7 +412,7 @@
         { label: "🛒 Seed shop", go: shopBar }, { label: "Done", go: idleBar }]);
     }
     if (t.kind === "mailbox") return setBar(view.mail ? "✉️ You've got mail!" : "No new mail today.", [{ label: "✉️ Open", big: view.mail, go: () => act("mail") }, { label: "Done", go: idleBar }]);
-    if (t.kind === "door") return setBar("Your house", [{ label: "🏠 Go inside", big: true, go: () => opts.openHouse() }, { label: "Done", go: idleBar }]);
+    if (t.kind === "door") return setBar("Your house", [{ label: "🏠 Go inside", big: true, go: goInside }, { label: "🏘️ Town home", go: () => opts.openHouse() }, { label: "Done", go: idleBar }]);
     if (t.kind === "exit") return setBar("The path to town", [{ label: "🏘️ Walk to town", big: true, go: close }, { label: "Stay", go: idleBar }]);
     idleBar();
   }
@@ -511,6 +518,7 @@
     view = msg.home;
     if (view.world) setWorld(view.world);
     if (view.house) houseId = view.house;
+    window.LivingTownRoom?.onState(view, msg.result);
     for (const o of view.others || []) {
       const cur = others.get(o.id) || { x: o.x, y: o.y, dir: o.dir, step: 0, name: o.name, id: o.id };
       Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, seen: performance.now() }); others.set(o.id, cur);
@@ -614,6 +622,7 @@
   function frame(t) {
     if (!isOpen) return;
     requestAnimationFrame(frame);
+    if (window.LivingTownRoom?.isOpen) { lastFrame = t; return; }   // inside the house: the room draws
     const dt = Math.min(0.1, (t - (lastFrame || t)) / 1000); lastFrame = t;
     try {
       const wasMoving = me.path.length > 0;
@@ -711,7 +720,7 @@
       act("enter"); idleBar(); cam.ready = false; requestAnimationFrame(frame);
     }).catch(err => { console.error(err); opts.toast("The home plot couldn't load."); close(); });
   }
-  function close() { if (!isOpen) return; isOpen = false; fishing = null; hidePop(); el.classList.add("hidden"); act("leave"); me.placed = false; opts.onClose?.(); }
+  function close() { if (!isOpen) return; window.LivingTownRoom?.close(true); isOpen = false; fishing = null; hidePop(); el.classList.add("hidden"); act("leave"); me.placed = false; opts.onClose?.(); }
 
   window.LivingTownHome = {
     init(o) {
