@@ -341,7 +341,7 @@
   }
   function worldBar() {
     setBar("Pick your world. Your family all sees the same one.", [...Object.entries(WORLDS).map(([k, w]) => ({ label: `${w.icon} ${w.name}`, big: k === world, go: () => { act("world", { world: k }); HOUSE_NAMES[k] ? houseBar(k) : idleBar(); } })),
-      ...(HOUSE_NAMES[world] ? [{ label: "🏠 Pick house", go: () => houseBar() }] : []), { label: "Back", go: idleBar }]);
+      ...(HOUSE_NAMES[world] ? [{ label: "🏠 Pick house", go: () => houseBar() }] : []), { label: "◈ Glint's Grid", go: () => { location.href = "glint/"; } }, { label: "Back", go: idleBar }]);
   }
   // Night Forest and Pirate Cove have four houses each; the family picks one (everyone sees the same)
   function houseBar(w = world) {

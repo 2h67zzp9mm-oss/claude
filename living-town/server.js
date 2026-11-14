@@ -1312,6 +1312,7 @@ function tronBuilds() {
   try { return fs.readdirSync(TRON_BUILDS).filter(f => f.endsWith(".json")).sort().map(f => JSON.parse(fs.readFileSync(path.join(TRON_BUILDS, f), "utf8"))); } catch { return []; }
 }
 function tronBuildLine(b) {
+  if (b.mode === "grid") return ({ live: `New in my Grid: ${b.summary || "something new"}`, failed: "My last Grid build didn't work out, so I left the Grid as it was. I'll try again later." })[b.status] || `I'm working on my Grid (${b.status}).`;
   return ({ queued: `“${b.text}” is in my queue.`, building: `I'm building “${b.text}” right now with Claude.`, deploying: `“${b.text}” passed every test and is on its way into town.`,
     live: `“${b.text}” is live! ${b.summary || ""}`, failed: `“${b.text}” didn't work out: ${b.error}` })[b.status] || `“${b.text}”: ${b.status}`;
 }
@@ -1345,7 +1346,7 @@ setInterval(() => {
     if (first || !["live", "failed"].includes(b.status)) continue;
     const line = `◈ Glint: ${tronBuildLine(b)}`;
     tronConversations.push({ at: Date.now(), who: "Glint", text: tronBuildLine(b) });
-    if (b.status === "live") addEvent(`◈ Glint built something new: ${b.text}`);
+    if (b.status === "live") addEvent(b.mode === "grid" ? "◈ Glint built something new in his Grid. Visit it from 🌍 World." : `◈ Glint built something new: ${b.text}`);
     for (const p of auth.profiles().filter(x => x.role === "owner")) for (const ws of socketsOf(p.residentId)) send(ws, { type: "toast", text: line });
   }
 }, 30_000).unref();

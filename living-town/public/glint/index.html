@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#05070f">
+<title>Glint's Grid</title>
+<link rel="stylesheet" href="grid.css">
+</head>
+<body>
+<!-- Glint's Grid: Glint's own little world. Glint (the town's caretaker program) builds here by himself.
+     Everything for this world lives in this folder and nowhere else. -->
+<canvas id="grid"></canvas>
+<div class="top"><span>◈ Glint's Grid</span><span id="count"></span></div>
+<div id="say" class="say hidden"></div>
+<div id="logPanel" class="panel hidden"><b>📜 What Glint built</b><ol id="log"></ol></div>
+<div class="bar">
+  <a class="btn" href="../">↩️ Back</a>
+  <button class="btn" id="logBtn">📜 Log</button>
+  <button class="btn" id="homeBtn">🎯 Centre</button>
+</div>
+<script src="world.js"></script>
+<script src="things.js"></script>
+<script src="log.js"></script>
+<script src="grid.js"></script>
+</body>
+</html>

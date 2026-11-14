@@ -1,0 +1,24 @@
+#!/bin/bash
+# glint-blender: runs Blender for Glint during a grid build, in its own macOS sandbox.
+# Blender can't run inside Claude Code's sandbox (it needs the graphics chip), so it runs here instead:
+# no network, and it can only write inside Glint's grid folder of the current build. 15 minute limit.
+# Usage (from Glint's grid folder): glint-blender art/src/thing.py [more args for the script]
+set -euo pipefail
+script="${1:-}"; [ -n "$script" ] || { echo "usage: glint-blender script.py [args]"; exit 2; }
+shift
+dir="$(cd "${GLINT_DIR:-.}" && pwd -P)"
+case "$dir" in */tron-build-*/living-town/public/glint) ;; *) echo "glint-blender only runs inside Glint's grid during a build"; exit 2;; esac
+tmp="$dir/.blender-tmp"; mkdir -p "$tmp"
+profile="$tmp/sandbox.sb"
+cat > "$profile" <<SB
+(version 1)
+(allow default)
+(deny network*)
+(deny file-write*)
+(allow file-write* (subpath "$dir") (subpath "/dev"))
+SB
+cd "$dir"
+status=0
+TMPDIR="$tmp/" perl -e 'alarm shift; exec @ARGV' 900 /usr/bin/sandbox-exec -f "$profile" /opt/homebrew/bin/blender -b --factory-startup --python "$script" -- "$@" 2>&1 | grep -vE "^(ArchWarn|Fra:|Read prefs)" | tail -n 40 || status=$?
+rm -rf "$tmp"
+exit $status

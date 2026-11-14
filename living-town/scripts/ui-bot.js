@@ -97,7 +97,7 @@ const PAGE = `(() => {
       big: cs(big, ["backgroundColor", "color"]), top: cs(top, ["color", "fontFamily", "fontSize", "fontWeight"]) };
     return { bad, look, text: (pop() || b)?.innerText.replace(/\\s+/g, " ").slice(0, 160) || "" };
   }
-  async function worlds() { if (!await home()) return []; btn("World").click(); await w(400); const names = [...bar().querySelectorAll("button")].map(x => x.innerText.trim()).filter(t => !/Back|Pick house/.test(t)); await home(); return names; }
+  async function worlds() { if (!await home()) return []; btn("World").click(); await w(400); const names = [...bar().querySelectorAll("button")].map(x => x.innerText.trim()).filter(t => !/Back|Pick house|Glint/.test(t)); await home(); return names; }
   async function goWorld(label) { if (!await home()) return false; btn("World").click(); await w(400); const b = btn(label); if (!b) return false; b.click(); await w(400); await home(); return true; }
   window.__ui = { open, audit, home, worlds, goWorld, ready: () => !!(window.LivingTownHome && canvas() && bar() && btn("Town") && T().view()) };
   return true;
