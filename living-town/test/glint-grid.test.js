@@ -34,3 +34,13 @@ test("glint grid: self-contained, small, and nothing from the internet", () => {
   }
   assert.ok(total <= 40 * 1024 * 1024, "the grid folder is over 40 MB");
 });
+
+test("glint grid: everything on the map has a drawing", () => {
+  const w = {}; w.window = w; vm.createContext(w);
+  for (const f of ["world.js", "things.js"]) vm.runInContext(fs.readFileSync(path.join(DIR, f), "utf8"), w);
+  const T = w.GLINT_THINGS || {};
+  for (const th of w.GLINT_WORLD?.things || []) {
+    const k = T[th.kind];
+    assert.ok(typeof k === "function" || typeof k?.draw === "function", `"${th.kind}" is on the map but has no drawing in things.js`);
+  }
+});

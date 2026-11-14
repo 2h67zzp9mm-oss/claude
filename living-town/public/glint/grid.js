@@ -6,6 +6,8 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
   const say = document.getElementById("say"), logPanel = document.getElementById("logPanel");
   const START = W.start || { x: W.size / 2, y: W.size / 2, s: 28 };
   const cam = { ...START };
+  { const q = new URLSearchParams(location.search), n = k => q.has(k) && isFinite(+q.get(k)) ? +q.get(k) : null;   // ?x=&y=&z= points the camera (glint-look uses it)
+    if (n("x") != null) cam.x = n("x"); if (n("y") != null) cam.y = n("y"); if (n("z") != null) cam.s = Math.max(10, Math.min(80, n("z"))); }
   const WALKERS = W.walkers || [];
   let follow = null, lastT = 0;
 
@@ -44,9 +46,9 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
       ctx.strokeStyle = g.line; ctx.lineWidth = 1; ctx.strokeRect(sx + 0.5, sy + 0.5, s - 1, s - 1);
     }
     for (const th of [...W.things, ...WALKERS].sort((a, b) => a.y - b.y)) {
-      const k = THINGS[th.kind]; if (!k?.draw) continue;
+      const k = THINGS[th.kind], draw = typeof k === "function" ? k : k?.draw; if (!draw) continue;   // a kind is a draw function, or an object with draw()
       const [sx, sy] = toScreen(th.x, th.y);
-      try { ctx.save(); k.draw(ctx, sx + s / 2, sy + s / 2, s, t, th); } catch (e) { console.error(th.kind, e); } finally { ctx.restore(); }
+      try { ctx.save(); draw.call(k, ctx, sx + s / 2, sy + s / 2, s, t, th); } catch (e) { console.error(th.kind, e); } finally { ctx.restore(); }
     }
     requestAnimationFrame(frame);
   }

@@ -1,0 +1,25 @@
+#!/bin/bash
+# glint-look: lets Glint see his own Grid. Takes an iPhone-sized picture of index.html in a real browser
+# (its own macOS sandbox: no network, writes only inside his grid folder) and saves it to .look/
+# Usage (from Glint's grid folder): glint-look [x y zoom]   then Read .look/grid.png
+#   x y zoom are optional: centre the camera on tile x,y at zoom pixels per tile (the page reads ?x=&y=&z=)
+set -euo pipefail
+dir="$(cd "${GLINT_DIR:-.}" && pwd -P)"
+case "$dir" in */tron-build-*/living-town/public/glint) ;; *) echo "glint-look only runs inside Glint's grid during a build"; exit 2;; esac
+CH="${CHROME_BIN:-/Users/sean/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell}"
+mkdir -p "$dir/.look"; tmp="$(mktemp -d "$dir/.look/chrome-XXXX")"
+cat > "$tmp/sandbox.sb" <<SB
+(version 1)
+(allow default)
+(deny network-outbound (remote ip))
+(deny file-write*)
+(allow file-write* (subpath "$dir/.look") (subpath "/dev") (subpath "/private/var/folders"))
+SB
+q=""; [ $# -ge 2 ] && q="?x=$1&y=$2${3:+&z=$3}"
+status=0
+perl -e 'alarm shift; exec @ARGV' 90 /usr/bin/sandbox-exec -f "$tmp/sandbox.sb" "$CH" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,844 --force-device-scale-factor=1 \
+  --allow-file-access-from-files --user-data-dir="$tmp/profile" --virtual-time-budget=3000 --enable-logging=stderr --v=0 \
+  --screenshot="$dir/.look/grid.png" "file://$dir/index.html$q" > "$tmp/log.txt" 2>&1 || status=$?
+grep -E "CONSOLE|Uncaught" "$tmp/log.txt" | sed 's/^.*CONSOLE/CONSOLE/' | head -20 || true
+rm -rf "$tmp"
+if [ -f "$dir/.look/grid.png" ]; then echo "Saved .look/grid.png (390x844, what a phone sees). Read it to look."; else echo "glint-look: no picture (status $status). Run me as a command on its own, not after cd, && or ;, and not in a pipe."; exit 1; fi

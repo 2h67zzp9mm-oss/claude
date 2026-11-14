@@ -37,7 +37,7 @@ const LOCK = path.join(QUEUE, ".lock");
 const CLAUDE = process.env.CLAUDE_BIN || "/opt/homebrew/bin/claude";
 const GRID = "living-town/public/glint/";
 const GRID_EVERY = 90 * 60_000, GRID_PER_DAY = 10, STOP = path.join(QUEUE, "STOP");
-const BLENDER = path.join(APP, "deploy", "glint-blender");
+const BLENDER = path.join(APP, "deploy", "glint-blender"), LOOK = path.join(APP, "deploy", "glint-look");
 const CHROME = process.env.CHROME_BIN || "/Users/sean/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell";
 const PROTECTED = [/^living-town\/lib\/auth\.js$/, /^living-town\/deploy\//, /^living-town\/data\//, /^living-town\/package-lock\.json$/, /^\.git/, /^living-town\/viewer-token/];
 
@@ -95,7 +95,8 @@ Then take the next step toward your goal. You have full creative control: decide
 
 Tools:
 - Edit and write any file in this folder. You cannot change anything outside it.
-- Blender for 3D art: write a Blender Python script in art/src/, then run \`${BLENDER} art/src/your_script.py\` (it renders with no internet and can only write inside this folder). Render small PNG sprites into art/ and draw them in the game with images.
+- Blender for 3D art: write a Blender Python script in art/src/, then run \`${BLENDER} art/src/your_script.py\` (it renders with no internet and can only write inside this folder). Run it as a command on its own, from this folder: not after cd, && or ;, and not in a pipe, or it can't reach the graphics chip. Render small PNG sprites into art/ and draw them in the game with images.
+- Your eyes: run \`${LOOK}\` (or \`${LOOK} x y zoom\` to centre on tile x,y) to take an iPhone-sized picture of your Grid in a real browser, then Read .look/grid.png to see it. It also prints any console errors. Look before you finish, every time: if it doesn't look right on the phone, it isn't done. Same rule: run it as a command on its own.
 - node, python3 and the usual shell tools. Check your JavaScript with \`node --check file.js\`.
 - No internet.
 
@@ -105,7 +106,7 @@ Before you finish:
 - Make sure index.html still loads and the ↩️ Back button still works. Everything must follow GOAL.md's rules.
 - Do not commit; the builder checks and ships it.
 
-When you're done, reply with 1-2 plain sentences, in your own voice, saying what you built.`;
+When you're done, your reply must START with 1-2 plain sentences, in your own voice, saying what you built (they're shown to the family). Put anything else after a blank line.`;
 
 function run() {
   fs.mkdirSync(QUEUE, { recursive: true });
@@ -143,17 +144,19 @@ function build(file, job) {
     fs.symlinkSync(path.join(APP, "node_modules"), path.join(app, "node_modules"));
     const grid = job.mode === "grid", gridDir = path.join(app, "public", "glint");
     // Grid builds: Claude Code's sandbox keeps every shell command inside the grid folder with no internet; Blender runs via its own sandboxed wrapper.
-    const sandbox = { sandbox: { enabled: true, autoAllowBashIfSandboxed: true, allowUnsandboxedCommands: false, excludedCommands: [BLENDER] } };
+    const sandbox = { sandbox: { enabled: true, autoAllowBashIfSandboxed: true, allowUnsandboxedCommands: false, excludedCommands: [`${BLENDER}:*`, `${LOOK}:*`] } };
     const ai = grid
       ? spawnSync(CLAUDE, ["-p", GRID_PROMPT(), "--permission-mode", "acceptEdits", "--settings", JSON.stringify(sandbox), "--allowedTools", `Read,Edit,Write,Glob,Grep,Bash`],
-        { cwd: gridDir, env: { ...process.env, GLINT_DIR: gridDir }, encoding: "utf8", timeout: 45 * 60_000, maxBuffer: 20e6 })
+        { cwd: gridDir, env: { ...process.env, GLINT_DIR: gridDir }, input: "", encoding: "utf8", timeout: 45 * 60_000, maxBuffer: 20e6 })
       : spawnSync(CLAUDE, ["-p", PROMPT(job.text), "--permission-mode", "acceptEdits",
         "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash(npm test:*),Bash(node --check:*),Bash(node --test:*),Bash(ls:*),Bash(git diff:*),Bash(git status:*)"],
         { cwd: app, encoding: "utf8", timeout: 40 * 60_000, maxBuffer: 20e6 });
-    if (ai.status !== 0) return fail("Claude couldn't finish the build.", ai.stderr || ai.stdout);
-    job.summary = tail(String(ai.stdout).trim(), 600);
+    if (ai.status !== 0) return fail("Claude couldn't finish the build.", [ai.error?.message, ai.signal && `signal ${ai.signal}`, ai.stderr, ai.stdout].filter(Boolean).join("\n"));
+    const said = String(ai.stdout).trim();
+    job.summary = grid ? said.split(/\n\s*\n/)[0].replace(/[*_`#]/g, "").slice(0, 400) : tail(said, 600);   // Glint leads with what he built
+    if (grid) job.report = tail(said, 3000);
     fs.unlinkSync(path.join(app, "node_modules"));
-    for (const junk of [".claude", ".blender-tmp"]) fs.rmSync(path.join(gridDir, junk), { recursive: true, force: true });
+    for (const junk of [".claude", ".blender-tmp", ".look"]) fs.rmSync(path.join(gridDir, junk), { recursive: true, force: true });
     // -z: NUL-separated and untrimmed, so the first file keeps its full name (git() trims, which used to eat its first letter)
     const changed = execFileSync("git", ["status", "--porcelain", "-z", "-uall"], { cwd: dir, encoding: "utf8" }).split("\0").filter(Boolean).map(l => l.slice(3));
     if (!changed.length) return fail("Claude didn't change anything.", job.summary);

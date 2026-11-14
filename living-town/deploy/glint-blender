@@ -19,6 +19,10 @@ cat > "$profile" <<SB
 SB
 cd "$dir"
 status=0
-TMPDIR="$tmp/" perl -e 'alarm shift; exec @ARGV' 900 /usr/bin/sandbox-exec -f "$profile" /opt/homebrew/bin/blender -b --factory-startup --python "$script" -- "$@" 2>&1 | grep -vE "^(ArchWarn|Fra:|Read prefs)" | tail -n 40 || status=$?
+TMPDIR="$tmp/" perl -e 'alarm shift; exec @ARGV' 900 /usr/bin/sandbox-exec -f "$profile" /opt/homebrew/bin/blender -b --factory-startup --python "$script" -- "$@" > "$tmp/out.txt" 2>&1 || status=$?
+grep -vE "^(ArchWarn|Fra:|Read prefs)" "$tmp/out.txt" | tail -n 40 || true
+if [ "$status" -ne 0 ] && grep -q "sandbox_apply" "$tmp/out.txt" 2>/dev/null; then
+  echo "glint-blender: run me as a command on its own (not after cd, && or ;, and not in a pipe) so I can reach the graphics chip."
+fi
 rm -rf "$tmp"
 exit $status
