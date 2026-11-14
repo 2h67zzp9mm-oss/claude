@@ -12,6 +12,7 @@ const files = (d = DIR) => fs.readdirSync(d, { withFileTypes: true }).flatMap(e 
 test("glint grid: the page and its scripts are there and every script parses", () => {
   const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
   assert.match(html, /href="\.\.\/"/, "keeps a way back home");
+  assert.match(html, /<script src="\.\.\/glint-life\.js"><\/script>/, "keeps Glint alive (../glint-life.js)");
   for (const src of [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map(m => m[1])) {
     assert.ok(fs.existsSync(path.join(DIR, src)), `index.html loads ${src}, which is missing`);
   }

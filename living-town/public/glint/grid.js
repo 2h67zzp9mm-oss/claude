@@ -16,6 +16,12 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
   const walkable = (x, y) => "po".includes((W.tiles[y] || "")[x] || ".") && !blocked.has(x + "," + y);
   for (const w of WALKERS) Object.assign(w, { fx: w.x, fy: w.y, tx: w.x, ty: w.y, px: w.x, py: w.y, wait: 1, dx: 0, dy: 0, moving: false });
   function stepWalker(w, dt) {
+    const life = window.GLINT_LIFE;
+    if (w.kind === "glint" && life?.ready) {   // the real Glint: his body and mind live on the server; walk smoothly to where he really is
+      const [gx, gy] = life.next && life.moving ? life.next : [life.x, life.y], ddx = gx - w.fx, ddy = gy - w.fy, d = Math.hypot(ddx, ddy);
+      if (d > 4) { w.fx = life.x; w.fy = life.y; } else if (d > 0.02) { const go = Math.min(d, dt * (w.speed || 1.3)); w.fx += ddx / d * go; w.fy += ddy / d * go; w.dx = Math.sign(Math.round(ddx)); w.dy = Math.sign(Math.round(ddy)); }
+      w.moving = d > 0.05; w.tx = Math.round(w.fx); w.ty = Math.round(w.fy); return;
+    }
     if (w.wait > 0) { w.wait -= dt; w.moving = false; return; }
     const ddx = w.tx - w.fx, ddy = w.ty - w.fy, d = Math.hypot(ddx, ddy), go = dt * (w.speed || 1.3);
     if (d > go) { w.fx += ddx / d * go; w.fy += ddy / d * go; w.moving = true; return; }
@@ -74,7 +80,8 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     pts.delete(e.pointerId); if (moved > 8 || pinch) return;
     const [wx, wy] = toWorld(e.clientX, e.clientY);
     const hit = [...W.things, ...WALKERS].filter(th => Math.hypot(th.x + 0.5 - wx, th.y + 0.5 - wy) < (th.r || 1)).sort((a, b) => Math.hypot(a.x + 0.5 - wx, a.y + 0.5 - wy) - Math.hypot(b.x + 0.5 - wx, b.y + 0.5 - wy))[0];
-    if (hit) { const line = hit.lines ? hit.lines[hit.lineAt = ((hit.lineAt ?? -1) + 1) % hit.lines.length] : hit.say; if (hit.lines) hit.wait = 2.5;
+    if (hit) { const real = hit.kind === "glint" && window.GLINT_LIFE?.ready ? (window.GLINT_LIFE.say || window.GLINT_LIFE.thought) : "";
+      const line = real ? real : hit.lines ? hit.lines[hit.lineAt = ((hit.lineAt ?? -1) + 1) % hit.lines.length] : hit.say; if (hit.lines) hit.wait = 2.5;
       say.innerHTML = `<b>${esc(hit.name || hit.kind)}</b>${line ? "<br>" + esc(line) : ""}`; say.classList.remove("hidden"); clearTimeout(sayTimer); sayTimer = setTimeout(() => say.classList.add("hidden"), 5000); }
   });
   cv.addEventListener("pointercancel", e => pts.delete(e.pointerId));

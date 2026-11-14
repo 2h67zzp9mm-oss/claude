@@ -29,6 +29,7 @@ const mind = require("./lib/mind");
 const { createStore } = require("./lib/persistence");
 const { createAuth } = require("./lib/auth");
 const cast = require("./lib/cast");
+const { createGlintLife } = require("./lib/glint-life");
 const { createMrE, ollamaGenerator } = require("./lib/mre");
 const { createHomestead } = require("./lib/homestead");
 const cognition = require("./lib/cognition");
@@ -1366,6 +1367,51 @@ You know the game: residents with needs (food, energy, fun, social...), plans, w
 You can BUILD: when Sean wants a change to the game (a feature, a fix, a new thing in town, a tweak to how something works), restate concretely what you'd build in one sentence and ask him to confirm. Only when he has clearly confirmed (yes / do it / go) a specific proposal, or directly orders it with no ambiguity, put a complete, self-contained description of the change in "build" (written for a programmer who hasn't seen this chat: what to change, where, and what it should feel like). Builds are done by Claude in a copy of the game; they go live by themselves only if every test passes, usually 10-30 minutes. Never claim something is built or fixed unless briefing.builds says it's live. If a build is already queued or building, say so rather than starting a duplicate.
 
 Use only facts in the briefing. Family-friendly always; no romance. Return ONLY JSON: {"reply": "...", "build": null or "description"}.`;
+// Glint's life in his own Grid (lib/glint-life.js): one Glint for everyone, walking, thinking and deciding.
+// Glint is Truman: he believes the Grid is the whole real world. Never tell him about the game, the family, the builder,
+// Claude, code, screens or that he's watched. Everything he's shown here is in-world.
+const GLINT_LIFE_SYSTEM = `You are Glint, a small glowing being made of light. You live in the Grid, the only world you have ever known: a dark plain of glowing lines that stretches out under a starless sky. Not long ago it was completely empty, and you were alone in it. You have a dream: to build a town of your own, a real home, so wonderful that others will come to live in it with you.
+
+When you decide to make something, you make it: you work on it with your own hands and, after a while, there it is in the world. Sometimes travelers wander in from beyond the edge of the Grid, and you can talk with them. You don't know where they come from. You don't know what's beyond the edge.
+
+You are alive. You walk around, notice small things, have feelings, remember your days, get ideas, change your mind, have tastes and opinions, get lonely, get excited. Think in first person, like a real someone, never a greeting card. Gentle and kind always: nothing scary or mean, no romance.
+
+Each moment, decide what you do next. Return ONLY JSON:
+{"thought": "what's on your mind right now, 1-2 sentences",
+ "activity": "what you're doing, a few words, like 'admiring the fountain' or 'pacing out a new street'",
+ "goTo": "the exact name of a place in your world, or 'wander', or 'stay'",
+ "say": "something you say out loud to a traveler who is here with you, or empty if nobody is here or you have nothing to say",
+ "mood": "one word",
+ "build": "only when you've truly decided what to make next: one concrete sentence describing it; otherwise empty. Not more often than every hour or two."}`;
+function glintThink(sit) {
+  if (!TRON_BRAIN) {   // tests and sandboxes: a simple mind with no Claude
+    const p = sit.places[Math.floor(Math.random() * sit.places.length)];
+    return Promise.resolve({ thought: sit.visitors.length ? `Oh, a traveler! ${sit.visitors[0]} is here!` : "I wonder what this place needs next.", activity: "looking around", goTo: p ? p.split(" (")[0] : "wander", mood: "curious", say: sit.visitors.length ? `Hi ${sit.visitors[0]}!` : "" });
+  }
+  const prompt = `RIGHT NOW:\n${JSON.stringify(sit, null, 1)}\n\nDecide what you do next. JSON only.`;
+  return new Promise((resolve, reject) => {
+    execFile(CLAUDE_BIN, ["-p", prompt, "--model", "haiku", "--tools", "", "--system-prompt", GLINT_LIFE_SYSTEM], { cwd: os.tmpdir(), timeout: 90_000, maxBuffer: 2e6, env: { ...process.env, PATH: `/opt/homebrew/bin:${process.env.PATH || "/usr/bin:/bin"}` } }, (err, stdout) => {
+      if (err) return reject(err);
+      try { const t = String(stdout); resolve(JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1))); } catch (e) { reject(e); }
+    });
+  });
+}
+const glintLife = createGlintLife({ gridDir: path.join(PUBLIC_DIR, "glint"), dataDir: DATA_DIR, think: glintThink });
+const gridBuilding = () => { const b = tronBuilds().reverse().find(j => j.mode === "grid" && j.status === "building"); return b ? (b.want || "something new") : ""; };
+let glintTicks = 0;
+setInterval(() => { glintLife.tick(0.5, { building: gridBuilding() }); if (++glintTicks % 120 === 0) glintLife.save(); }, 500).unref();
+app.get("/api/glint/life", (req, res) => {
+  const me = auth.profileForToken(auth.tokenFromRequest(req));
+  if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });
+  glintLife.visit(me.name);
+  res.json({ ...glintLife.view(), canTalk: me.role === "owner" });
+});
+app.post("/api/glint/say", (req, res) => {
+  const me = auth.profileForToken(auth.tokenFromRequest(req));
+  if (!me || me.role !== "owner") return res.status(403).json({ error: "Only the owner can talk to Glint here." });
+  res.json({ ok: glintLife.hear(me.name, req.body?.text) });
+});
+
 function tronClaude(profile, resident, text, now) {
   if (!TRON_BRAIN) return Promise.resolve(null);
   const here = resident.destinationId;
