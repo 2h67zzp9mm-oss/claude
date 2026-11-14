@@ -8,7 +8,11 @@
   css.textContent = `.life-strip{position:fixed;z-index:3;left:12px;right:12px;top:calc(36px + env(safe-area-inset-top));pointer-events:none;font:500 .8rem/1.3 system-ui;color:#dff8ff;text-shadow:0 1px 4px #000}
   .life-strip b{color:#57e1ff;font-weight:700}.life-strip i{display:block;opacity:.85;font-style:normal;max-height:2.6em;overflow:hidden}
   .life-say{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));max-width:calc(100% - 32px);padding:7px 12px;border-radius:14px;background:#e9fbff;color:#06231a;font:600 .9rem/1.3 system-ui;text-align:center;box-shadow:0 4px 16px #0008}
-  .life-say::before{content:"◈ Glint: ";color:#0a7f9a}.life-hidden{display:none}`;
+  .life-say::before{content:"◈ Glint: ";color:#0a7f9a}.life-hidden{display:none}
+  .life-brain{position:fixed;z-index:6;left:0;right:0;bottom:0;max-height:62vh;display:flex;flex-direction:column;background:#071a22f2;border-top:1px solid #57e1ff66;color:#dff8ff;font:500 .85rem/1.35 system-ui;padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+  .life-brain h3{margin:0 0 6px;font-size:.95rem;color:#57e1ff}.life-brain .bs{overflow:auto;flex:1}.life-brain h4{margin:8px 0 2px;font-size:.8rem;opacity:.7;text-transform:uppercase}
+  .life-brain button{min-height:44px;border-radius:10px;border:1px solid #57e1ff55;background:#0d2c38;color:#dff8ff;font:600 .85rem system-ui;padding:0 12px;margin:3px 4px 3px 0}
+  .life-brain p{margin:3px 0;opacity:.9}.life-brain .bf{display:flex;justify-content:flex-end;padding-top:6px}`;
   document.head.append(css);
   const strip = document.createElement("div"), bubble = document.createElement("div");
   strip.className = "life-strip"; bubble.className = "life-say life-hidden";
@@ -27,6 +31,31 @@
     };
     if (bar) bar.insertBefore(b, bar.children[bar.children.length - 1] || null); else document.body.append(b);
   }
+  let brainAdded = false;
+  function addBrain() {
+    if (brainAdded) return; brainAdded = true;
+    const bar = document.querySelector(".bar"); if (!bar) return;
+    const b = document.createElement("button"); b.className = "btn"; b.textContent = "🧠 Brain";
+    b.onclick = () => openBrain();
+    bar.insertBefore(b, bar.children[bar.children.length - 1] || null);
+  }
+  const ICON = { me: "✨ Me", people: "🧑 People", places: "📍 Places", things: "🔧 Things", ideas: "💡 Ideas", feelings: "💗 Feelings", days: "📅 Days" };
+  async function openBrain(note) {
+    document.querySelector(".life-brain")?.remove();
+    const p = document.createElement("div"); p.className = "life-brain"; document.body.append(p);
+    const get = async q => { try { const r = await fetch("../api/glint/brain" + q, { credentials: "same-origin", cache: "no-store" }); return r.ok ? r.json() : {}; } catch { return {}; } };
+    if (note) {
+      const n = await get("?note=" + encodeURIComponent(note));
+      p.innerHTML = `<h3>${esc(n.title || "Note")}</h3><div class="bs">${(n.lines || []).map(l => `<p>${esc(l)}</p>`).join("") || "<p>Empty.</p>"}</div><div class="bf"><button data-b>Back</button></div>`;
+      p.querySelector("[data-b]").onclick = () => openBrain();
+      return;
+    }
+    const m = await get("");
+    const f = m.folders || {};
+    p.innerHTML = `<h3>🧠 Glint's brain · ${m.count || 0} notes</h3><div class="bs">${Object.keys(ICON).filter(k => (f[k] || []).length).map(k => `<h4>${ICON[k]}</h4>${f[k].map(n => `<button data-n="${esc(n.path)}">${esc(n.title)}</button>`).join("")}`).join("") || "<p>Nothing yet. He's only just started remembering.</p>"}</div><div class="bf"><button data-d>Done</button></div>`;
+    p.querySelectorAll("[data-n]").forEach(x => x.onclick = () => openBrain(x.dataset.n));
+    p.querySelector("[data-d]").onclick = () => p.remove();
+  }
   async function poll() {
     try {
       const r = await fetch("../api/glint/life", { credentials: "same-origin", cache: "no-store" });
@@ -37,7 +66,7 @@
         if (L.say && L.say !== lastSay) { bubble.textContent = L.say; bubble.classList.remove("life-hidden"); }
         if (!L.say) bubble.classList.add("life-hidden");
         lastSay = L.say;
-        if (L.canTalk) addTalk();
+        if (L.canTalk) { addTalk(); addBrain(); }
       }
     } catch { /* offline: Glint just strolls on his own */ }
     setTimeout(poll, document.hidden ? 8000 : 1500);

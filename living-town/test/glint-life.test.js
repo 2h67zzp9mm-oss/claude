@@ -42,3 +42,34 @@ test("glint life: at night he walks home and sleeps, and his mind rests", async 
   assert.deepEqual([life.state().x, life.state().y], [9, 5], "went home (next to his house)");
   h = 8; t += 500; life.tick(0.5); assert.equal(life.view().awake, true);
 });
+
+test("glint brain: he writes notes in folders, finds them again by keyword, links them and sleeps on the day", async () => {
+  const { createGlintBrain } = require("../lib/glint-brain");
+  const gridDir = grid(), dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "glint-data-"));
+  let t = Date.UTC(2026, 10, 13, 15), h = 15;
+  const brain = createGlintBrain({ dir: path.join(dataDir, "glint-brain"), now: () => t });
+  let seen = null, n = 0;
+  const life = createGlintLife({ gridDir, dataDir, brain, now: () => t, hour: () => h, think: async sit => { seen = sit; n++;
+    return n === 1 ? { thought: "Hazel likes purple!", remember: [{ folder: "people", title: "Hazel", note: "Hazel loves purple and asked for a [[Purple Bridge]].", keywords: ["purple"] }, { folder: "ideas", title: "Purple Bridge", note: "A purple bridge over the stream.", keywords: ["bridge"] }], wonder: "purple" } : { thought: "hmm" }; } });
+  life.visit("Hazel"); life.tick(0.5); await new Promise(r => setImmediate(r));
+  assert.ok(fs.existsSync(path.join(dataDir, "glint-brain", "people", "hazel.md")), "a note for Hazel");
+  assert.match(fs.readFileSync(path.join(dataDir, "glint-brain", "people", "hazel.md"), "utf8"), /loves purple/);
+  t += 20 * 60_000; life.state().nextThinkAt = 0; life.tick(0.5); await new Promise(r => setImmediate(r));
+  const came = seen.comesToMind.map(m => m.note);
+  assert.ok(came.includes("Hazel") && came.includes("Purple Bridge"), `recalled by keyword and link: ${came}`);
+  h = 23; t += 1000; life.tick(0.5);
+  assert.ok(Object.values(brain.map().days).length === 1, "a page for the day");
+  assert.deepEqual(brain.recall("../../etc"), brain.recall("etc")); assert.equal(brain.page("../index.json"), null);
+});
+
+test("glint brain: the day's dump is filed into his notes while he sleeps", async () => {
+  const { createGlintBrain } = require("../lib/glint-brain");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "glint-brain-"));
+  const brain = createGlintBrain({ dir });
+  brain.log("heard", "Hazel: can you make a purple bridge?"); brain.log("thought", "I'll make it tomorrow.");
+  let got = null;
+  const n = await brain.dream(async d => { got = d; return { file: [{ folder: "people", title: "Hazel", note: "wants:purple bridge; promised:yes", keywords: ["bridge"] }], self: "builder; keeps promises" }; });
+  assert.match(got.dump, /purple bridge/); assert.equal(n, 1);
+  assert.equal(brain.recall("bridge")[0].note, "Hazel");
+  assert.equal(await brain.dream(async () => { throw new Error("filed twice"); }), 0, "each day is filed once");
+});
