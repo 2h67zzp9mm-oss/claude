@@ -73,3 +73,31 @@ test("glint brain: the day's dump is filed into his notes while he sleeps", asyn
   assert.equal(brain.recall("bridge")[0].note, "Hazel");
   assert.equal(await brain.dream(async () => { throw new Error("filed twice"); }), 0, "each day is filed once");
 });
+
+test("glint life: talking gets a real reply right away, and he sees the whole conversation", async () => {
+  const gridDir = grid(), dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "glint-data-"));
+  let t = 1_000_000, asked = null;
+  const life = createGlintLife({ gridDir, dataDir, now: () => t, hour: () => 15, think: async () => ({}),
+    chat: async sit => { asked = sit; return { say: sit.conversation.length > 2 ? "You said blue earlier!" : "Hello, traveler.", mood: "happy" }; } });
+  life.hear("Sean", "Hi Glint");
+  await new Promise(r => setTimeout(r, 20));
+  assert.strictEqual(life.view().talk.at(-1).text, "Hello, traveler.");
+  t += 1000; life.hear("Sean", "My favourite colour is blue");
+  await new Promise(r => setTimeout(r, 20));
+  assert.ok(asked.conversation.some(l => l.includes("Hello, traveler.")), "he sees what he said before");
+  assert.strictEqual(life.view().talk.at(-1).text, "You said blue earlier!");
+  assert.ok(life.situation().conversation.length >= 4, "his everyday mind knows about the chat too");
+});
+
+test("glint life: he can pick his own name, and it sticks", async () => {
+  const gridDir = grid(), dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "glint-data-"));
+  let t = 1_000_000;
+  const life = createGlintLife({ gridDir, dataDir, now: () => t, hour: () => 15, think: async () => ({}),
+    chat: async sit => (sit.namePicked ? { say: `I'm ${sit.myName}.` } : { say: "I think I'll be Lumen.", newName: "Lumen" }) });
+  assert.strictEqual(life.view().name, "Glint");
+  life.hear("Sean", "Would you like to pick your own name?"); await new Promise(r => setTimeout(r, 20));
+  assert.strictEqual(life.view().name, "Lumen");
+  t += 1000; life.hear("Sean", "Who are you?"); await new Promise(r => setTimeout(r, 20));
+  assert.strictEqual(life.view().talk.at(-1).text, "I'm Lumen.");
+  assert.strictEqual(life.situation().myName, "Lumen");
+});

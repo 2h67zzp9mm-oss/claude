@@ -20,11 +20,25 @@ const THINK_MIN = 10 * 60_000, THINK_MAX = 15 * 60_000;
 const SLEEP_FROM = 22.5, SLEEP_TO = 7;     // local hours
 const DIARY_MAX = 60;
 
-function createGlintLife({ gridDir, dataDir, think, dreamer = null, brain = null, now = () => Date.now(), hour = () => { const d = new Date(now()); return d.getHours() + d.getMinutes() / 60; } }) {
+function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null, brain = null, now = () => Date.now(), hour = () => { const d = new Date(now()); return d.getHours() + d.getMinutes() / 60; } }) {
   const file = path.join(dataDir, "glint-life.json"), wantsFile = path.join(dataDir, "tron-builds", "glint-wants.json");
-  let world = null, worldStamp = "", thinking = false;
+  let world = null, worldStamp = "", thinking = false, replying = false;
   const st = Object.assign({ x: 12, y: 12, path: [], activity: "waking up", thought: "", say: "", sayAt: 0, mood: "curious", awake: true,
-    nextThinkAt: 0, diary: [], visitors: {}, heard: [] }, read(file) || {});
+    nextThinkAt: 0, diary: [], visitors: {}, heard: [], talk: [], name: "Glint", namePicked: false, namedAt: 0 }, read(file) || {});
+  if (!Array.isArray(st.talk)) st.talk = [];
+  const TALK_MAX = 40;
+  // He picks his own name when it feels right (and may change it again, but not often).
+  function pickName(v) {
+    const n = String(v || "").replace(/[^A-Za-z' -]/g, "").replace(/\s+/g, " ").trim().slice(0, 20);
+    if (n.length < 2 || n.toLowerCase() === String(st.name).toLowerCase()) return false;
+    if (st.namePicked && now() - st.namedAt < 3 * 86_400_000) return false;
+    const old = st.name; st.name = n; st.namePicked = true; st.namedAt = now();
+    note(`I've chosen my own name. I'm ${n} now.`, `named myself ${n}`);
+    if (brain) { brain.log("did", `chose my own name: ${n} (was ${old})`); brain.remember({ folder: "me", title: "Who I am", text: `I chose my own name: ${n}. Before that I was called ${old}.`, keywords: ["name", n, "me"] }); }
+    return true;
+  }
+  const said = (who, text) => { st.talk.push({ who, text, at: now() }); if (st.talk.length > TALK_MAX) st.talk.splice(0, st.talk.length - TALK_MAX); };
+  const recentTalk = n => st.talk.filter(m => now() - m.at < 6 * 3600_000).slice(-n).map(m => `${new Date(m.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${m.who}: ${m.text}`);
 
   function read(f) { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return null; } }
   function save() { try { fs.mkdirSync(dataDir, { recursive: true }); fs.writeFileSync(file, JSON.stringify(st)); } catch { /* next time */ } }
@@ -80,12 +94,13 @@ function createGlintLife({ gridDir, dataDir, think, dreamer = null, brain = null
     if (d.thought) st.thought = clean(d.thought, 280);
     if (d.activity) st.activity = clean(d.activity, 60);
     if (d.mood) st.mood = clean(d.mood, 24).toLowerCase();
-    if (d.say) { st.say = clean(d.say, 200); st.sayAt = now(); }
+    if (d.say) { st.say = clean(d.say, 200); st.sayAt = now(); said("Glint", st.say); }
     if (brain) { if (d.thought) brain.log("thought", st.thought); if (d.say) brain.log("said", st.say); if (d.activity) brain.log("did", st.activity + (d.goTo ? ` -> ${clean(d.goTo, 40)}` : "")); if (d.build) brain.log("decided to make", clean(d.build, 300)); }
     const where = clean(d.goTo, 40).toLowerCase();
     const place = where && (loadWorld()?.places || []).find(p => p.name.toLowerCase() === where) || (loadWorld()?.places || []).find(p => where && p.name.toLowerCase().includes(where));
     const target = place ? place : (where && where !== "stay" ? wanderTarget() : null);
     if (target) st.path = route(target);
+    if (d.newName) pickName(d.newName);
     const build = clean(d.build, 300);
     for (const m of (Array.isArray(d.remember) ? d.remember : []).slice(0, 3)) if (brain && m && typeof m === "object") brain.remember({ folder: clean(m.folder, 12).toLowerCase(), title: clean(m.title, 60), text: clean(m.note || m.text, 400), keywords: Array.isArray(m.keywords) ? m.keywords.slice(0, 8).map(String) : [] });
     st.wonder = clean(d.wonder, 80);
@@ -98,9 +113,9 @@ function createGlintLife({ gridDir, dataDir, think, dreamer = null, brain = null
     const w = loadWorld(), here = (w?.places || []).map(p => ({ ...p, d: Math.hypot(p.x - st.x, p.y - st.y) })).sort((a, b) => a.d - b.d)[0];
     const visitors = Object.entries(st.visitors).filter(([, t]) => now() - t < 60_000).map(([n]) => n);
     const tail = (f, n) => { try { return fs.readFileSync(path.join(gridDir, f), "utf8").slice(-n); } catch { return ""; } };
-    return { time: new Date(now()).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" }), mood: st.mood, doing: st.activity,
+    return { myName: st.name, namePicked: st.namePicked, time: new Date(now()).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" }), mood: st.mood, doing: st.activity,
       near: here ? here.name : "open grid", places: (w?.places || []).map(p => `${p.name} (${p.kind}) at ${p.x},${p.y}${p.about ? ": " + p.about : ""}`),
-      visitors, heard: st.heard.slice(-5), diary: st.diary.slice(-8).map(e => `${new Date(e.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${e.thought}${e.did ? " [" + e.did + "]" : ""}`),
+      visitors, heard: st.heard.slice(-5), conversation: recentTalk(10), diary: st.diary.slice(-8).map(e => `${new Date(e.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${e.thought}${e.did ? " [" + e.did + "]" : ""}`),
       memories: tail("log.js", 900), dreams: tail("plans.md", 900), makingNow: extra.building || "",
       comesToMind: brain ? brain.recall([...visitors, here ? here.name : "", st.activity, st.thought, st.wonder || "", ...st.heard, extra.building || ""], 6) : [],
       brainSize: brain ? brain.count() : 0 };   // all in-world: never NOTES.md (that's the builder's)
@@ -131,7 +146,7 @@ function createGlintLife({ gridDir, dataDir, think, dreamer = null, brain = null
       else if (now() >= st.idleUntil) { st.idleUntil = 0; const t = wanderTarget(5); if (t) st.path = route(t).slice(0, 4); }
     }
     if (st.awake && now() >= st.nextThinkAt) decide(extra);
-    if (st.say && now() - st.sayAt > 20_000) st.say = "";
+    if (st.say && now() - st.sayAt > 45_000) st.say = "";
   }
 
   // A family member is looking at the Grid. Someone new makes him think soon.
@@ -147,13 +162,38 @@ function createGlintLife({ gridDir, dataDir, think, dreamer = null, brain = null
   function hear(name, text) {
     const t = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200); if (!t) return false;
     st.heard.push(`The traveler ${String(name).slice(0, 30)} says to you: "${t}"`); if (brain) brain.log("heard", `${String(name).slice(0, 30)}: ${t}`); if (st.heard.length > 10) st.heard.shift();
-    if (st.awake) st.nextThinkAt = Math.min(st.nextThinkAt, now() + 1_000);
+    said(String(name).slice(0, 30), t);
+    if (!chat) { if (st.awake) st.nextThinkAt = Math.min(st.nextThinkAt, now() + 1_000); }
+    else reply(String(name).slice(0, 30));
     return true;
   }
+  // A real conversation: when a traveler talks, he answers right away, knowing everything said so far.
+  async function reply(name) {
+    if (replying) return; replying = true;
+    try {
+      for (let turn = 0; turn < 3; turn++) {
+        const last = st.talk[st.talk.length - 1]; if (!last || last.who === "Glint") break;
+        const sit = situation();
+        const words = st.talk.slice(-4).filter(m => m.who !== "Glint").map(m => m.text);
+        const out = await chat({ myName: st.name, namePicked: st.namePicked, traveler: name, awake: st.awake, time: sit.time, mood: st.mood, doing: st.activity, thinking: st.thought, near: sit.near, places: sit.places,
+          conversation: recentTalk(24), comesToMind: brain ? brain.recall([name, ...words], 6) : [], recentDays: sit.diary.slice(-4), makingNow: sit.makingNow });
+        if (!out || !out.say) break;
+        const clean = (v, n) => String(v || "").replace(/\s+/g, " ").trim().slice(0, n);
+        st.say = clean(out.say, 400); st.sayAt = now(); said("Glint", st.say);
+        if (out.mood) st.mood = clean(out.mood, 24).toLowerCase();
+        if (out.newName) pickName(out.newName);
+        if (out.thought) st.thought = clean(out.thought, 280);
+        if (brain) { brain.log("said", `to ${name}: ${st.say}`); for (const m of (Array.isArray(out.remember) ? out.remember : []).slice(0, 2)) if (m && typeof m === "object") brain.remember({ folder: clean(m.folder, 12).toLowerCase(), title: clean(m.title, 60), text: clean(m.note || m.text, 400), keywords: Array.isArray(m.keywords) ? m.keywords.slice(0, 8).map(String) : [] }); }
+        st.heard = st.heard.filter(h => !h.startsWith("The traveler"));   // answered
+        st.nextThinkAt = Math.max(st.nextThinkAt, now() + 60_000);       // talking, not wandering off mid-chat
+      }
+    } catch (e) { note("", `lost my words: ${String(e.message || e).slice(0, 80)}`); }
+    finally { replying = false; save(); }
+  }
 
-  const view = () => ({ x: Math.round(st.x * 100) / 100, y: Math.round(st.y * 100) / 100, moving: st.path.length > 0, next: st.path[0] || null,
-    activity: st.activity, thought: st.thought, say: st.say, mood: st.mood, awake: st.awake, diary: st.diary.slice(-12).reverse() });
-  return { tick, visit, hear, view, decide, situation, state: () => st, save };
+  const view = () => ({ name: st.name, x: Math.round(st.x * 100) / 100, y: Math.round(st.y * 100) / 100, moving: st.path.length > 0, next: st.path[0] || null,
+    activity: st.activity, thought: st.thought, say: st.say, mood: st.mood, awake: st.awake, replying, talk: st.talk.slice(-14).map(({ who, text }) => ({ who, text })), diary: st.diary.slice(-12).reverse() });
+  return { tick, visit, hear, reply, view, decide, situation, state: () => st, save };
 }
 
 module.exports = { createGlintLife };

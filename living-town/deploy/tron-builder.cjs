@@ -92,12 +92,13 @@ When you're done, reply with 1-3 plain sentences Sean will read in the game, say
 
 // His life between builds (lib/glint-life.js keeps a diary), so the builder version of him remembers his day.
 const diary = () => { try { return JSON.parse(fs.readFileSync(path.join(APP, "data", "glint-life.json"), "utf8")).diary.slice(-12).map(e => `- ${e.thought}${e.did ? ` [${e.did}]` : ""}`).join("\n"); } catch { return ""; } };
+const chosenName = () => { try { const l = JSON.parse(fs.readFileSync(path.join(APP, "data", "glint-life.json"), "utf8")); return l.namePicked && l.name ? String(l.name).slice(0, 20) : ""; } catch { return ""; } };
 const GRID_PROMPT = job => `You are the hidden builder of Glint's Grid, a world inside Cooke's Corner, a family-friendly game Sean plays with his young daughters on iPhones.
 
 Glint is the Grid's one living character, and he is like Truman in The Truman Show: he believes the Grid is the whole real world. He doesn't know it's a game, that the family watches him, or that you exist. The server keeps him alive between builds (walking, thinking, talking to "travelers", sleeping); window.GLINT_LIFE in the page holds where he really is and what he's thinking, kept up to date by ../glint-life.js. Always draw him from it and keep that script in index.html.
 
 Your job: make his world real. When he decides to make something, you build it, so to him it's his own work. Read GOAL.md (your brief) and NOTES.md (your own notes from earlier builds), look at log.js (his memories), plans.md (his dreams) and the code and art here.
-${diary() ? `\nHis diary today (what he thought and did while walking around):\n${diary()}\n` : ""}${job.want ? `\nWhile walking around, Glint decided to make this next: "${job.want}". Build it, true to what he imagined.\n` : "\nHe hasn't decided anything specific, so take the next step toward his dream that fits his diary and plans.\n"}
+${chosenName() ? `\nHe has chosen his own name: "${chosenName()}". Use it anywhere his name shows in the Grid (labels, signs, his own words), never "Glint".\n` : ""}${diary() ? `\nHis diary today (what he thought and did while walking around):\n${diary()}\n` : ""}${job.want ? `\nWhile walking around, Glint decided to make this next: "${job.want}". Build it, true to what he imagined.\n` : "\nHe hasn't decided anything specific, so take the next step toward his dream that fits his diary and plans.\n"}
 Make one solid, finished step this build (you have about 30 minutes), not a half-done giant one.
 
 Never break the illusion. Everything Glint can see or remember must be in-world: log.js, plans.md, names and "say" lines in world.js. No mention there of code, files, builds, games, players, screens, phones, Claude, Blender, Sean or the family. Technical notes go only in NOTES.md, which he never sees.
