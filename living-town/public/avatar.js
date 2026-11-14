@@ -96,5 +96,87 @@
     return { canvas: out, cw: idx.cw, ch: idx.ch, ax: b.ax, ay: b.ay };
   }
 
-  window.LivingTownAvatar = { sheet, bodyFor, getIndex, DEFAULTS };
+  // --- Pirate Cove ink look ---
+  // The pirate world is a moonlit night drawn with dark ink lines, so people and pets get redrawn to match while they're there.
+  // Hazel picks the look. Switch it here (or try one on a phone with ?pirateLook=A):
+  //   "A" ink outline only   "B" ink outline + inside lines + moonlight   "C" like B, plus a pirate hat
+  const PIRATE_LOOK = "B";
+  const INK = [16, 16, 34];   // the world's ink colour
+  const inked = new WeakMap();
+  function pirateLook() { try { const q = new URLSearchParams(location.search).get("pirateLook"); if (/^[ABC]$/.test(q || "")) return q; } catch { /* no URL */ } return PIRATE_LOOK; }
+  /** The same walk sheet redrawn in the pirate ink style. Made once per sheet and kept. hat: false for pets. */
+  function ink(sh, style = pirateLook(), hat = true) {
+    if (!sh) return null;
+    let m = inked.get(sh); if (!m) inked.set(sh, m = {});
+    const key = style + (hat ? "h" : "");
+    return m[key] ||= restyle(sh, style, hat && style === "C");
+  }
+  function restyle(sh, style, hat) {
+    const W = sh.canvas.width, H = sh.canvas.height, cw = sh.cw, ch = sh.ch;
+    const out = document.createElement("canvas"); out.width = W; out.height = H;
+    const g = out.getContext("2d", { willReadFrequently: true }); g.drawImage(sh.canvas, 0, 0);
+    let px = g.getImageData(0, 0, W, H), d = px.data;
+    if (style !== "A") {
+      // moonlight: cooler, a touch darker, shadows lean blue-violet like the world; then thin ink lines where colours meet
+      for (let i = 0; i < d.length; i += 4) {
+        if (!d[i + 3]) continue;
+        const r = d[i], gg = d[i + 1], b = d[i + 2], dark = 1 - (r * 0.3 + gg * 0.59 + b * 0.11) / 255;
+        d[i] = Math.min(255, r * 0.84 + 4 - dark * 14);
+        d[i + 1] = Math.min(255, gg * 0.86 + 6 - dark * 10);
+        d[i + 2] = Math.min(255, b * 0.88 + 26 + dark * 4);
+      }
+      const src = new Uint8ClampedArray(d);
+      for (let y = 0; y < H - 1; y++) for (let x = 0; x < W - 1; x++) {
+        const i = (y * W + x) * 4; if (src[i + 3] < 200) continue;
+        for (const j of [i + 4, i + W * 4]) {
+          if (src[j + 3] < 200) continue;
+          const diff = Math.abs(src[i] - src[j]) + Math.abs(src[i + 1] - src[j + 1]) + Math.abs(src[i + 2] - src[j + 2]);
+          if (diff > 150) {
+            const k = (src[i] + src[i + 1] + src[i + 2]) <= (src[j] + src[j + 1] + src[j + 2]) ? i : j, a = Math.min(0.65, (diff - 150) / 120 + 0.3);
+            d[k] = d[k] * (1 - a) + INK[0] * a; d[k + 1] = d[k + 1] * (1 - a) + INK[1] * a; d[k + 2] = d[k + 2] * (1 - a) + INK[2] * a;
+          }
+        }
+      }
+      g.putImageData(px, 0, 0);
+    }
+    if (hat) { for (let r = 0; r < H / ch; r++) for (let c = 0; c < W / cw; c++) tricorn(g, d, W, c * cw, r * ch, cw, ch); px = g.getImageData(0, 0, W, H); d = px.data; }
+    // the ink outline all the way round, kept inside each frame
+    const a0 = new Uint8ClampedArray(W * H); for (let i = 0; i < a0.length; i++) a0[i] = d[i * 4 + 3];
+    const R = 2;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const p = y * W + x, sa = a0[p]; if (sa >= 250) continue;
+      const fx = x - x % cw, fy = y - y % ch; let m = 0;
+      for (let dy = -R; dy <= R; dy++) {
+        const yy = y + dy; if (yy < fy || yy >= fy + ch) continue;
+        for (let dx = -R; dx <= R; dx++) { const xx = x + dx; if (xx < fx || xx >= fx + cw || dx * dx + dy * dy > R * R + 1) continue; const v = a0[yy * W + xx]; if (v > m) m = v; }
+      }
+      if (m <= sa) continue;
+      const s = sa / 255, k = m / 255 * (1 - s), oa = s + k, i = p * 4;
+      d[i] = (d[i] * s + INK[0] * k) / oa; d[i + 1] = (d[i + 1] * s + INK[1] * k) / oa; d[i + 2] = (d[i + 2] * s + INK[2] * k) / oa; d[i + 3] = oa * 255;
+    }
+    g.putImageData(px, 0, 0);
+    return { ...sh, canvas: out };
+  }
+  // A little cartoon tricorn hat on top of the head in every frame (found by looking for the top of the sprite).
+  function tricorn(g, d, W, x0, y0, cw, ch) {
+    let top = -1;
+    for (let y = y0; y < y0 + ch && top < 0; y++) for (let x = x0; x < x0 + cw; x++) if (d[(y * W + x) * 4 + 3] > 128) { top = y; break; }
+    if (top < 0) return;
+    const row = top + 10; let lo = x0 + cw, hi = x0;
+    for (let x = x0; x < x0 + cw; x++) if (d[(row * W + x) * 4 + 3] > 128) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+    if (hi <= lo) return;
+    const cx = (lo + hi) / 2, hw = Math.max(7, Math.min(16, (hi - lo) / 2)) * 1.3, by = top + hw * 0.5;
+    g.save(); g.lineJoin = "round";
+    g.fillStyle = "#3a2f4a";   // crown
+    g.beginPath(); g.moveTo(cx - hw * 0.62, by); g.quadraticCurveTo(cx - hw * 0.6, top - hw * 0.3, cx, top - hw * 0.3); g.quadraticCurveTo(cx + hw * 0.6, top - hw * 0.3, cx + hw * 0.62, by); g.closePath(); g.fill();
+    g.fillStyle = "#2a2238";   // brim, turned up at both sides with a point in front
+    g.beginPath(); g.moveTo(cx - hw * 1.1, by - hw * 0.55); g.quadraticCurveTo(cx - hw * 0.7, by + hw * 0.1, cx, by + hw * 0.22);
+    g.quadraticCurveTo(cx + hw * 0.7, by + hw * 0.1, cx + hw * 1.1, by - hw * 0.55); g.quadraticCurveTo(cx + hw * 0.6, by - hw * 0.05, cx, by - hw * 0.12);
+    g.quadraticCurveTo(cx - hw * 0.6, by - hw * 0.05, cx - hw * 1.1, by - hw * 0.55); g.closePath(); g.fill();
+    g.strokeStyle = "#e0b64a"; g.lineWidth = 1.5;   // gold trim
+    g.beginPath(); g.moveTo(cx - hw * 1.0, by - hw * 0.45); g.quadraticCurveTo(cx - hw * 0.6, by + hw * 0.05, cx, by + hw * 0.14); g.quadraticCurveTo(cx + hw * 0.6, by + hw * 0.05, cx + hw * 1.0, by - hw * 0.45); g.stroke();
+    g.restore();
+  }
+
+  window.LivingTownAvatar = { sheet, bodyFor, getIndex, DEFAULTS, ink, PIRATE_LOOK };
 })();
