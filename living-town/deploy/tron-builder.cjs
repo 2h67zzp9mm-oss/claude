@@ -99,7 +99,8 @@ function build(file, job) {
     if (ai.status !== 0) return fail("Claude couldn't finish the build.", ai.stderr || ai.stdout);
     job.summary = tail(String(ai.stdout).trim(), 600);
     fs.unlinkSync(path.join(app, "node_modules"));
-    const changed = git(dir, "status", "--porcelain", "-uall").split("\n").filter(Boolean).map(l => l.slice(3));
+    // -z: NUL-separated and untrimmed, so the first file keeps its full name (git() trims, which used to eat its first letter)
+    const changed = execFileSync("git", ["status", "--porcelain", "-z", "-uall"], { cwd: dir, encoding: "utf8" }).split("\0").filter(Boolean).map(l => l.slice(3));
     if (!changed.length) return fail("Claude didn't change anything.", job.summary);
     const bad = changed.filter(f => !f.startsWith("living-town/") || PROTECTED.some(re => re.test(f)));
     if (bad.length) return fail(`It tried to change protected files: ${bad.join(", ")}`);
