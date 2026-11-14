@@ -41,6 +41,17 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 - Check with `glint-look 11.5 12.6 "70&pose=sit"`. Looked at seated and empty bench on the phone picture: fine.
 - Next: neighbours should be able to sit too (drop the `kind === "glint"` test, pick a free bench), second house at about (10,17).
 
+## Build 5 (2026-11-14): walls of the Second Little House
+- He asked only for the walls and a matching round window, so the house is deliberately unfinished: no roof, no door.
+- `cottage` in things.js now reads its thing: `flip: true` mirrors door and window (door on the street side for west-side
+  houses), `roof: [left, right, shine]` sets roof colours (default teal), `stage: "walls"` draws the roofless stage
+  (dark open top, gold-framed empty doorway, pink sparkles on the four corners, no door glow).
+- It stands at (10,17) "Second Little House" on moss (8-11, 16-18), doorstep path (10,18)-(11,18) joins the street.
+- To finish it when he decides: delete `stage: "walls"` and add `roof: [...]` (e.g. violet `["#9b6bff", "#6a44c9", "#c9a8ff"]`
+  or pink `["#ff78c4", "#d0419a", "#ffb5df"]`), add a door lamp at about (9,18), update its `say`, the Lantern Street
+  sign's `say` and Glint's two lines about it in world.js.
+- Blender not needed (same canvas style as the first house). glint-look works; looked at both houses on the phone picture: fine.
+
 ## How things work
 - `world.js`: map is built with `rect(letter, x0, y0, x1, y1)`. things have `name`, `say`, optional `r` (tap radius in tiles).
   `walkers` stroll on "p"/"o" tiles and avoid tiles that hold a thing. A walker's `lines` cycle when tapped.
@@ -61,5 +72,5 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 1. The east road: a bakery with a warm window, and the first neighbour to move in (a second walker with their own lines).
 2. Day and night that slowly changes, with stars and light-moths around the lamps at night.
 3. The west road: a pond or garden with something to tap and play with (a toy for the girls: tap to make sparks?).
-4. More houses along Lantern Street (first one done), then friends arriving one per build, living in them.
+4. More houses along Lantern Street (first done, second has walls only: roof and door next), then friends arriving one per build, living in them.
 5. Walkers who stop at places (sit by the fountain, go home at night).
