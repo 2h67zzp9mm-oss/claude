@@ -20,6 +20,21 @@ test("home plot economy: buy several, sell one at a time, till for an extra crop
   for (const [k, c] of Object.entries(hs.CROPS || {})) assert.ok(c.sell * c.yield > c.seed, `${k} is worth planting`);
 });
 
+test("economy bot: every day of a little play can buy one small decoration, and it's the same every run", () => {
+  const bot = require("../scripts/economy-bot"), sim = bot.simulate();
+  assert.deepEqual(bot.problems(sim), []);
+  assert.deepEqual(bot.simulate(), sim, "same numbers every time");
+  for (const p of sim) {
+    assert.equal(p.days.length, bot.DAYS);
+    for (const d of p.days) { assert.ok(d.sold > 0, `${p.name} sells something on day ${d.day}`); assert.equal(d.spare, d.earned - d.seeds); }
+  }
+  const file = require("node:path").join(__dirname, "..", "ECONOMY.md"), fs = require("node:fs");
+  assert.ok(fs.existsSync(file) && fs.readFileSync(file, "utf8") === bot.report(sim), "ECONOMY.md is out of date. Run: node scripts/economy-bot.js");
+  const [little, big] = sim;
+  assert.ok(big.week > little.week, "playing more earns more");
+  assert.equal(little.days.at(-1).beds, 4, "a little play never upgrades"); assert.ok(big.days.at(-1).beds > 4, "a big play upgrades the garden");
+});
+
 test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () => {
   let roll = 0.5;
   const hs = createHomestead({ random: () => roll });
