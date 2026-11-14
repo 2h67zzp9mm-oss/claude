@@ -99,3 +99,13 @@ test("decor: a rare thing can be bought once on its day", () => {
   assert.equal(hs.act(state, "h", me, { action: "decorBuy", item: "chair" }, t).ok, true, "basics can be bought again and again");
   assert.equal(hs.act(state, "h", me, { action: "decorBuy", item: "chair" }, t).ok, true);
 });
+
+test("decor: Hazel's art picks save for the family and reject unknown styles", () => {
+  const h = {}, r = { stars: 0 }, ctx = { world: "clay", householdId: "x", now: Date.now() };
+  assert.deepStrictEqual(Decor.view(h, ctx).art, { room: "clay", pirate: "B" });
+  assert.ok(Decor.act(h, r, { action: "artPick", key: "room", item: "pixel" }, ctx).ok);
+  assert.ok(Decor.act(h, r, { action: "artPick", key: "pirate", item: "C" }, ctx).ok);
+  assert.strictEqual(Decor.act(h, r, { action: "artPick", key: "room", item: "neon" }, ctx).ok, false);
+  assert.strictEqual(Decor.act(h, r, { action: "artPick", key: "stars", item: "A" }, ctx).ok, false);
+  assert.deepStrictEqual(Decor.view(h, ctx).art, { room: "pixel", pirate: "C" });
+});

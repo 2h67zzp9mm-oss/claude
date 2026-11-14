@@ -102,6 +102,14 @@ async function main() {
     await run(`window.__room.click("Store", document.querySelector(".home-pop"))`);
     d = await run("window.__room.decor()"); ok(d.storage.some(t => t.id === "pic_flower") && !d.room.some(t => t.id === "pic_flower"), "put the picture back in the box");
     await shot("7-decorated");
+    await run(`window.__room.click("Back")`); await run(`window.__room.click("Style")`);
+    await run(`window.__room.click("Storybook")`); await shot("7b-storybook");
+    await run(`window.__room.click("Cozy pixel")`); await run(`window.__room.click("Pirate hat")`); await shot("7c-pixel");
+    d = await run("window.__room.decor()");
+    ok(d.art.room === "pixel" && d.art.pirate === "C" && await run("window.LivingTownArt.pirate") === "C", `picked art in the game (room ${d.art.room}, pirate ${d.art.pirate})`);
+    ok((await run("window.__room.bar()")).includes("✅ Cozy pixel"), "the picked style shows a tick");
+    await run(`window.__room.click("Soft clay")`); await run(`window.__room.click("Moonlit")`);
+    await run(`window.__room.click("Back")`); await run(`window.__room.click("Decorate")`);
     await run(`window.__room.click("Back")`); await run(`window.__room.click("Back")`);
     ok(!await run("window.LivingTownRoom.isOpen") && (await run("window.__room.bar()")).includes("Town"), "walked back out to the garden");
     await shot("8-outside");

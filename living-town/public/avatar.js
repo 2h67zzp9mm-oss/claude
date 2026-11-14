@@ -98,12 +98,12 @@
 
   // --- Pirate Cove ink look ---
   // The pirate world is a moonlit night drawn with dark ink lines, so people and pets get redrawn to match while they're there.
-  // Hazel picks the look. Switch it here (or try one on a phone with ?pirateLook=A):
+  // Hazel picks the look in the game (🏠 inside → 🎨 Style, saved for the family). The default is here (or try one on a phone with ?pirateLook=A):
   //   "A" ink outline only   "B" ink outline + inside lines + moonlight   "C" like B, plus a pirate hat
   const PIRATE_LOOK = "B";
   const INK = [16, 16, 34];   // the world's ink colour
   const inked = new WeakMap();
-  function pirateLook() { try { const q = new URLSearchParams(location.search).get("pirateLook"); if (/^[ABC]$/.test(q || "")) return q; } catch { /* no URL */ } return PIRATE_LOOK; }
+  function pirateLook() { try { const q = new URLSearchParams(location.search).get("pirateLook"); if (/^[ABC]$/.test(q || "")) return q; } catch { /* no URL */ } const pick = window.LivingTownArt?.pirate; return /^[ABC]$/.test(pick || "") ? pick : PIRATE_LOOK; }
   /** The same walk sheet redrawn in the pirate ink style. Made once per sheet and kept. hat: false for pets. */
   function ink(sh, style = pirateLook(), hat = true) {
     if (!sh) return null;

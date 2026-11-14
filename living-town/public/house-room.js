@@ -8,8 +8,10 @@
   const R = DC.ROOM, BY = DC.BY_ID;
   // Art styles for Hazel to pick from: A soft clay, B storybook (ink lines), C cozy pixel. ?roomstyle=b to preview.
   const STYLES = { a: "clay", b: "story", c: "pixel" };
-  let STYLE = "clay";
-  try { STYLE = STYLES[new URLSearchParams(location.search).get("roomstyle")] || STYLE; } catch { /* fine */ }
+  // Hazel picks it in the game (🎨 Style, saved for the family); ?roomstyle=b still overrides for a preview.
+  let URL_STYLE = null;
+  try { URL_STYLE = STYLES[new URLSearchParams(location.search).get("roomstyle")] || null; } catch { /* fine */ }
+  let STYLE = URL_STYLE || "clay";
 
   const PAL = {
     clay: { wall: "#f4e7d4", wall2: "#ead6bb", trim: "#c99c6e", floor: "#dcb88e", floor2: "#cfa97d", side: "#e3ccad", wood: "#b9875a", fabric: "#ec8f7c", fabric2: "#8cc5d8", accent: "#f6c95b", leaf: "#6fb27a", metal: "#c9c2b8", pot: "#d9825b", ink: "#5a3d2b", sky: ["#a9dcff", "#e6f5ff"], sun: true, dark: 0 },
@@ -310,6 +312,7 @@
     if (!silent) host?.onClose?.();
   }
   function onState(view, result) {
+    const pick = view?.decor?.art?.room; if (!URL_STYLE && Object.values(STYLES).includes(pick)) STYLE = pick;
     if (!isOpen) return;
     if (!drag) items = (view?.decor?.room || []).map(x => ({ ...x }));
     if (sel && !items.some(i => i.uid === sel)) { sel = null; hideRing(); }
@@ -318,14 +321,14 @@
     if (result && result.ok === false && sel) showRing();
     refreshBar();
   }
-  function refreshBar() { ({ idle, shop, stored, decorate })[barKind]?.(); }
+  function refreshBar() { ({ idle, shop, stored, decorate, style })[barKind]?.(); }
 
   // --- the bottom bar ---
   const count = id => [...V().storage, ...items].filter(x => x.id === id).length;
   function idle() {
     barKind = "idle"; mode = "look"; sel = null; hideRing();
     const n = V().storage.length;
-    host.setBar("", [{ label: "🛋️ Decorate", big: n > 0, go: decorate }, { label: "🛒 Shop", big: !n && !items.length, go: shop }, { label: "📦 Stored", badge: n ? String(n) : "", go: stored }, { label: "↩️ Back", go: () => close() }], "home-dock");
+    host.setBar("", [{ label: "🛋️ Decorate", big: n > 0, go: decorate }, { label: "🛒 Shop", big: !n && !items.length, go: shop }, { label: "📦 Stored", badge: n ? String(n) : "", go: stored }, { label: "🎨 Style", go: style }, { label: "↩️ Back", go: () => close() }], "home-dock");
   }
   function shop() {
     barKind = "shop"; mode = "look"; sel = null; hideRing();
@@ -347,6 +350,17 @@
     if (!list) return host.setBar("📦 Your box is empty. Buy something in the shop!", [{ label: "🛒 Shop", big: true, go: shop }, { label: "Back", go: idle }]);
     host.setBar(`<span class="home-head"><b>📦 Stored</b><small>Tap one to put it out</small></span><div class="home-actions wide room-picks">${list}</div>`, [{ label: "Back", go: idle }]);
     wirePicks();
+  }
+  // Hazel's art picks, right in the game: the house style, and how people and pets look in Pirate Cove.
+  const ROOM_LOOKS = [["clay", "🏺 Soft clay"], ["story", "📖 Storybook"], ["pixel", "👾 Cozy pixel"]];
+  const PIRATE_LOOKS = [["A", "✒️ Outline"], ["B", "🌙 Moonlit"], ["C", "🏴‍☠️ Pirate hat"]];
+  function style() {
+    barKind = "style"; mode = "look"; sel = null; hideRing();
+    const art = V().art || {}, opt = (key, list, cur) => list.map(([v, name]) => `<button data-art="${key}:${v}">${v === cur ? "✅" : name.split(" ")[0]} ${name.split(" ").slice(1).join(" ")}</button>`).join("");
+    host.setBar(`<span class="home-head"><b>🎨 Inside the house</b><small>For the whole family</small></span><div class="home-actions room-picks">${opt("room", ROOM_LOOKS, art.room || STYLE)}</div>` +
+      `<span class="home-head"><b>🏴‍☠️ People in Pirate Cove</b><small>You and your pets</small></span><div class="home-actions room-picks">${opt("pirate", PIRATE_LOOKS, art.pirate || "B")}</div>`,
+      [{ label: "Back", go: idle }]);
+    host.bar.querySelectorAll("[data-art]").forEach(b => { b.onclick = () => { const [key, item] = b.dataset.art.split(":"); host.act("artPick", { key, item }); host.sfx?.pop(); }; });
   }
   function decorate() {
     barKind = "decorate"; mode = "decorate";

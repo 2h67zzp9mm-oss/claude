@@ -9,7 +9,11 @@
  */
 const D = require("../shared/decor");
 
-const ACTIONS = ["decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore"];
+const ACTIONS = ["decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick"];
+// Hazel picks the art in the game: the inside-the-house style and how people look in Pirate Cove. Saved for the whole family.
+const ART = { room: ["clay", "story", "pixel"], pirate: ["A", "B", "C"] };
+const ART_DEFAULT = { room: "clay", pirate: "B" };
+const artOf = h => ({ ...ART_DEFAULT, ...(h.art || {}) });
 function dayKey(now) { const d = new Date(now); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
 function roomOf(h, world) {
   if (!h.rooms || typeof h.rooms !== "object") h.rooms = {};
@@ -35,7 +39,8 @@ function view(h, { world, householdId, now }) {
   return {
     stock: D.shopToday(day, world, householdId).map(id => ({ id, soldOut: Boolean(D.BY_ID[id].rare && rare.includes(id)) })),
     storage: storageOf(h).map(({ uid, id }) => ({ uid, id })),
-    room: roomOf(h, world).items.map(({ uid, id, x, y, rot }) => ({ uid, id, x, y, rot: rot || 0 }))
+    room: roomOf(h, world).items.map(({ uid, id, x, y, rot }) => ({ uid, id, x, y, rot: rot || 0 })),
+    art: artOf(h)
   };
 }
 
@@ -43,6 +48,12 @@ function view(h, { world, householdId, now }) {
 function act(h, r, msg, { world, householdId, now }) {
   const room = roomOf(h, world), box = storageOf(h), uid = Number(msg.uid);
   switch (msg.action) {
+    case "artPick": {
+      const key = String(msg.key || ""), v = String(msg.item || "");
+      if (!ART[key]?.includes(v)) return { ok: false, toast: "Hmm, I don't know that style." };
+      h.art = { ...artOf(h), [key]: v };
+      return { ok: true, artPicked: key, toast: "🎨 New look!" };
+    }
     case "decorBuy": {
       const id = typeof msg.item === "string" ? msg.item : typeof msg.id === "string" ? msg.id : "", d = D.BY_ID[id], day = dayKey(now);
       if (!d || !D.shopToday(day, world, householdId).includes(id)) return { ok: false, toast: "That's not in the shop today. Come back tomorrow!" };
@@ -85,4 +96,4 @@ function act(h, r, msg, { world, householdId, now }) {
   return { ok: false, toast: "Hmm, I don't know how to do that." };
 }
 
-module.exports = { ACTIONS, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, shopToday: D.shopToday, fits: D.fits, footprint: D.footprint, view, act, dayKey };
+module.exports = { ACTIONS, ART, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, shopToday: D.shopToday, fits: D.fits, footprint: D.footprint, view, act, dayKey };

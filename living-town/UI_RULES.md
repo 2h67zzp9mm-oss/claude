@@ -35,7 +35,7 @@ like a finished game, not a web page.
   the words, then the meter and the small text. A finished row turns green and its picture becomes ✅. Locked things say `🔒 Level N`.
 - Inside the house (`public/house-room.js`) reuses the same top, bottom panel and pop-up. Its own pieces:
   `canvas.house-room` (the room, drawn under the panels), `.room-picks` (stored things to put out, in the part of the
-  panel that scrolls) and `.home-pop.room-ring` (`↻ Turn`, `📦 Store`, `Done` on the thing you picked, one row).
+  panel that scrolls) and `.home-pop.room-ring` (`↻ Turn`, `📦 Store`, `Done` on the thing you picked, one row). `🎨 Style` in the room is where Hazel picks the art (house style, Pirate Cove look) for the whole family.
 - A new menu reuses these. If it truly needs a new piece, add it once in `public/map.css` and list it here.
 - Progress is always shown the same way: `have/need` in small text, plus a meter when there's room.
 - Rewards are always written `+N⭐` (and `🍪` for treats). Prices and what you have are `N⭐`, no space.

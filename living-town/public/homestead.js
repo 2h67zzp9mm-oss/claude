@@ -589,6 +589,7 @@
   function onState(msg) {
     if (msg.error) return opts.toast(msg.error);
     view = msg.home;
+    window.LivingTownArt = view.decor?.art || {};   // Hazel's art picks (house style, Pirate Cove look)
     if (view.world) setWorld(view.world);
     if (view.house) houseId = view.house;
     window.LivingTownRoom?.onState(view, msg.result);
