@@ -164,7 +164,7 @@
     const h = houseArt().r; if (px > h.x && px < h.x + h.w && py > h.y && py < h.y + h.h) {
       const d = L.house.door; return { kind: "door", x: d[0] + 0.7, y: d[1] };
     }
-    for (let k = 0; k < L.garden.plots.length; k++) { const r = plotRect(k); if (w.x > r.x0 - 0.1 && w.x < r.x1 + 0.1 && w.y > r.y0 - 0.1 && w.y < r.y1 + 0.1) return { kind: "plot", plot: k, x: r.cx + 0.2, y: r.y0 - 0.25 }; }
+    for (let k = 0; k < L.garden.plots.length; k++) { const r = plotRect(k); if (w.x > r.x0 - 0.1 && w.x < r.x1 + 0.1 && w.y > r.y0 - 0.1 && w.y < r.y1 + 0.1) { const s = bedSpot(k); return { kind: "plot", plot: k, x: s.x, y: s.y }; } }
     const p = L.pond, e = ((w.x - p.x) / p.rx) ** 2 + ((w.y - p.y) / p.ry) ** 2;
     if (e < 1.15) { const a = Math.atan2((w.y - p.y) / p.ry, (w.x - p.x) / p.rx); return { kind: "pond", x: p.x + Math.cos(a) * (p.rx + 0.45), y: p.y + Math.sin(a) * (p.ry + 0.45), cast: { x: p.x + Math.cos(a) * p.rx * 0.45, y: p.y + Math.sin(a) * p.ry * 0.45 } }; }
     if (Math.hypot(w.x - L.exit[0], w.y - L.exit[1]) < 1.6) return { kind: "exit", x: L.exit[0], y: L.exit[1] };
@@ -254,9 +254,23 @@
   const CONFETTI = ["#ff6b6b", "#ffd84a", "#4fc3a1", "#64b5f6", "#c38bff", "#ff9ad5"];
 
   // --- the pop-up menu right at your finger: tap a thing, it lights up, pick what to do ---
-  let pop = null, popAt = null, highlight = null;
+  let pop = null, popAt = null, highlight = null, ringButtons = [];
   const CLOSERS = /^(Done|OK|Stay|Back)$/;
-  function near(t) { return Math.hypot(me.x - t.x, me.y - t.y) < 0.6 && !me.path.length; }
+  // Beds can be worked from anywhere on the path next to them; other things from where you stand by them.
+  const REACH = 0.8;
+  function toRect(r, x, y) { return Math.hypot(Math.max(r.x0 - x, 0, x - r.x1), Math.max(r.y0 - y, 0, y - r.y1)); }
+  function near(t) { if (me.path.length) return false; return t.kind === "plot" ? toRect(plotRect(t.plot), me.x, me.y) < REACH : Math.hypot(me.x - t.x, me.y - t.y) < 0.6; }
+  // The closest spot on the path beside a bed, from where you are now.
+  function bedSpot(k) {
+    const r = plotRect(k), out = 0.27; let best = null;
+    for (let i = 0; i < 24; i++) {
+      const a = i / 24, side = Math.floor(a * 4), f = (a * 4) % 1;
+      const [x, y] = side === 0 ? [r.x0 + f * (r.x1 - r.x0), r.y0 - out] : side === 1 ? [r.x1 + out, r.y0 + f * (r.y1 - r.y0)] : side === 2 ? [r.x1 - f * (r.x1 - r.x0), r.y1 + out] : [r.x0 - out, r.y1 - f * (r.y1 - r.y0)];
+      if (blockedAt(x, y)) continue;
+      const d = Math.hypot(x - me.x, y - me.y); if (!best || d < best.d) best = { x, y, d };
+    }
+    return best || { x: r.cx + 0.2, y: r.y0 - 0.25 };
+  }
   function showPop(t, at) {
     const menu = menuFor(t); if (!menu) return;
     highlight = t; popAt = at; me.popTarget = t;
@@ -264,15 +278,58 @@
       hidePop(true);
       if (near(t)) b.go(); else { me.pending = b.go; walkTo(t, true); }
     } }));
-    pop.innerHTML = `${menu.title ? `<p class="home-title">${menu.title}</p>` : ""}<div class="home-actions">${buttons.map((b, i) => `<button data-i="${i}" ${b.off ? "disabled" : ""} class="${b.big ? "big" : ""}">${b.label}</button>`).join("")}</div>`;
-    pop.querySelectorAll("button").forEach(btn => { btn.onclick = e => { e.stopPropagation(); buttons[Number(btn.dataset.i)].go(); }; });
+    // A ring of choices around your finger: slide to one and let go, or tap it. The middle closes it.
+    const opts2 = buttons.map((b, i) => ({ ...b, i })).filter(b => !CLOSERS.test(b.label));
+    const n = opts2.length, R = n > 6 ? 98 : 84, W = el.clientWidth, H = el.clientHeight, M = R + 34;
+    const cx = Math.max(M, Math.min(W - M, at.x)), cy = Math.max(M + 40, Math.min(H - M - 70, at.y));
+    const part = l => { const t = String(l).replace(/<br>/g, " ").replace(/<[^>]+>/g, "").trim(), m = t.match(/^(\S+)\s+(.*)$/); return m ? [m[1], m[2]] : [t, ""]; };
+    pop.className = "home-pop home-ring"; ringButtons = buttons;
+    pop.innerHTML = `${menu.title ? `<p class="ring-title">${menu.title}</p>` : ""}<button class="ring-mid" data-i="-1" aria-label="Done"><span>Done</span></button>${opts2.map((b, j) => {
+      const a = -Math.PI / 2 + j * 2 * Math.PI / Math.max(1, n), [ic, word] = part(b.label);
+      return `<button data-i="${b.i}" ${b.off ? "disabled" : ""} ${b.hold ? `data-hold="${b.hold}"` : ""} class="ring-btn ${b.big ? "big" : ""}" style="left:${Math.round(Math.cos(a) * R)}px;top:${Math.round(Math.sin(a) * R)}px"><b>${ic}</b><span>${esc(word.replace(/\s+(×\d+|\d+⭐.*)$/, ""))}</span>${/\s(×\d+|\d+⭐)/.test(word) ? `<small>${esc(word.match(/(×\d+|\d+⭐)/)[1])}</small>` : ""}${b.hold ? "<i class=\"ring-fill\"></i>" : ""}</button>`; }).join("")}`;
+    pop.style.left = cx + "px"; pop.style.top = cy + "px";
+    const fire = btn => { const i = Number(btn.dataset.i); if (i < 0) return hidePop(); if (btn.disabled) return; if (btn.dataset.hold) return; buttons[i].go(); };
+    pop.querySelectorAll("button").forEach(btn => {
+      btn.onclick = e => { e.stopPropagation(); if (btn.dataset.hold) { holdHint(btn); return; } fire(btn); };
+      if (btn.dataset.hold) { btn.onpointerdown = e => { e.stopPropagation(); startHold(btn, buttons[Number(btn.dataset.i)]); }; btn.onpointerup = btn.onpointerleave = () => stopHold(); }
+    });
     pop.classList.remove("hidden");
-    const W = el.clientWidth, H = el.clientHeight, w = pop.offsetWidth, h = pop.offsetHeight;
-    const x = Math.max(8, Math.min(W - w - 8, at.x - w / 2));
-    const y = at.y - h - 24 > 60 ? at.y - h - 24 : Math.min(H - h - 90, at.y + 24);
-    pop.style.left = x + "px"; pop.style.top = y + "px";
   }
-  function hidePop(keepHighlight) { pop?.classList.add("hidden"); if (!keepHighlight) { highlight = null; popAt = null; } }
+  // Hold-to-do buttons (Till): keep your finger on it until the ring fills.
+  let hold = null;
+  function startHold(btn, b) {
+    stopHold(); const ms = Number(btn.dataset.hold) || 1500, t0 = performance.now(), fill = btn.querySelector(".ring-fill");
+    btn.classList.add("holding"); SFX.pop?.();
+    hold = { btn, raf: 0 };
+    const step = () => { const k = Math.min(1, (performance.now() - t0) / ms); if (fill) fill.style.setProperty("--k", k); navigator.vibrate?.(k < 1 ? 0 : 30);
+      if (k >= 1) { stopHold(); b.go(); return; } hold.raf = requestAnimationFrame(step); };
+    hold.raf = requestAnimationFrame(step);
+  }
+  function stopHold() { if (!hold) return; cancelAnimationFrame(hold.raf); hold.btn.classList.remove("holding"); hold.btn.querySelector(".ring-fill")?.style.setProperty("--k", 0); hold = null; }
+  function holdHint(btn) { btn.classList.add("nudge"); setTimeout(() => btn.classList.remove("nudge"), 400); opts.toast?.("Hold it down to till!"); }
+  // Press on something and slide: the ring opens under your finger and the choice you let go on happens.
+  let press = null;
+  function onDown(e) {
+    if (!isOpen || !A || e.button > 0) return;
+    const rect = canvas.getBoundingClientRect(), [px, py] = fromScreen(e.clientX - rect.left, e.clientY - rect.top), t = targetAt(px, py);
+    if (t.kind === "walk") return;
+    press = { id: e.pointerId, x: e.clientX, y: e.clientY, over: null };
+    showPop(t, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* fine */ }
+  }
+  function onMove(e) {
+    if (!press || e.pointerId !== press.id) return;
+    const b = document.elementFromPoint(e.clientX, e.clientY)?.closest?.(".home-ring .ring-btn");
+    if (b !== press.over) { press.over?.classList.remove("hover"); stopHold(); press.over = b || null; if (b) { b.classList.add("hover"); navigator.vibrate?.(8); if (b.dataset.hold && !b.disabled) startHold(b, menuButtons(b)); } }
+  }
+  function onUp(e) {
+    if (!press || e.pointerId !== press.id) return;
+    const b = press.over; press.over?.classList.remove("hover"); const p = press; press = null; lastPress = p; setTimeout(() => { if (lastPress === p) lastPress = null; }, 400);
+    if (b && !b.dataset.hold) b.click(); else stopHold();
+  }
+  let lastPress = null;
+  const menuButtons = btn => ringButtons[Number(btn.dataset.i)];
+  function hidePop(keepHighlight) { stopHold?.(); pop?.classList.add("hidden"); if (!keepHighlight) { highlight = null; popAt = null; } }
   function drawHighlight(t) {
     if (!highlight) return;
     const pulse = 0.55 + 0.45 * Math.sin(t / 180);
@@ -362,13 +419,28 @@
     return menu;
   }
   function contextBar(t) { contextBarInner(t); }
-  // The seed shop stays open while you buy: every tap buys one, and the stars and counts update in place.
+  // What a seed costs, what its crop pays back and how long it takes: "12⭐ → 55⭐ · 8h".
+  const growTime = m => m < 60 ? `${m}m` : `${Math.round(m / 6) / 10}h`.replace(".0h", "h");
+  const payback = k => { const c = view.crops[k]; return `${c.seed}⭐ → ${c.sell * (c.yield || 1)}⭐ · ${growTime(c.minutes)}`; };
+  // The seed shop stays open while you buy: every tap buys one (or five), and the stars and counts update in place.
+  let buyMany = 1;
   function shopBar() {
     if (!view) return idleBar();
     const C = view.crops, up = view.upgrade;
-    setBar(`<span class="home-goals home-shop"><span class="home-head"><b>🛒 Seed shop</b><small>You have ${view.stars}⭐ · tap to buy one</small></span></span>`,
-      [...view.shop.map(k => ({ label: `${C[k].emoji} ${C[k].name} ${C[k].seed}⭐${view.seeds[k] > 0 ? ` <small>×${view.seeds[k]}</small>` : ""}`, off: view.stars < C[k].seed, go: () => act("buy", { crop: k }) })),
+    setBar(`<span class="home-goals home-shop"><span class="home-head"><b>🛒 Seed shop</b><small>You have ${view.stars}⭐ · seed → crop pays</small></span></span>`,
+      [...view.shop.map(k => ({ label: `${C[k].emoji} ${C[k].name}${view.seeds[k] > 0 ? ` <small>×${view.seeds[k]}</small>` : ""}<br><small>${payback(k)}</small>`, off: view.stars < C[k].seed, go: () => act("buy", { crop: k, n: buyMany }) })),
+        { label: buyMany > 1 ? "✋ Buy 1 at a time" : "🖐️ Buy 5 at a time", go: () => { buyMany = buyMany > 1 ? 1 : 5; shopBar(); } },
         ...(up ? [{ label: `🌱 Bigger garden ${up.cost}⭐`, big: view.stars >= up.cost, off: view.stars < up.cost, go: () => act("upgrade") }] : []), { label: "Back", go: idleBar }], "wide");
+  }
+  // Sell one thing at a time (tap again for more), so you can keep some for the family build.
+  function sellBar() {
+    if (!view) return idleBar();
+    const C = view.crops, F = view.fish, items = Object.entries(view.bag).filter(([k, n]) => n > 0 && (C[k] || F[k]));
+    if (!items.length) return setBar("📦 Nothing to sell. Grow or catch something!", [{ label: "Back", go: idleBar }]);
+    const total = items.reduce((s, [k, n]) => s + n * (C[k]?.sell ?? F[k].sell), 0);
+    setBar(`<span class="home-goals home-shop home-sell"><span class="home-head"><b>📦 Sell</b><small>You have ${view.stars}⭐ · tap to sell one</small></span></span>`,
+      [...items.map(([k, n]) => ({ label: `${C[k] ? C[k].emoji : (F[k].emoji || "🐟")} ${C[k] ? C[k].name : F[k].name} <small>×${n}</small><br><small>${C[k]?.sell ?? F[k].sell}⭐ each</small>`, go: () => act("sell", { item: k }) })),
+        { label: `📦 Sell all ${total}⭐`, big: true, go: () => act("sell") }, { label: "Back", go: idleBar }], "wide");
   }
   function contextBarInner(t) {
     if (!view) return idleBar();
@@ -382,11 +454,12 @@
         // Seeds you have, then seeds you can buy right here (a price means "buy one and plant it").
         const seeds = Object.entries(view.seeds).filter(([, n]) => n > 0), buy = view.shop.filter(k => !(view.seeds[k] > 0) && view.stars >= C[k].seed);
         if (!seeds.length && !buy.length) return setBar("No seeds, and not enough ⭐ for more. Sell crops or fish at the crate!", [{ label: "OK", go: idleBar }]);
-        return setBar(`🌱 Plant · you have ${view.stars}⭐`, [...seeds.map(([k, n]) => ({ label: `${C[k].emoji} ${C[k].name} ×${n}`, go: () => act("plant", { plot: t.plot, crop: k }) })),
+        return setBar(`🌱 Plant${p.tilled ? " · ⛏️ tilled, +1 crop" : ""} · ${view.stars}⭐`, [...(p.tilled ? [] : [{ label: "⛏️ Till", hold: 1500, go: () => act("till", { plot: t.plot }) }]),
+          ...seeds.map(([k, n]) => ({ label: `${C[k].emoji} ${C[k].name} ×${n}`, go: () => act("plant", { plot: t.plot, crop: k }) })),
           ...buy.map(k => ({ label: `${C[k].emoji} ${C[k].name} ${C[k].seed}⭐`, go: () => act("plant", { plot: t.plot, crop: k }) })), { label: "Done", go: idleBar }]);
       }
-      if (p.growth >= 1) return setBar(`${C[p.crop].emoji} Ready to pick!`, [{ label: "🧺 Pick", big: true, go: () => act("harvest", { plot: t.plot }) }]);
-      return setBar(`${C[p.crop].emoji} ${C[p.crop].name}: ${Math.round(p.growth * 100)}% grown${p.wet ? " · watered" : ""}`, [{ label: "💧 Water", big: !p.wet, go: () => act("water", { plot: t.plot }) }, { label: "Done", go: idleBar }]);
+      if (p.growth >= 1) return setBar(`${C[p.crop].emoji} Ready to pick!`, [{ label: "🧺 Pick", big: true, go: () => act("harvest", { plot: t.plot }) }, { label: "Done", go: idleBar }]);
+      return setBar(`${C[p.crop].emoji} ${C[p.crop].name}: ${Math.round(p.growth * 100)}% grown${p.wet ? " · watered" : ""}`, [{ label: "💧 Water", big: !p.wet, go: () => act("water", { plot: t.plot }) }, { label: "🪏 Dig up", go: () => act("dig", { plot: t.plot }) }, { label: "Done", go: idleBar }]);
     }
     if (t.kind === "treat") return setBar("🍪 A pet treat!", [{ label: "🍪 Pick up", big: true, go: () => act("treat", { spot: t.spot }) }, { label: "Done", go: idleBar }]);
     if (t.kind === "wild" && view.pets?.wild) {
@@ -402,7 +475,7 @@
     if (t.kind === "crate") {
       const n = Object.entries(view.bag).filter(([k]) => C[k] || view.fish[k]).reduce((s, [, v]) => s + v, 0);
       return setBar(`📦 Shipping crate · you have ${view.stars}⭐`, [{ label: `📦 Sell all (${n})`, big: n > 0, off: !n, go: () => act("sell") },
-        { label: "🛒 Seed shop", go: shopBar }, { label: "Done", go: idleBar }]);
+        { label: "🧺 Sell some", off: !n, go: sellBar }, { label: "🛒 Seed shop", go: shopBar }, { label: "Done", go: idleBar }]);
     }
     if (t.kind === "mailbox") return setBar(view.mail ? "✉️ You've got mail!" : "No new mail today.", [{ label: "✉️ Open", big: view.mail, go: () => act("mail") }, { label: "Done", go: idleBar }]);
     if (t.kind === "door") return setBar("Your house", [{ label: "🏠 Go inside", big: true, go: () => opts.openHouse() }, { label: "Done", go: idleBar }]);
@@ -543,11 +616,12 @@
     }
     if (bar.querySelector(".home-pets") && !r.treat) petsBar();
     if (r.bought) { floatText(me.x, me.y, 1.5, `+${r.bought.n} ${view.crops[r.bought.crop]?.emoji || "🌱"}`); SFX.pop(); }
-    if (bar.querySelector(".home-shop")) shopBar();
+    if (bar.querySelector(".home-sell")) sellBar(); else if (bar.querySelector(".home-shop")) shopBar();
     if (r.splash != null) {
       splash = { plot: r.splash, at: performance.now() }; const pr = plotRect(r.splash);
       burst(pr.cx, pr.cy, 0.9, { n: 14, color: ["#7cc8ff", "#b5e3ff", "#4aa3e8"], speed: 60, up: 60, gravity: 420, life: 700, size: 3 }); SFX.water();
     }
+    if (r.tilled != null || r.dug != null) { const pr = plotRect(r.tilled ?? r.dug); burst(pr.cx, pr.cy, 0.2, { n: 16, color: ["#8a5a35", "#a8754a", "#6b4426"], speed: 90, up: 90, life: 650, size: 3 }); SFX.plant(); navigator.vibrate?.(25); }
     if (r.planted != null) { const pr = plotRect(r.planted); burst(pr.cx, pr.cy, 0.2, { n: 10, color: ["#8a5a35", "#a8754a", "#6b4426"], speed: 70, up: 70, life: 550, size: 3 }); SFX.plant(); }
     if (r.harvested) {
       const pr = plotRect(r.plot ?? 0), em = view.crops[r.harvested]?.emoji || "✨";
@@ -562,7 +636,7 @@
       setTimeout(() => { if (!isOpen) return; SFX.goal(); burst(me.x, me.y, 1.6, { n: 26, color: CONFETTI, speed: 150, up: 160, life: 1300, size: 4 }); flyStars(me.x, me.y, 1.4, gl.stars); }, 200);
     }
     if (r.allGoals) banner(`🎉 All done today! <b>+${r.allGoals.bonus}⭐</b><br>🔥 ${r.allGoals.streak} day${r.allGoals.streak > 1 ? "s" : ""} in a row`, "big");
-    if (r.goals || r.allGoals) { if (!bar.querySelector(".home-goals") && !r.letter && !r.fish) idleBar(); else if (bar.querySelector(".home-goals")) goalsBar(); }
+    if (r.goals || r.allGoals) { if (!bar.querySelector(".home-goals") && !r.letter && !r.fish) idleBar(); else if (bar.querySelector(".home-goals") && !bar.querySelector(".home-shop")) goalsBar(); }
     if (r.letter) {
       return setBar(`✉️ From ${esc(r.letter.from)}: “${esc(r.letter.text)}”<br>🎁 ${esc(r.letter.gift)}`, [{ label: "Thanks!", big: true, go: idleBar }]);
     }
@@ -677,6 +751,12 @@
     if (!drawnHouse) house.draw();
     drawHighlight(t);
     drawFx(t);
+    // tilled beds: dark furrows, so you can see the extra crop is coming
+    if (view?.plots) for (let k = 0; k < view.plots.length; k++) if (view.plots[k].tilled && !view.plots[k].crop) {
+      const r = plotRect(k); ctx.save(); ctx.strokeStyle = "rgba(60,35,18,0.55)"; ctx.lineWidth = Math.max(1.5, 3 * cam.z); ctx.lineCap = "round";
+      for (let i = 1; i <= 3; i++) { const y = r.y0 + (r.y1 - r.y0) * i / 4, [ax, ay] = toScreen(...P(r.x0 + 0.12, y, 0.02)), [bx, by] = toScreen(...P(r.x1 - 0.12, y, 0.02)); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); }
+      ctx.restore();
+    }
     // tap marker, splash, fishing bobber
     if (marker && t - marker.at < 700) { const [sx, sy] = toScreen(...P(marker.x, marker.y)); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(sx, sy, 16 * (1 - (t - marker.at) / 900), 7 * (1 - (t - marker.at) / 900), 0, 0, Math.PI * 2); ctx.stroke(); }
     if (splash && t - splash.at < 900) { const r = plotRect(splash.plot); const [sx, sy] = toScreen(...P(r.cx, r.cy)); ctx.font = "26px system-ui"; ctx.textAlign = "center"; ctx.fillText("💧", sx, sy - 30 - (t - splash.at) / 30); }
@@ -696,6 +776,7 @@
   // --- open / close ---
   function onTap(e) {
     if (!isOpen || !A) return;
+    if (lastPress) { lastPress = null; return; }   // the press already opened the ring
     const rect = canvas.getBoundingClientRect(), [px, py] = fromScreen(e.clientX - rect.left, e.clientY - rect.top);
     // Tap another family member: wave.
     for (const o of others.values()) { const [ox, oy] = P(o.x, o.y); if (Math.abs(px - ox) < 30 && py > oy - 140 && py < oy + 10) { opts.toast(`👋 You waved at ${o.name}!`); return; } }
@@ -721,6 +802,8 @@
       document.body.appendChild(el);
       canvas = el.querySelector("canvas"); ctx = canvas.getContext("2d"); top = el.querySelector(".home-top"); bar = el.querySelector(".home-bar"); pop = el.querySelector(".home-pop");
       canvas.addEventListener("click", onTap);
+      canvas.addEventListener("pointerdown", onDown); canvas.addEventListener("pointermove", onMove); canvas.addEventListener("pointerup", onUp); canvas.addEventListener("pointercancel", onUp);
+      canvas.style.touchAction = "none";
     },
     open, close, onState, get isOpen() { return isOpen; },
     _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me, view: () => view, L: () => L, petTargets: () => petTargets(), pet }

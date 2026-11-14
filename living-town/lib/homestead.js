@@ -13,14 +13,18 @@
 const Q = require("./quests");   // levels, story, family build and collection book
 
 const CROPS = {
-  carrot: { name: "Carrot", emoji: "🥕", minutes: 20, seed: 1, sell: 3 },
-  strawberry: { name: "Strawberry", emoji: "🍓", minutes: 60, seed: 2, sell: 6 },
-  tomato: { name: "Tomato", emoji: "🍅", minutes: 40, seed: 2, sell: 4 },
-  blueberry: { name: "Blueberry", emoji: "🫐", minutes: 90, seed: 3, sell: 4 },
-  corn: { name: "Corn", emoji: "🌽", minutes: 120, seed: 3, sell: 10 },
-  sunflower: { name: "Sunflower", emoji: "🌻", minutes: 180, seed: 4, sell: 12 },
-  watermelon: { name: "Watermelon", emoji: "🍉", minutes: 360, seed: 5, sell: 20 },
-  pumpkin: { name: "Pumpkin", emoji: "🎃", minutes: 480, seed: 6, sell: 25 }
+  // The economy: every seed is worth planting. Quick crops are for when you're playing; slow ones pay the most
+  // for while you're away (or asleep). A seed gives `yield` crops, one more if the bed was tilled first.
+  // Profit (untilled): carrot +4 in 20m, tomato +7 in 40m, strawberry +8 in 1h, blueberry +11 in 1.5h,
+  // corn +14 in 2h, sunflower +18 in 3h, watermelon +30 in 6h, pumpkin +43 in 8h.
+  carrot: { name: "Carrot", emoji: "🥕", minutes: 20, seed: 2, sell: 3, yield: 2 },
+  strawberry: { name: "Strawberry", emoji: "🍓", minutes: 60, seed: 4, sell: 4, yield: 3 },
+  tomato: { name: "Tomato", emoji: "🍅", minutes: 40, seed: 3, sell: 5, yield: 2 },
+  blueberry: { name: "Blueberry", emoji: "🫐", minutes: 90, seed: 5, sell: 4, yield: 4 },
+  corn: { name: "Corn", emoji: "🌽", minutes: 120, seed: 6, sell: 10, yield: 2 },
+  sunflower: { name: "Sunflower", emoji: "🌻", minutes: 180, seed: 8, sell: 26, yield: 1 },
+  watermelon: { name: "Watermelon", emoji: "🍉", minutes: 360, seed: 10, sell: 40, yield: 1 },
+  pumpkin: { name: "Pumpkin", emoji: "🎃", minutes: 480, seed: 12, sell: 55, yield: 1 }
 };
 // weight: how common; hours: when they bite (any time if missing)
 const FISH = {
@@ -271,7 +275,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     const others = [...positions.entries()].filter(([rid, p]) => p.household === id && rid !== me?.id && now - p.at < 15_000)
       .map(([rid, p]) => ({ id: rid, name: state.residents.find(r => r.id === rid)?.name || "", x: p.x, y: p.y, dir: p.dir, moving: p.moving }));
     return {
-      plots: h.plots.map(p => p.crop ? { crop: p.crop, growth: Math.round(p.growth * 100) / 100, wet: now < Number(p.wateredAt || 0) + (Number(p.wetH) || WATER_HOURS) * 3600_000 } : { crop: null }),
+      plots: h.plots.map(p => p.crop ? { crop: p.crop, growth: Math.round(p.growth * 100) / 100, wet: now < Number(p.wateredAt || 0) + (Number(p.wetH) || WATER_HOURS) * 3600_000, tilled: Boolean(p.tilled) } : { crop: null, tilled: Boolean(p.tilled) }),
       beds: bedsOf(h), level: levelOf(h) + 1, shop: cropsOf(h),
       upgrade: LEVELS[levelOf(h) + 1] ? { cost: LEVELS[levelOf(h) + 1].cost, beds: LEVELS[levelOf(h) + 1].beds, crops: LEVELS[levelOf(h) + 1].crops } : null,
       world: WORLDS.includes(h.world) ? h.world : "clay", house: houseOf(h),
@@ -354,10 +358,10 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         if (!plot?.crop) return { ok: false, toast: "Nothing growing there yet." };
         if (plot.growth < 1) return { ok: false, toast: `Not ready yet (${Math.round(plot.growth * 100)}% grown).` };
         const c = plot.crop, extra = perk(h, r.id, "thumb2") ? random() < 0.5 : perk(h, r.id, "thumb") && random() < 0.25;
-        const n = ({ strawberry: 3, blueberry: 3, carrot: 2, tomato: 2 }[c] || 1) + (extra ? 1 : 0), newCrop = !h.grown[c];
+        const tilled = Boolean(plot.tilled), n = (CROPS[c].yield || 1) + (tilled ? 1 : 0) + (extra ? 1 : 0), newCrop = !h.grown[c];
         h.bag[c] = (h.bag[c] || 0) + n; h.grown[c] = (h.grown[c] || 0) + n;
-        Object.assign(plot, { crop: null, growth: 0, wateredAt: 0 });
-        return { ok: true, toast: `${CROPS[c].emoji} Picked ${n} ${CROPS[c].name.toLowerCase()}${n > 1 ? "s" : ""}!`, harvested: c, plot: msg.plot, count: n, newCrop };
+        Object.assign(plot, { crop: null, growth: 0, wateredAt: 0, tilled: false });
+        return { ok: true, ...(tilled ? { tilledBonus: 1 } : {}), toast: `${CROPS[c].emoji} Picked ${n} ${CROPS[c].name.toLowerCase()}${n > 1 ? "s" : ""}!`, harvested: c, plot: msg.plot, count: n, newCrop };
       }
       case "fish": {
         // The phone runs the timing game; this records the catch.
@@ -370,16 +374,36 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         return { ok: true, fish: k, first, toast: `🎣 You caught a ${f.name}!${first ? " New in your fish book!" : ""}` };
       }
       case "sell": {
+        // Sell everything, or just some of one thing (msg.item, msg.n; n defaults to one).
         let stars = 0, count = 0;
+        const only = msg.item ? String(msg.item) : null;
+        if (only && !(h.bag[only] > 0)) return { ok: false, toast: "You don't have any of those." };
         for (const [k, n] of Object.entries(h.bag)) {
           const price = CROPS[k]?.sell ?? FISH[k]?.sell;
-          if (!price || !(n > 0)) continue;
-          stars += price * n; count += n; delete h.bag[k];
+          if (!price || !(n > 0) || (only && k !== only)) continue;
+          const take = only ? Math.max(1, Math.min(n, Math.floor(Number(msg.n)) || 1)) : n;
+          stars += price * take; count += take; h.bag[k] = n - take; if (!h.bag[k]) delete h.bag[k];
         }
         if (!count) return { ok: false, toast: "The crate is empty. Grow or catch something to sell!" };
         if (perk(h, r.id, "trader")) stars = Math.round(stars * 1.1);
         r.stars = (Number(r.stars) || 0) + stars;
-        return { ok: true, sold: stars, toast: `📦 Sold ${count} thing${count > 1 ? "s" : ""} for ${stars} ⭐` };
+        return { ok: true, sold: stars, ...(only ? { soldItem: only } : {}), toast: only ? `📦 Sold ${count} ${(CROPS[only]?.name || FISH[only]?.name || "").toLowerCase()} for ${stars} ⭐` : `📦 Sold ${count} thing${count > 1 ? "s" : ""} for ${stars} ⭐` };
+      }
+      case "till": {
+        // Hold to till an empty bed: the next crop there gives one extra.
+        if (!plot) return { ok: false, toast: "Pick a bed to till." };
+        if (plot.crop) return { ok: false, toast: "Something's growing there. Till it once it's picked." };
+        if (plot.tilled) return { ok: false, toast: "Already tilled. Plant something!" };
+        plot.tilled = true;
+        return { ok: true, tilled: msg.plot, toast: "⛏️ Tilled! The next crop here gives one extra." };
+      }
+      case "dig": {
+        // Dig up a crop you changed your mind about. Fresh seeds go back in your bag.
+        if (!plot?.crop) return { ok: false, toast: "Nothing to dig up there." };
+        const c = plot.crop, back = plot.growth < 0.1;
+        if (back) h.seeds[c] = (h.seeds[c] || 0) + 1;
+        Object.assign(plot, { crop: null, growth: 0, wateredAt: 0 });
+        return { ok: true, dug: msg.plot, toast: back ? `🪏 Dug up. The ${CROPS[c].name.toLowerCase()} seed is back in your bag.` : `🪏 Dug up the ${CROPS[c].name.toLowerCase()}.` };
       }
       case "buy": {
         const crop = CROPS[msg.crop] ? msg.crop : null;
@@ -387,8 +411,9 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
         if (!cropsOf(h).includes(crop)) return { ok: false, toast: "Upgrade your garden to grow those." };
         const cost = CROPS[crop].seed;
         if ((Number(r.stars) || 0) < cost) return { ok: false, toast: `You need ${cost} ⭐ for ${CROPS[crop].name.toLowerCase()} seeds.` };
-        r.stars -= cost; h.seeds[crop] = (h.seeds[crop] || 0) + 1;
-        return { ok: true, bought: { crop, n: 1 }, toast: `🌱 Bought ${CROPS[crop].name.toLowerCase()} seeds.` };
+        const n = Math.max(1, Math.min(Math.floor((Number(r.stars) || 0) / cost), Math.floor(Number(msg.n)) || 1, 20));
+        r.stars -= cost * n; h.seeds[crop] = (h.seeds[crop] || 0) + n;
+        return { ok: true, bought: { crop, n }, toast: `🌱 Bought ${n > 1 ? n + " " : ""}${CROPS[crop].name.toLowerCase()} seed${n > 1 ? "s" : ""}.` };
       }
       case "world": {
         if (!WORLDS.includes(msg.world)) return { ok: false, toast: "That world isn't built yet." };

@@ -3,6 +3,23 @@ const test = require("node:test");
 const assert = require("node:assert");
 const { createHomestead } = require("../lib/homestead");
 
+test("home plot economy: buy several, sell one at a time, till for an extra crop, dig up", () => {
+  const hs = createHomestead({ random: () => 0.99 }); const me = { id: "dad", stars: 20 }, state = { residents: [me] }, t0 = Date.parse("2026-11-11T10:00:00");
+  const h = hs.home(state, "h"); h.seeds = {};
+  assert.deepEqual(hs.act(state, "h", me, { action: "buy", crop: "tomato", n: 5 }, t0).bought, { crop: "tomato", n: 5 }); assert.equal(me.stars, 5);
+  assert.equal(hs.act(state, "h", me, { action: "buy", crop: "tomato", n: 5 }, t0).bought.n, 1, "only what you can afford");
+  assert.equal(hs.act(state, "h", me, { action: "till", plot: 0 }, t0).ok, true);
+  assert.equal(hs.view(state, "h", me, t0).plots[0].tilled, true);
+  hs.act(state, "h", me, { action: "plant", plot: 0, crop: "tomato" }, t0); h.plots[0].growth = 1;
+  assert.equal(hs.act(state, "h", me, { action: "harvest", plot: 0 }, t0).count, 3, "tilled: 2 tomatoes + 1");
+  assert.equal(hs.view(state, "h", me, t0).plots[0].tilled, false, "tilling is used up");
+  const s0 = me.stars; const one = hs.act(state, "h", me, { action: "sell", item: "tomato" }, t0);
+  assert.equal(one.ok, true); assert.ok(me.stars >= s0 + 5); assert.equal(h.bag.tomato, 2, "sold just one");
+  hs.act(state, "h", me, { action: "plant", plot: 1, crop: "tomato" }, t0); const seeds = h.seeds.tomato;
+  assert.equal(hs.act(state, "h", me, { action: "dig", plot: 1 }, t0).ok, true); assert.equal(h.seeds.tomato, seeds + 1, "fresh seed comes back");
+  for (const [k, c] of Object.entries(hs.CROPS || {})) assert.ok(c.sell * c.yield > c.seed, `${k} is worth planting`);
+});
+
 test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () => {
   let roll = 0.5;
   const hs = createHomestead({ random: () => roll });
@@ -24,9 +41,9 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "pumpkin" }, t0).ok, false, "pumpkins need a bigger garden");
   assert.equal(hs.act(state, "home-1", me, { action: "plant", plot: 5, crop: "carrot" }, t0).ok, false, "start with 4 beds");
   assert.equal(hs.act(state, "home-1", me, { action: "upgrade" }, t0).ok, false, "upgrades cost stars");
-  me.stars = 31; assert.equal(hs.act(state, "home-1", me, { action: "upgrade" }, t0).ok, true);
-  assert.equal(hs.view(state, "home-1", me, t0).beds, 8); assert.equal(me.stars, 6);
-  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "corn" }, t0).ok, true); assert.equal(me.stars, 3);
+  me.stars = 37; assert.equal(hs.act(state, "home-1", me, { action: "upgrade" }, t0).ok, true);
+  assert.equal(hs.view(state, "home-1", me, t0).beds, 8); assert.equal(me.stars, 12);
+  assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "corn" }, t0).ok, true); assert.equal(me.stars, 6);
   assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "corn" }, t0).ok, true); assert.equal(me.stars, 0);
   assert.equal(hs.act(state, "home-1", me, { action: "buy", crop: "corn" }, t0).ok, false, "can't buy without stars");
   const fish = hs.act(state, "home-1", me, { action: "fish" }, t0);

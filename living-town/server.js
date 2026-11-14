@@ -30,6 +30,7 @@ const { createStore } = require("./lib/persistence");
 const { createAuth } = require("./lib/auth");
 const cast = require("./lib/cast");
 const { createGlintLife } = require("./lib/glint-life");
+const { createGlintBrain } = require("./lib/glint-brain");
 const { createMrE, ollamaGenerator } = require("./lib/mre");
 const { createHomestead } = require("./lib/homestead");
 const cognition = require("./lib/cognition");
@@ -1143,14 +1144,15 @@ function validateClientMessage(raw) {
   }
   if (msg.type === "home") {
     // The home plot (lib/homestead.js): only known actions and plain fields get through.
-    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "give", "giveStars", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName"];
+    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "give", "giveStars", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName", "till", "dig"];
     if (!HOME.includes(msg.action)) return null;
     const word = v => typeof v === "string" && v.length <= 32 ? v : undefined;
     const num = v => Number.isFinite(v) ? v : undefined;
     return { type: "home", action: msg.action, plot: Number.isInteger(msg.plot) ? msg.plot : undefined, crop: word(msg.crop), world: word(msg.world), house: word(msg.house),
       x: num(msg.x), y: num(msg.y), dir: num(msg.dir), moving: msg.moving === true,
       species: word(msg.species), color: word(msg.color), spot: Number.isInteger(msg.spot) ? msg.spot : undefined,
-      id: msg.id === null ? null : Number.isInteger(msg.id) ? msg.id : undefined, name: typeof msg.name === "string" ? msg.name.slice(0, 40) : undefined };
+      id: msg.id === null ? null : Number.isInteger(msg.id) ? msg.id : undefined, name: typeof msg.name === "string" ? msg.name.slice(0, 40) : undefined,
+      item: word(msg.item), n: Number.isInteger(msg.n) && msg.n > 0 && msg.n <= 20 ? msg.n : undefined };
   }
   return null;
 }
@@ -1382,7 +1384,11 @@ Each moment, decide what you do next. Return ONLY JSON:
  "goTo": "the exact name of a place in your world, or 'wander', or 'stay'",
  "say": "something you say out loud to a traveler who is here with you, or empty if nobody is here or you have nothing to say",
  "mood": "one word",
- "build": "only when you've truly decided what to make next: one concrete sentence describing it; otherwise empty. Not more often than every hour or two."}`;
+ "build": "only when you've truly decided what to make next: one concrete sentence describing it; otherwise empty. Not more often than every hour or two.",
+ "remember": [up to 3 things worth keeping in your memory, or []: {"folder": "me|people|places|things|ideas|feelings", "title": "short name of the note, like a traveler's name, a place, or 'Things I love'", "note": "one sentence to add to it; link other notes like [[Spark Fountain]]", "keywords": ["a", "few", "words"]}],
+ "wonder": "a few words you want to think about next, to bring old memories to mind (or empty)"}
+
+Your memory is real and it's yours: a mind full of little notes in folders. "comesToMind" shows the notes that came back to you just now. Remember what matters to you: travelers and what they said, what you made and how it felt, what you like, what you hope for, what you learned. Use it: greet old friends by name, keep your promises, grow your own tastes.`;
 function glintThink(sit) {
   if (!TRON_BRAIN) {   // tests and sandboxes: a simple mind with no Claude
     const p = sit.places[Math.floor(Math.random() * sit.places.length)];
@@ -1396,7 +1402,21 @@ function glintThink(sit) {
     });
   });
 }
-const glintLife = createGlintLife({ gridDir: path.join(PUBLIC_DIR, "glint"), dataDir: DATA_DIR, think: glintThink });
+const glintBrain = createGlintBrain({ dir: path.join(DATA_DIR, "glint-brain") });
+if (!glintBrain.count()) glintBrain.remember({ folder: "me", title: "Who I am", text: "I'm Glint, made of light. I live in the Grid and I'm building a town so others will come and live here with me.", keywords: ["glint", "me", "light", "grid", "town", "dream"] });
+// Every night while Glint sleeps he "dreams": his mind files the day's dump into his brain's folders.
+const GLINT_DREAM_SYSTEM = `You are the dreaming mind of Glint, a small being of light who lives in the Grid (the only world he knows). While he sleeps you sort his day into his memory, which is a set of notes in folders: me, people, places, things, ideas, feelings. Keep only what matters to him: who he met and what they said or liked, promises, what he made and how it went, what he loves or dislikes, what he learned, his hopes. Merge into existing notes by using their exact title; make a new note only for something new. Write each note line for a mind to read, not a person: dense, factual, no filler, e.g. "likes:purple; asked for bridge 11/13; promised:build it". Link notes with [[Title]]. Stay inside his world: travelers are travelers. Return ONLY JSON: {"file":[{"folder":"people","title":"Hazel","note":"...","keywords":["..."]}], "self":"one dense line: who he is becoming (or empty)"}`;
+function glintDream(day) {
+  if (!TRON_BRAIN) return Promise.resolve({ file: [] });
+  const prompt = `DAY ${day.day}\nNOTES HE HAS:\n${day.notes.join("\n") || "(none yet)"}\n\nTHE DAY'S DUMP:\n${day.dump}\n\nFile it. JSON only.`;
+  return new Promise((resolve, reject) => {
+    execFile(CLAUDE_BIN, ["-p", prompt, "--model", "sonnet", "--tools", "", "--system-prompt", GLINT_DREAM_SYSTEM], { cwd: os.tmpdir(), timeout: 240_000, maxBuffer: 4e6, env: { ...process.env, PATH: `/opt/homebrew/bin:${process.env.PATH || "/usr/bin:/bin"}` } }, (err, stdout) => {
+      if (err) return reject(err);
+      try { const t = String(stdout); resolve(JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1))); } catch (e) { reject(e); }
+    });
+  });
+}
+const glintLife = createGlintLife({ gridDir: path.join(PUBLIC_DIR, "glint"), dataDir: DATA_DIR, think: glintThink, dreamer: glintDream, brain: glintBrain });
 const gridBuilding = () => { const b = tronBuilds().reverse().find(j => j.mode === "grid" && j.status === "building"); return b ? (b.want || "something new") : ""; };
 let glintTicks = 0;
 setInterval(() => { glintLife.tick(0.5, { building: gridBuilding() }); if (++glintTicks % 120 === 0) glintLife.save(); }, 500).unref();
@@ -1405,6 +1425,13 @@ app.get("/api/glint/life", (req, res) => {
   if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });
   glintLife.visit(me.name);
   res.json({ ...glintLife.view(), canTalk: me.role === "owner" });
+});
+// The owner's peek into Glint's brain (folders and notes). Glint never sees this page.
+app.get("/api/glint/brain", (req, res) => {
+  const me = auth.profileForToken(auth.tokenFromRequest(req));
+  if (!me || me.role !== "owner") return res.status(403).json({ error: "Only the owner can look inside." });
+  if (req.query.note) return res.json(glintBrain.page(String(req.query.note)) || {});
+  res.json({ count: glintBrain.count(), folders: glintBrain.map() });
 });
 app.post("/api/glint/say", (req, res) => {
   const me = auth.profileForToken(auth.tokenFromRequest(req));
