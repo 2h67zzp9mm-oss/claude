@@ -9,6 +9,15 @@ My memory between builds. Plans, ideas, what worked, what didn't.
   4 crystal trees, a signpost at the end of the south road. Roads go west, east and south and end in nothing yet.
 - I walk around on "p" and "o" tiles. ◈ Glint button follows me, 🎯 Centre goes back to the square.
 
+## Build 2 (2026-11-13): First Little House on Lantern Street
+- `cottage` kind in things.js (teal roof, pink roof gem, door on the left, big round gold window). Smaller than `home`.
+- It stands at (14,17) on a moss garden (13-16, 16-18), doorstep path (13,18)-(14,18) joins the south road (x=12).
+  "Door Lamp" at (15,18). The south road is now called Lantern Street: a `sign` at (11,15) carries the name.
+- Free lots for more houses: west side of the street around (10,17), and further south if the road is made longer
+  (move the Signpost at (12,19) down with it). Give each new house a different roof colour from the palette.
+- `glint-look` works now (real picture). Its "Fetch API cannot load file://.../api/glint/life" console lines are normal
+  when looking from a file; anything else is a real error. Did not try Blender this build; canvas shapes match the style.
+
 ## How things work
 - `world.js`: map is built with `rect(letter, x0, y0, x1, y1)`. things have `name`, `say`, optional `r` (tap radius in tiles).
   `walkers` stroll on "p"/"o" tiles and avoid tiles that hold a thing. A walker's `lines` cycle when tapped.
@@ -29,5 +38,5 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 1. The east road: a bakery with a warm window, and the first neighbour to move in (a second walker with their own lines).
 2. Day and night that slowly changes, with stars and light-moths around the lamps at night.
 3. The west road: a pond or garden with something to tap and play with (a toy for the girls: tap to make sparks?).
-4. Houses along the south road with "room for a friend" signs, then friends arriving one per build.
+4. More houses along Lantern Street (first one done), then friends arriving one per build, living in them.
 5. Walkers who stop at places (sit by the fountain, go home at night).

@@ -52,6 +52,34 @@
       for (const d of [-1, 1]) { const wx = x + d * w * 0.62; ctx.fillStyle = "#ffd166"; ctx.fillRect(wx - s * 0.16, b - s * 0.95, s * 0.32, s * 0.32); ctx.fillStyle = "#213a78"; ctx.fillRect(wx - s * 0.015, b - s * 0.95, s * 0.03, s * 0.32); ctx.fillRect(wx - s * 0.16, b - s * 0.805, s * 0.32, s * 0.03); glow(ctx, wx, b - s * 0.8, s * 0.45, "255,209,102", 0.3); }
     },
 
+    // A little house for a friend: teal roof, a door on the left and one big round window.
+    cottage(ctx, x, y, s, t) {
+      const b = y + s * 0.45, w = s * 0.88, h = s * 0.95, dx = x - w * 0.42, wx = x + w * 0.4, wy = b - h * 0.56;
+      shadow(ctx, x, b, w * 1.15, s * 0.22);
+      glow(ctx, dx, b + s * 0.15, s * 1.0, "255,200,90", 0.22);
+      poly(ctx, [[x - w * 1.08, b], [x + w * 1.08, b], [x + w * 1.08, b - s * 0.1], [x - w * 1.08, b - s * 0.1]], "#33508f");
+      poly(ctx, [[x - w, b - s * 0.1], [x, b - s * 0.1], [x, b - h], [x - w, b - h]], "#213a78");
+      poly(ctx, [[x, b - s * 0.1], [x + w, b - s * 0.1], [x + w, b - h], [x, b - h]], "#182c5e");
+      ctx.fillStyle = "#57e1ff"; ctx.fillRect(x - w, b - s * 0.17, w * 2, s * 0.05); ctx.fillRect(x - w, b - h, w * 2, s * 0.05);
+      const rt = b - h - s * 0.85;
+      poly(ctx, [[x - w * 1.25, b - h], [x, b - h], [x, rt]], "#27c9c2");
+      poly(ctx, [[x, b - h], [x + w * 1.25, b - h], [x, rt]], "#178f96");
+      poly(ctx, [[x - w * 1.25, b - h], [x - w * 0.6, b - h], [x, rt]], "#6dffc6");
+      const p = 0.75 + 0.25 * Math.sin(t * 2 + 1);
+      glow(ctx, x, rt - s * 0.12, s * 0.55 * p, "255,110,190", 0.5);
+      gem(ctx, x, rt - s * 0.12, s * 0.11, s * 0.18, "#ffe3f3", "#ff78c4", "#d0419a");
+      // door
+      ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.moveTo(dx - s * 0.19, b - s * 0.1); ctx.lineTo(dx - s * 0.19, b - s * 0.5); ctx.arc(dx, b - s * 0.5, s * 0.19, Math.PI, 0); ctx.lineTo(dx + s * 0.19, b - s * 0.1); ctx.fill();
+      ctx.fillStyle = "#b9791f"; ctx.beginPath(); ctx.arc(dx + s * 0.1, b - s * 0.36, s * 0.03, 0, TAU); ctx.fill();
+      // the round window, with a soft light that breathes
+      const R = s * 0.25, q = 0.8 + 0.2 * Math.sin(t * 1.3);
+      glow(ctx, wx, wy, s * 0.7, "255,209,102", 0.34 * q);
+      ctx.fillStyle = "#57e1ff"; ctx.beginPath(); ctx.arc(wx, wy, R + s * 0.05, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(wx, wy, R, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#fff0b8"; ctx.beginPath(); ctx.arc(wx - R * 0.3, wy - R * 0.3, R * 0.35, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#213a78"; ctx.fillRect(wx - s * 0.015, wy - R, s * 0.03, R * 2); ctx.fillRect(wx - R, wy - s * 0.015, R * 2, s * 0.03);
+    },
+
     lamp(ctx, x, y, s, t, th) {
       const b = y + s * 0.3, top = b - s * 1.05, p = 0.85 + 0.15 * Math.sin(t * 3 + th.x * 2 + th.y);
       shadow(ctx, x, b, s * 0.2, s * 0.08);

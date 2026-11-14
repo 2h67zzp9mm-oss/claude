@@ -15,6 +15,8 @@
   rect("p", 12, 15, 12, 19);     // south road
   rect("o", 10, 10, 14, 14);     // the square
   rect("g", 7, 14, 8, 15); rect("g", 16, 14, 17, 15);
+  rect("g", 13, 16, 16, 18);     // the little garden of the first house on Lantern Street
+  rect("p", 13, 18, 14, 18);     // its doorstep, joining the street
 
   window.GLINT_WORLD = {
     size,
@@ -31,6 +33,9 @@
       { kind: "tree", x: 15, y: 7, name: "Crystal Tree", say: "I planted this one from a single pixel." },
       { kind: "tree", x: 8, y: 14, name: "Crystal Tree", say: "A good tree for sitting under." },
       { kind: "tree", x: 16, y: 14, name: "Crystal Tree", say: "Its leaves ring like little bells in the wind." },
+      { kind: "sign", x: 11, y: 15, name: "Lantern Street", say: "This way to Lantern Street. One little house so far, and room for a whole row." },
+      { kind: "cottage", x: 14, y: 17, r: 1.3, name: "First Little House", say: "Nobody lives here yet. The round window is for looking out and seeing who's coming." },
+      { kind: "lamp", x: 15, y: 18, name: "Door Lamp", say: "I light this one so whoever comes can find the door, even late." },
       { kind: "sign", x: 12, y: 19, name: "Signpost", say: "Welcome to Glint's Grid! Population: 1 (me). Room for lots more." }
     ],
     walkers: [
@@ -38,6 +43,7 @@
         "Hello! I'm Glint. I'm building a town. Want to watch?",
         "This is Spark Square. It's the middle of everything, so far.",
         "I live in the house with the purple roof.",
+        "The south road is Lantern Street now. It has its first little house!",
         "I'm saving the east road for a bakery. I think.",
         "One day lots of friends will live here. I'm making it nice for them.",
         "Beep! That means I'm happy.",
