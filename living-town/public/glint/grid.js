@@ -10,6 +10,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     if (n("x") != null) cam.x = n("x"); if (n("y") != null) cam.y = n("y"); if (n("z") != null) cam.s = Math.max(10, Math.min(80, n("z"))); }
   const WALKERS = W.walkers || [];
   let follow = null, lastT = 0;
+  const POSE = new URLSearchParams(location.search).get("pose");   // ?pose=sleep|wave|walk holds Glint in a pose (for checking how he looks)
 
   // Walkers stroll from tile to tile along paths and plaza, around anything standing there.
   const blocked = new Set(W.things.map(th => th.x + "," + th.y));
@@ -41,6 +42,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
   function frame(ms) {
     const t = ms / 1000, dt = Math.min(0.1, t - lastT); lastT = t;
     for (const w of WALKERS) { stepWalker(w, dt); w.x = w.fx; w.y = w.fy; }
+    if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } }
     if (follow) { cam.x += (follow.fx + 0.5 - cam.x) * Math.min(1, dt * 4); cam.y += (follow.fy - cam.y) * Math.min(1, dt * 4); }
     const s = cam.s;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -80,7 +82,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     pts.delete(e.pointerId); if (moved > 8 || pinch) return;
     const [wx, wy] = toWorld(e.clientX, e.clientY);
     const hit = [...W.things, ...WALKERS].filter(th => Math.hypot(th.x + 0.5 - wx, th.y + 0.5 - wy) < (th.r || 1)).sort((a, b) => Math.hypot(a.x + 0.5 - wx, a.y + 0.5 - wy) - Math.hypot(b.x + 0.5 - wx, b.y + 0.5 - wy))[0];
-    if (hit) { const real = hit.kind === "glint" && window.GLINT_LIFE?.ready ? (window.GLINT_LIFE.say || window.GLINT_LIFE.thought) : "";
+    if (hit) { hit.tapped = lastT; const real = hit.kind === "glint" && window.GLINT_LIFE?.ready ? (window.GLINT_LIFE.say || window.GLINT_LIFE.thought) : "";
       const line = real ? real : hit.lines ? hit.lines[hit.lineAt = ((hit.lineAt ?? -1) + 1) % hit.lines.length] : hit.say; if (hit.lines) hit.wait = 2.5;
       say.innerHTML = `<b>${esc(hit.name || hit.kind)}</b>${line ? "<br>" + esc(line) : ""}`; say.classList.remove("hidden"); clearTimeout(sayTimer); sayTimer = setTimeout(() => say.classList.add("hidden"), 5000); }
   });

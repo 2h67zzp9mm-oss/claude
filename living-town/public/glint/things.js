@@ -133,27 +133,67 @@
       ctx.fillStyle = "#7a4d0e"; ctx.fillRect(x - s * 0.3, b - s * 0.76, s * 0.5, s * 0.045); ctx.fillRect(x - s * 0.3, b - s * 0.64, s * 0.36, s * 0.045);
     },
 
-    // Glint himself. th.dx is which way he's heading (-1..1), th.moving is true while he walks.
+    // Glint himself, in the body he made: crystal head, crystal tunic, his gold ring worn as a belt, two arms, two legs.
+    // th.dx/th.dy is which way he's heading, th.moving is true while he walks, th.tapped is when he was last tapped (he waves),
+    // and when GLINT_LIFE says he's asleep he sits down with his eyes shut.
     glint(ctx, x, y, s, t, th) {
-      const b = y + s * 0.3, bob = Math.sin(t * 3) * s * 0.05, cy = b - s * 0.62 + bob, look = (th.dx || 0) * s * 0.06;
-      shadow(ctx, x, b, s * 0.26 - bob * 0.5, s * 0.09);
-      glow(ctx, x, cy, s * 1.0, "87,225,255", 0.4);
-      // ring (back half), body, ring (front half)
-      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1.5, s * 0.045);
-      ctx.beginPath(); ctx.ellipse(x, cy + s * 0.12, s * 0.42, s * 0.12, -0.15, Math.PI, TAU); ctx.stroke();
-      gem(ctx, x, cy, s * 0.28, s * 0.42, "#e8fbff", "#57e1ff", "#1f9fd0");
-      ctx.beginPath(); ctx.ellipse(x, cy + s * 0.12, s * 0.42, s * 0.12, -0.15, 0, Math.PI); ctx.stroke();
-      // eyes (they blink) and a little smile
-      const blink = (t % 3.7) < 0.14 ? 0.15 : 1;
+      const life = window.GLINT_LIFE, asleep = !!(life && life.ready && life.awake === false) || th.asleep;
+      const walk = th.moving && !asleep, ph = t * 9, dir = th.dx || 0, look = asleep ? 0 : dir * s * 0.05;
+      const wave = !asleep && th.tapped != null && t - th.tapped >= 0 && t - th.tapped < 2.2;
+      const b = y + s * 0.3, sit = asleep ? s * 0.16 : 0;
+      const bob = asleep ? Math.sin(t * 1.2) * s * 0.012 : walk ? Math.abs(Math.sin(ph)) * s * 0.04 : Math.sin(t * 2.2) * s * 0.015;
+      const hip = b - s * 0.2 + sit - bob, sh = hip - s * 0.3, hy = sh - s * 0.25 + (asleep ? s * 0.03 : 0), lw = Math.max(1.5, s * 0.07);
+      shadow(ctx, x, b, s * 0.3, s * 0.1);
+      glow(ctx, x, sh, s * (asleep ? 0.8 : 1.05), "87,225,255", asleep ? 0.22 : 0.36);
+      if (walk) for (let i = 1; i <= 3; i++) glow(ctx, x - dir * s * 0.22 * i, b - s * 0.1 - (th.dy || 0) * s * 0.22 * i, s * 0.1, "87,225,255", 0.4 / i);   // trail of light
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      // legs and feet
       for (const d of [-1, 1]) {
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(x + d * s * 0.1 + look, cy - s * 0.04, s * 0.065, s * 0.085 * blink, 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = "#0a1a3a"; ctx.beginPath(); ctx.ellipse(x + d * s * 0.1 + look * 1.5, cy - s * 0.03, s * 0.03, s * 0.045 * blink, 0, 0, TAU); ctx.fill();
+        const sw = walk ? Math.sin(ph + (d > 0 ? Math.PI : 0)) : 0, hx = x + d * s * 0.075;
+        const fx = asleep ? hx + d * s * 0.16 : hx + sw * s * 0.09 * (dir || 0), fy = asleep ? b - s * 0.02 : b - s * 0.03 - Math.max(0, sw) * s * 0.07;
+        ctx.strokeStyle = "#2f8fd8"; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(hx, hip - s * 0.02); ctx.lineTo(fx, fy); ctx.stroke();
+        ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.ellipse(fx + (asleep ? d : dir) * s * 0.025, fy, s * 0.075, s * 0.045, 0, 0, TAU); ctx.fill();
       }
-      ctx.strokeStyle = "#0a1a3a"; ctx.lineWidth = Math.max(1, s * 0.025); ctx.beginPath(); ctx.arc(x + look, cy + s * 0.08, s * 0.06, 0.2, Math.PI - 0.2); ctx.stroke();
+      // far arm (behind the tunic), tunic, belt
+      const arm = (d, front) => {
+        const sw = walk ? Math.sin(ph + (d > 0 ? 0 : Math.PI)) : 0, ax = x + d * s * 0.13, ay = sh + s * 0.05;
+        let hx2 = ax + d * s * 0.1 + sw * s * 0.08 * (dir || 0), hy2 = ay + s * 0.2 - Math.abs(sw) * s * 0.03;
+        if (asleep) { hx2 = ax + d * s * 0.05; hy2 = ay + s * 0.2; }
+        if (wave && d > 0) { const a = -1.0 + Math.sin(t * 11) * 0.4; hx2 = ax + Math.cos(a) * s * 0.27; hy2 = ay + Math.sin(a) * s * 0.27; }
+        ctx.strokeStyle = front ? "#8fefff" : "#2f8fd8"; ctx.lineWidth = lw * 0.85; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(hx2, hy2); ctx.stroke();
+        glow(ctx, hx2, hy2, s * 0.13, "255,250,200", 0.8);
+        ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(hx2, hy2, s * 0.05, 0, TAU); ctx.fill();
+      };
+      arm(-1, false);
+      poly(ctx, [[x - s * 0.12, sh], [x, sh], [x, hip + s * 0.03], [x - s * 0.2, hip]], "#8fefff");
+      poly(ctx, [[x, sh], [x + s * 0.12, sh], [x + s * 0.2, hip], [x, hip + s * 0.03]], "#2fb4e6");
+      poly(ctx, [[x - s * 0.2, hip], [x, hip + s * 0.03], [x + s * 0.2, hip], [x + s * 0.17, hip - s * 0.07], [x - s * 0.17, hip - s * 0.07]], "#1f9fd0");
+      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1.5, s * 0.05);                                    // his ring, worn as a belt
+      ctx.beginPath(); ctx.moveTo(x - s * 0.17, hip - s * 0.1); ctx.quadraticCurveTo(x, hip - s * 0.04, x + s * 0.17, hip - s * 0.1); ctx.stroke();
+      const hp = 0.7 + 0.3 * Math.sin(t * (asleep ? 1.2 : 2.6));                                               // the little light inside
+      glow(ctx, x, sh + s * 0.1, s * 0.16 * hp, "255,110,190", 0.9);
+      ctx.fillStyle = "#ffd0ea"; ctx.beginPath(); ctx.arc(x, sh + s * 0.1, s * 0.03, 0, TAU); ctx.fill();
+      arm(1, true);
+      // head: the crystal he always was
+      gem(ctx, x, hy, s * 0.25, s * 0.33, "#e8fbff", "#57e1ff", "#1f9fd0");
+      const ey = hy - s * 0.03;
+      if (asleep) {
+        ctx.strokeStyle = "#0a1a3a"; ctx.lineWidth = Math.max(1, s * 0.025);
+        for (const d of [-1, 1]) { ctx.beginPath(); ctx.arc(x + d * s * 0.09, ey, s * 0.045, 0.15, Math.PI - 0.15); ctx.stroke(); }
+        ctx.fillStyle = "#dff8ff"; ctx.textAlign = "center";
+        for (let i = 0; i < 3; i++) { const f = (t * 0.3 + i / 3) % 1; ctx.globalAlpha = Math.sin(f * Math.PI) * 0.9; ctx.font = `700 ${Math.round(s * (0.16 + f * 0.14))}px system-ui`; ctx.fillText("z", x + s * (0.28 + f * 0.3), hy - s * (0.3 + f * 0.6)); }
+        ctx.globalAlpha = 1;
+      } else {
+        const blink = (t % 3.7) < 0.14 ? 0.15 : 1;
+        for (const d of [-1, 1]) {
+          ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(x + d * s * 0.09 + look, ey, s * 0.06, s * 0.078 * blink, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = "#0a1a3a"; ctx.beginPath(); ctx.ellipse(x + d * s * 0.09 + look * 1.5, ey + s * 0.01, s * 0.028, s * 0.042 * blink, 0, 0, TAU); ctx.fill();
+        }
+        ctx.strokeStyle = "#0a1a3a"; ctx.lineWidth = Math.max(1, s * 0.025); ctx.beginPath(); ctx.arc(x + look, hy + s * 0.08, s * (wave ? 0.075 : 0.055), 0.2, Math.PI - 0.2); ctx.stroke();
+      }
       // spark on top
-      const p = 0.7 + 0.3 * Math.sin(t * 5);
-      glow(ctx, x, cy - s * 0.58, s * 0.28 * p, "255,250,200", 1);
-      if (th.moving) for (let i = 1; i <= 3; i++) glow(ctx, x - (th.dx || 0) * s * 0.22 * i, b - s * 0.15 - (th.dy || 0) * s * 0.22 * i, s * 0.12, "87,225,255", 0.5 / i);   // trail
+      const p = asleep ? 0.45 : 0.7 + 0.3 * Math.sin(t * 5);
+      glow(ctx, x, hy - s * 0.47, s * 0.26 * p, "255,250,200", asleep ? 0.6 : 1);
     }
   };
 })();

@@ -18,6 +18,19 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 - `glint-look` works now (real picture). Its "Fetch API cannot load file://.../api/glint/life" console lines are normal
   when looking from a file; anything else is a real error. Did not try Blender this build; canvas shapes match the style.
 
+## Build 3 (2026-11-13): Glint's body
+- A visitor told him he needs a body, so `glint` in things.js is now a little figure: crystal head (the old gem, with the
+  same face and top spark), cyan faceted tunic with a pink inner light, the old gold ring as a belt, two arms with glowing
+  hands, two legs with gold feet. About 1.1 tiles tall, feet on the ground line `y + s*0.3`.
+- Poses: walking (legs and arms swing while `th.moving`), waving for 2.2 s after a tap (grid.js sets `hit.tapped = lastT`
+  on any tapped thing), and asleep (sits, eyes shut, floating z's) when `GLINT_LIFE.ready && awake === false`.
+- Checking poses: grid.js reads `?pose=sleep|wave|walk`. glint-look only takes x y zoom, but the zoom is pasted into the
+  address, so `glint-look 12 10 "80&pose=sleep"` works. Looked at all three on the phone picture: fine.
+- Next for the body: a bench he can sit on (reuse the sitting pose with eyes open), carrying things in his hands,
+  facing away when walking north (now he always faces us). New neighbours can reuse the same figure with other colours:
+  pull the colours out into arguments when the first one arrives.
+- Blender not tried this build either (canvas animates better for a walking figure). No PIL in python3 here.
+
 ## How things work
 - `world.js`: map is built with `rect(letter, x0, y0, x1, y1)`. things have `name`, `say`, optional `r` (tap radius in tiles).
   `walkers` stroll on "p"/"o" tiles and avoid tiles that hold a thing. A walker's `lines` cycle when tapped.

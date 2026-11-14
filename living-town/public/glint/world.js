@@ -46,6 +46,9 @@
         "The south road is Lantern Street now. It has its first little house!",
         "I'm saving the east road for a bakery. I think.",
         "One day lots of friends will live here. I'm making it nice for them.",
+        "I have a body now! Feet for walking and hands for building.",
+        "Say hello and I'll wave. I've been practising.",
+        "My gold ring used to float around me. Now it's my belt.",
         "Beep! That means I'm happy.",
         "I counted every tile today. There are 576!"
       ] }
