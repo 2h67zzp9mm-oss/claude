@@ -120,7 +120,7 @@
   // --- pets ---
   function spotPos(u, v) { const S = L.size, [i, j] = nearestFree(2 + u * (S - 4), 1 + v * (S - 3)); return [(i + 0.5) * CELL, (j + 0.5) * CELL]; }
   const petHex = c => view?.pets?.colors?.[c] || "#ffffff";
-  function petSheet(species, color) { return window.LivingTownAvatar?.sheet("pets", species, { skin: petHex(color) }) || null; }
+  function petSheet(species, color) { const AV = window.LivingTownAvatar, sh = AV?.sheet("pets", species, { skin: petHex(color) }) || null; return world === "pirate" && AV?.ink ? AV.ink(sh, undefined, false) : sh; }   // pirate: ink look to match the world
   function activePet() { const P2 = view?.pets; return P2?.active ? P2.owned.find(x => x.id === P2.active) || null : null; }
   function drawPet(info, p, idle) {
     const sh = petSheet(info.species, info.color); if (!sh) return;
@@ -665,7 +665,8 @@
     const r = opts.resident(id), AV = window.LivingTownAvatar; if (!AV) return null;
     const kid = id === "hazel" || id === "olive" || (Number(r?.profile?.age) > 0 && Number(r.profile.age) < 13);
     const look = opts.look?.(id) || r?.look;
-    return AV.sheet(world === "scifi" ? "scifi" : "clay", kid ? "kid" : AV.bodyFor(look, 30), look);   // other worlds use the everyday clothes until they get outfits
+    const sh = AV.sheet(world === "scifi" ? "scifi" : "clay", kid ? "kid" : AV.bodyFor(look, 30), look);   // other worlds use the everyday clothes until they get outfits
+    return world === "pirate" && AV.ink ? AV.ink(sh) : sh;   // Pirate Cove: redrawn in the world's moonlit ink style
   }
   function drawWalker(id, p) {
     const key = walkerFor(id), av = avatarFor(id);
