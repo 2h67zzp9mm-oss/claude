@@ -65,7 +65,20 @@ const PAGE = `(() => {
   function audit() {
     const bad = [], vw = innerWidth, vh = innerHeight, name = b => JSON.stringify(b.innerText.replace(/\\s+/g, " ").trim().slice(0, 24));
     const boxes = (gate() ? [["the full-screen editor", gate()]] : [[".home-bar", bar()], [".home-pop", pop()]]).filter(x => x[1]);
+    // The finger ring (a .home-pop.home-ring) has its own rules: round buttons fully on screen, and a Done in the middle.
+    const ring = pop() && pop().classList.contains("home-ring") ? pop() : null;
+    if (ring) {
+      for (const b of ring.querySelectorAll("button")) {
+        const q = b.getBoundingClientRect();
+        if (q.width < 44 || q.height < 44) bad.push("ring button " + name(b) + " is smaller than 44x44");
+        if (q.left < -0.5 || q.right > vw + 0.5 || q.top < -0.5 || q.bottom > vh + 0.5) bad.push("ring button " + name(b) + " runs off the screen");
+        const barTop = bar()?.getBoundingClientRect().top ?? vh; if (q.bottom > barTop + 0.5) bad.push("ring button " + name(b) + " is under the bottom bar");
+      }
+      if (!ring.querySelector(".ring-mid")) bad.push("the ring has no Done in the middle");
+      for (const e of ring.querySelectorAll(".ring-btn span")) if (e.scrollWidth > e.clientWidth + 1) bad.push("ring text " + JSON.stringify(e.innerText.slice(0, 24)) + " is cut off");
+    }
     for (const [sel, el] of boxes) {
+      if (el === ring) continue;
       const r = el.getBoundingClientRect();
       if (r.left < -0.5 || r.right > vw + 0.5) bad.push(sel + " runs off the side of the screen");
       if (r.top < -0.5 || r.bottom > vh + 0.5) bad.push(sel + " runs off the top or bottom of the screen");
@@ -81,6 +94,7 @@ const PAGE = `(() => {
     }
     // The way out is always the last button, and it is in view without scrolling.
     for (const [sel, el] of boxes) {
+      if (el === ring) continue;
       const all = [...el.querySelectorAll(".home-actions button")], last = all[all.length - 1]; if (!last) continue;
       if (!btn("Town", el) && !/^(Back|Done|Close|OK|Stay|Stop|Thanks!?)$/.test(last.innerText.replace(/^[^A-Za-z]+/, "").trim())) bad.push(sel + " has no way out as its last button (it ends with " + name(last) + ")");
       const r = el.getBoundingClientRect(), q = last.getBoundingClientRect();
