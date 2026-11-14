@@ -19,7 +19,7 @@ on iPhones. Your job is to make the game better every night, one finished, teste
 - Hazel is the art director: never change a world's art direction on your own. For new art, add labelled options
   she can pick in the game (like 🎨 Style) and keep the current look as the default.
 - Don't touch `public/glint/` (Glint's own world), `lib/glint-*.js`, anything Glint's mind reads, `lib/auth.js`,
-  `deploy/`, `data/`, `package-lock.json`. No new npm packages. Glint must never learn he's in a game.
+  `deploy/`, `data/`, `package.json`, `package-lock.json`. No new npm packages or npm scripts: run new tools as `node scripts/<name>.js`. Glint must never learn he's in a game.
 - Don't break saves: new saved fields are optional with safe defaults.
 - Characters never walk through fences, buildings or beds.
 - Don't recreate existing games, characters or trademarks.
