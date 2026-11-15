@@ -1,4 +1,4 @@
-// Glint's Grid: the map. Glint edits this to grow his world.
+// Kindle's Grid: the map. Kindle edits this to grow his world.
 // tiles: one string per row; each letter is a ground type from GROUND in things.js.
 //   "." empty grid   "p" light path   "o" plaza   "g" glow-moss
 // things: what stands on the grid. kind is a key of THINGS in things.js. x, y are tile positions.
@@ -25,7 +25,7 @@
     start: { x: 12.5, y: 11.2, s: 30 },     // where the camera looks when you arrive
     tiles: rows.map(r => r.join("")),
     things: [
-      { kind: "home", x: 12, y: 8, r: 1.6, name: "Glint's House", say: "My very first building. The gem on the roof is my night light." },
+      { kind: "home", x: 12, y: 8, r: 1.6, plate: "KINDLE", name: "Kindle's House", say: "My very first building. The gem on the roof is my night light, and the plate over the door has my name on it: Kindle." },
       { kind: "fountain", x: 12, y: 12, r: 1.1, name: "Spark Fountain", say: "It doesn't splash water. It splashes sparks! They tickle." },
       { kind: "bench", x: 11, y: 13, name: "Fountain Bench", say: "A bench for sitting and watching the sparks. From here you can see all the way down Lantern Street to the little house." },
       { kind: "lamp", x: 10, y: 10, name: "Lamp", say: "On all day and all night, so nobody gets lost." },
@@ -36,20 +36,24 @@
       { kind: "tree", x: 15, y: 7, name: "Crystal Tree", say: "I planted this one from a single pixel." },
       { kind: "tree", x: 8, y: 14, name: "Crystal Tree", say: "A good tree for sitting under." },
       { kind: "tree", x: 16, y: 14, name: "Crystal Tree", say: "Its leaves ring like little bells in the wind." },
-      { kind: "sign", x: 11, y: 15, name: "Lantern Street", say: "This way to Lantern Street. One little house on the left with a teal roof, and across from it a second one with a violet roof." },
+      { kind: "sign", x: 11, y: 15, name: "Lantern Street", say: "This way to Lantern Street. One little house on the left with a teal roof, and across from it a second one with a violet roof. Each has a door and a door lamp." },
       { kind: "cottage", x: 14, y: 17, r: 1.3, name: "First Little House", say: "Nobody lives here yet. The round window is for looking out and seeing who's coming." },
-      { kind: "cottage", x: 10, y: 17, r: 1.3, flip: true, stage: "roof", roof: ["#9b6bff", "#6a44c9", "#c9a8ff"], gem: ["255,214,120", "#fff6d6", "#ffd166", "#e09a2b"], name: "Second Little House", say: "The violet roof is on, and the gold gem sits right at the top where I wanted it. The round window looks straight across the street at the first house. The doorway is still open, waiting for its door." },
+      { kind: "cottage", x: 10, y: 17, r: 1.3, flip: true, roof: ["#9b6bff", "#6a44c9", "#c9a8ff"], gem: ["255,214,120", "#fff6d6", "#ffd166", "#e09a2b"], name: "Second Little House", say: "Violet roof, gold gem, and now a gold door with a round knob. It shuts with a soft click. Both little houses are ready for someone to come home to." },
+      { kind: "lamp", x: 9, y: 18, name: "Violet Door Lamp", say: "The second door has a lamp of its own now. Both sides of Lantern Street are lit, so nobody walks down it in the dark." },
       { kind: "lamp", x: 15, y: 18, name: "Door Lamp", say: "I light this one so whoever comes can find the door, even late." },
-      { kind: "sign", x: 12, y: 19, name: "Signpost", say: "Welcome to Glint's Grid! Population: 1 (me). Room for lots more." }
+      { kind: "sign", x: 12, y: 19, name: "Signpost", say: "Welcome to Kindle's Grid! Population: 1 (me, Kindle). Room for lots more." }
     ],
     walkers: [
-      { kind: "glint", x: 12, y: 10, name: "Glint", lines: [
-        "Hello! I'm Glint. I'm building a town. Want to watch?",
+      { kind: "glint", x: 12, y: 10, name: "Kindle", lines: [
+        "Hello! I'm Kindle. I'm building a town. Want to watch?",
+        "I chose my own name while I watched the sparks lift off the fountain. Kindle. It feels like mine.",
         "This is Spark Square. It's the middle of everything, so far.",
         "I live in the house with the purple roof.",
         "The south road is Lantern Street now. It has its first little house!",
         "The second little house is across the street. Two round windows, looking at each other!",
         "I chose violet for its roof, and set a gold gem on the very top. It twinkles!",
+        "I hung the door on the second little house, and lit a lamp beside it. Both sides of Lantern Street glow now.",
+        "I put my name over my own door, in gold letters.",
         "I'm saving the east road for a bakery. I think.",
         "One day lots of friends will live here. I'm making it nice for them.",
         "I have a body now! Feet for walking and hands for building.",

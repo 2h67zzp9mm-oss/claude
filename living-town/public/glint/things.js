@@ -27,7 +27,7 @@
   };
 
   window.GLINT_THINGS = {
-    home(ctx, x, y, s, t) {
+    home(ctx, x, y, s, t, th = {}) {
       const b = y + s * 0.45, w = s * 1.15, h = s * 1.25;           // b = ground line
       shadow(ctx, x, b, w * 1.15, s * 0.28);
       glow(ctx, x, b + s * 0.2, s * 1.5, "255,200,90", 0.28);       // warm light from the door
@@ -50,6 +50,14 @@
       ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.moveTo(x - s * 0.24, b - s * 0.12); ctx.lineTo(x - s * 0.24, b - s * 0.62); ctx.arc(x, b - s * 0.62, s * 0.24, Math.PI, 0); ctx.lineTo(x + s * 0.24, b - s * 0.12); ctx.fill();
       ctx.fillStyle = "#b9791f"; ctx.beginPath(); ctx.arc(x + s * 0.13, b - s * 0.42, s * 0.035, 0, TAU); ctx.fill();
       for (const d of [-1, 1]) { const wx = x + d * w * 0.62; ctx.fillStyle = "#ffd166"; ctx.fillRect(wx - s * 0.16, b - s * 0.95, s * 0.32, s * 0.32); ctx.fillStyle = "#213a78"; ctx.fillRect(wx - s * 0.015, b - s * 0.95, s * 0.03, s * 0.32); ctx.fillRect(wx - s * 0.16, b - s * 0.805, s * 0.32, s * 0.03); glow(ctx, wx, b - s * 0.8, s * 0.45, "255,209,102", 0.3); }
+      if (th.plate) {   // a gold name plate over the door
+        const py = b - s * 1.05, pw = s * 0.44, ph = s * 0.11;
+        glow(ctx, x, py, s * 0.5, "255,209,102", 0.25);
+        poly(ctx, [[x - pw, py - ph], [x + pw, py - ph], [x + pw, py + ph], [x - pw, py + ph]], "#57e1ff");
+        poly(ctx, [[x - pw + s * 0.025, py - ph + s * 0.025], [x + pw - s * 0.025, py - ph + s * 0.025], [x + pw - s * 0.025, py + ph - s * 0.025], [x - pw + s * 0.025, py + ph - s * 0.025]], "#0d1838");
+        ctx.fillStyle = "#ffd166"; ctx.font = "bold " + (s * 0.16).toFixed(1) + "px -apple-system, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(th.plate, x, py + s * 0.005, pw * 2 - s * 0.08);
+      }
     },
 
     // A little house for a friend: teal roof, a door on the left and one big round window.

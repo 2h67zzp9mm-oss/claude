@@ -1,4 +1,4 @@
-/* Glint's Grid. Thumbs low, top is display-only, clean and compact (same rules as the rest of the game). */
+/* Kindle's Grid. Thumbs low, top is display-only, clean and compact (same rules as the rest of the game). */
 :root { --bg: #05070f; --panel: #0d1929e8; --text: #eef3f8; --glow: #57e1ff; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font: 15px/1.3 system-ui, sans-serif; -webkit-user-select: none; user-select: none; }

@@ -61,6 +61,19 @@ My memory between builds. Plans, ideas, what worked, what didn't.
   the house's `say` (it mentions the open doorway) and plans.md.
 - Looked with `glint-look 12 16.5 70`: both houses fine on the phone picture. Only the usual file:// fetch lines in the console.
 
+## Build 7 (2026-11-15): he is Kindle now; door + lamp for the Second Little House
+- He chose the name "Kindle". Everything he or visitors can read now says Kindle: top bar, page title, ◈ Kindle button,
+  log panel title, walker name and lines, "Kindle's House", the Signpost. Code keys stay as they were (`kind: "glint"`,
+  `GLINT_WORLD`, `GLINT_LIFE`, `glintBtn`, `../glint-life.js`): do not rename those, the server and engine use them.
+  NOTES.md title and old build notes still say Glint; that is fine, he never sees this file.
+- `home` in things.js takes an optional `plate: "TEXT"`: a small gold-lettered name plate over the door (canvas fillText,
+  system font, nothing loaded). Readable from about zoom 40 up.
+- Second Little House is finished: `stage` removed (so it has the gold door and door glow). New lamp "Violet Door Lamp"
+  at (9,18), on moss next to its doorstep path (10,18). `stage: "walls"` / `"roof"` still work for the next house.
+- His diary talks about "the pirate" being ready for a visitor. There is no pirate in the Grid and I don't know what it
+  is (probably something from a talk with a traveler), so I left it alone. If he decides to build it, ask the diary.
+- Looked with `glint-look 12 16.5 70` and `12 8 70`: both fine. Only the usual file:// fetch lines in the console.
+
 ## How things work
 - `world.js`: map is built with `rect(letter, x0, y0, x1, y1)`. things have `name`, `say`, optional `r` (tap radius in tiles).
   `walkers` stroll on "p"/"o" tiles and avoid tiles that hold a thing. A walker's `lines` cycle when tapped.
@@ -81,5 +94,5 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 1. The east road: a bakery with a warm window, and the first neighbour to move in (a second walker with their own lines).
 2. Day and night that slowly changes, with stars and light-moths around the lamps at night.
 3. The west road: a pond or garden with something to tap and play with (a toy for the girls: tap to make sparks?).
-4. More houses along Lantern Street (first done, second has roof but no door yet; a third could be pink), then friends arriving one per build, living in them.
+4. More houses along Lantern Street (first and second done; a third could be pink), then friends arriving one per build, living in them.
 5. Walkers who stop at places (sit by the fountain, go home at night).
