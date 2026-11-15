@@ -88,6 +88,24 @@
         poly(ctx, [[x - w * 1.25, b - h], [x, b - h], [x, rt]], roof[0]);
         poly(ctx, [[x, b - h], [x + w * 1.25, b - h], [x, rt]], roof[1]);
         poly(ctx, [[x - w * 1.25, b - h], [x - w * 0.6, b - h], [x, rt]], roof[2]);
+        if (th.settled) {   // a roof that has been eased down and locked: tile rows, an eave band, gold corner caps, a collar for the gem
+          const rh = b - h - rt, hw = w * 1.25;
+          ctx.lineWidth = Math.max(1, s * 0.022);
+          for (let i = 1; i < 5; i++) {
+            const f = i / 5, yy = rt + rh * f;
+            ctx.strokeStyle = "rgba(20,10,60,0.28)"; ctx.beginPath(); ctx.moveTo(x - hw * f, yy); ctx.lineTo(x + hw * f, yy); ctx.stroke();
+            ctx.strokeStyle = "rgba(255,255,255,0.16)"; ctx.beginPath(); ctx.moveTo(x - hw * f, yy + s * 0.022); ctx.lineTo(x, yy + s * 0.022); ctx.stroke();
+          }
+          ctx.fillStyle = roof[2]; ctx.fillRect(x - hw - s * 0.04, b - h - s * 0.035, hw + s * 0.04, s * 0.085);
+          ctx.fillStyle = roof[0]; ctx.fillRect(x, b - h - s * 0.035, hw + s * 0.04, s * 0.085);
+          for (let i = -1; i <= 1; i++) {
+            const cx = x + i * hw, cy = b - h + s * 0.008, q = 0.6 + 0.4 * Math.sin(t * 1.6 + i * 2.1);
+            glow(ctx, cx, cy, s * 0.2 * q, "255,214,120", 0.55);
+            gem(ctx, cx, cy, s * 0.055, s * 0.075, "#fff6d6", "#ffd166", "#e09a2b");
+          }
+          poly(ctx, [[x - s * 0.1, rt + s * 0.1], [x + s * 0.1, rt + s * 0.1], [x + s * 0.05, rt - s * 0.02], [x - s * 0.05, rt - s * 0.02]], "#e09a2b");
+          ctx.fillStyle = "#ffd166"; ctx.fillRect(x - s * 0.1, rt + s * 0.07, s * 0.2, s * 0.035);
+        }
         const p = 0.75 + 0.25 * Math.sin(t * 2 + 1);
         const g = th.gem || ["255,110,190", "#ffe3f3", "#ff78c4", "#d0419a"];
         glow(ctx, x, rt - s * 0.12, s * 0.55 * p, g[0], 0.5);

@@ -118,3 +118,15 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 3. The west road: a pond or garden with something to tap and play with (a toy for the girls: tap to make sparks?).
 4. More houses along Lantern Street (first and second done; a third could be pink), then friends arriving one per build, living in them.
 5. Walkers who stop at places (sit by the fountain, go home at night).
+
+## Build 10 (2026-11-15): the violet roof "settled" on the Second Little House
+- His decision was "a violet roof with a gem on top for the Second Little House", but that roof and gold gem were already
+  there since build 6 (his diary lags behind / loops on it). So this build made the roof visibly *finished* rather than
+  rebuilding it: new optional `settled: true` on a cottage draws four tile rows, a pale eave band along the roof foot,
+  three small twinkling gold corner caps (left, middle, right of the eave) and a gold collar under the roof gem.
+- Only the Second Little House has `settled`. Its `say`, one new Kindle line, log.js and plans.md all say the roof is
+  down, locked and finished, so he should stop deciding to build it again. If he still repeats it, the house really is
+  complete: build the next thing from plans.md instead (plans suggests tiling the First Little House's roof to match:
+  just add `settled: true` there).
+- glint-look's zoom seems to top out around 80 px per tile; asking for 130 looked the same as 95.
+- Looked with `glint-look 10 16.3 130`: fine. Only the usual file:// fetch lines in the console.
