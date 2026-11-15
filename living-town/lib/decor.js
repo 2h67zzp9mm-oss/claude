@@ -5,6 +5,7 @@
  * Saved on the homestead (state.homesteads[householdId]):
  *   h.rooms[world] = { items: [{ uid, id, x, y, rot }] }   h.storage = [{ uid, id }]   h.decorUid = next uid
  *   h.rareDay = { day, ids }   (a rare thing can be bought once on the day it shows up)
+ *   h.dreams = [id]            (dream things the family has bought: one of each, ever; missing on old saves = none)
  * The catalog and the fit check live in shared/decor.js so the phone can check a drag before asking.
  */
 const D = require("../shared/decor");
@@ -31,6 +32,7 @@ function nextUid(h) {
   const used = [...storageOf(h), ...Object.values(h.rooms || {}).flatMap(r => r.items || [])].map(it => it.uid);
   h.decorUid = Math.max(Number(h.decorUid) || 1, ...used.map(u => u + 1)); return h.decorUid++;
 }
+const dreamsOf = h => (Array.isArray(h.dreams) ? h.dreams : []);
 const num = v => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : NaN);
 
 /** What the phone needs: today's shop, what's in the box, and this world's room. */
@@ -38,6 +40,7 @@ function view(h, { world, householdId, now }) {
   const day = dayKey(now), rare = h.rareDay?.day === day ? h.rareDay.ids || [] : [];
   return {
     stock: D.shopToday(day, world, householdId).map(id => ({ id, soldOut: Boolean(D.BY_ID[id].rare && rare.includes(id)) })),
+    dreams: D.dreams(world).map(id => ({ id, owned: dreamsOf(h).includes(id) })),
     storage: storageOf(h).map(({ uid, id }) => ({ uid, id })),
     room: roomOf(h, world).items.map(({ uid, id, x, y, rot }) => ({ uid, id, x, y, rot: rot || 0 })),
     art: artOf(h)
@@ -56,6 +59,14 @@ function act(h, r, msg, { world, householdId, now }) {
     }
     case "decorBuy": {
       const id = typeof msg.item === "string" ? msg.item : typeof msg.id === "string" ? msg.id : "", d = D.BY_ID[id], day = dayKey(now);
+      if (d?.dream) {   // always in the shop, one of each per family
+        if (!D.inWorld(d, world)) return { ok: false, toast: `The ${d.name} is sold in another world.` };
+        if (dreamsOf(h).includes(id)) return { ok: false, toast: `${d.emoji} You already have the ${d.name}!` };
+        if ((Number(r.stars) || 0) < d.price) return { ok: false, toast: `You need ${d.price}⭐ for the ${d.name}. Keep saving!` };
+        r.stars -= d.price; h.dreams = [...dreamsOf(h), id];
+        const it = { uid: nextUid(h), id }; box.push(it);
+        return { ok: true, decorBought: it, dreamBought: id, toast: `🎉 The ${d.name} is yours! It's in 📦 Stored.` };
+      }
       if (!d || !D.shopToday(day, world, householdId).includes(id)) return { ok: false, toast: "That's not in the shop today. Come back tomorrow!" };
       if (d.rare && h.rareDay?.day === day && (h.rareDay.ids || []).includes(id)) return { ok: false, toast: `✨ Only one ${d.name} today!` };
       if ((Number(r.stars) || 0) < d.price) return { ok: false, toast: `You need ${d.price}⭐ for the ${d.name}. Grow and sell to save up!` };
@@ -96,4 +107,4 @@ function act(h, r, msg, { world, householdId, now }) {
   return { ok: false, toast: "Hmm, I don't know how to do that." };
 }
 
-module.exports = { ACTIONS, ART, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, shopToday: D.shopToday, fits: D.fits, footprint: D.footprint, view, act, dayKey };
+module.exports = { ACTIONS, ART, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, shopToday: D.shopToday, dreams: D.dreams, fits: D.fits, footprint: D.footprint, view, act, dayKey };

@@ -63,7 +63,17 @@
     // rare: now and then, one a day
     T("canopy", "Canopy Bed", "👑", 180, 2, 3, "floor", "all", { rare: true }),
     T("rainbow", "Rainbow Rug", "🌈", 150, 3, 3, "rug", "all", { rare: true }),
-    T("globe", "Star Globe", "🌟", 200, 1, 1, "floor", "all", { rare: true, glow: true })
+    T("globe", "Star Globe", "🌟", 200, 1, 1, "floor", "all", { rare: true, glow: true }),
+    // dream: big things to save up for. Always in the shop (never in the daily mix), one of each per family.
+    T("fountain", "Sparkle Fountain", "⛲", 500, 2, 2, "floor", "all", { dream: true }),
+    T("glowtree", "Glow Tree", "🌲", 700, 2, 2, "floor", ["night"], { dream: true, glow: true }),
+    T("grand", "Grand Piano", "🎼", 900, 3, 2, "floor", "all", { dream: true }),
+    T("rocket", "Play Rocket", "🚀", 1000, 2, 2, "floor", ["scifi"], { dream: true, glow: true }),
+    T("dragon", "Friendly Dragon", "🐲", 1000, 2, 2, "floor", ["castle"], { dream: true }),
+    T("ship", "Little Ship", "⛵", 1000, 3, 2, "floor", ["pirate"], { dream: true }),
+    T("aquarium", "Aquarium Wall", "🐟", 1200, 3, 1, "wall", "all", { dream: true }),
+    T("treehouse", "Treehouse Bed", "🌳", 1500, 2, 3, "floor", "all", { dream: true }),
+    T("bigscope", "Giant Telescope", "🌌", 2000, 2, 2, "floor", "all", { dream: true })
   ];
   const BY_ID = Object.fromEntries(CATALOG.map(d => [d.id, d]));
   const inWorld = (d, world) => d.worlds === "all" || d.worlds.includes(world);
@@ -72,13 +82,16 @@
   /** Today's shop: the basics, 5 things that change every day, and on some days one rare thing. The same for the whole family all day. */
   function shopToday(dayKey, world, householdId = "") {
     const rnd = seeded(`decor|${dayKey}|${world}|${householdId}`);
-    const pool = CATALOG.filter(d => !d.basic && !d.rare && inWorld(d, world));
+    const pool = CATALOG.filter(d => !d.basic && !d.rare && !d.dream && inWorld(d, world));
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
     const rot = pool.slice(0, 5).sort((a, b) => a.price - b.price);
     const rares = CATALOG.filter(d => d.rare && inWorld(d, world));
     const rare = rnd() < 0.34 ? [rares[Math.floor(rnd() * rares.length)]] : [];
     return [...CATALOG.filter(d => d.basic), ...rot, ...rare].map(d => d.id);
   }
+
+  /** The dream things for this world's house, cheapest first. They never change from day to day. */
+  function dreams(world) { return CATALOG.filter(d => d.dream && inWorld(d, world)).sort((a, b) => a.price - b.price).map(d => d.id); }
 
   /** The tiles a thing covers when turned rot quarter-turns (wall things don't turn). */
   function footprint(d, rot = 0) { return d.kind === "wall" ? { w: d.w, h: 1 } : rot % 2 ? { w: d.h, h: d.w } : { w: d.w, h: d.h }; }
@@ -109,5 +122,5 @@
     return null;
   }
 
-  return { ROOM, CATALOG, BY_ID, inWorld, shopToday, footprint, fits, freeSpot };
+  return { ROOM, CATALOG, BY_ID, inWorld, shopToday, dreams, footprint, fits, freeSpot };
 });

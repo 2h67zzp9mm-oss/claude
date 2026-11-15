@@ -158,6 +158,81 @@
     lantern(P, p) { P.cyl(0.5, 0.6, 0.2, 0, 0.5, "#d9f2ff"); P.cyl(0.5, 0.6, 0.2, 0.5, 0.08, p.wood); P.at(0.5, 0.6, 0.25, (c, x, y, T) => { const t = performance.now() / 600; c.fillStyle = "#fff59a"; for (let i = 0; i < 4; i++) { c.globalAlpha = 0.5 + 0.5 * Math.sin(t + i * 1.7); c.beginPath(); c.arc(x + Math.sin(t * 0.7 + i * 2) * T * 0.1, y + Math.cos(t * 0.9 + i) * T * 0.12, T * 0.035, 0, 7); c.fill(); } c.globalAlpha = 1; }, 1); },
     chest(P, p) { P.box(0.1, 0.25, 1.9, 0.9, 0, 0.5, p.wood, { front: (c, x0, y0, x1, y1) => { c.fillStyle = p.accent; c.fillRect(x0 + (x1 - x0) * 0.2, y0, 4, y1 - y0); c.fillRect(x1 - (x1 - x0) * 0.2 - 4, y0, 4, y1 - y0); c.fillRect((x0 + x1) / 2 - 5, y0 + 2, 10, 9); } }); P.box(0.1, 0.25, 1.9, 0.9, 0.5, 0.18, dark(p.wood, 0.08), { r: radius({ style: STYLE, T: 30 }, 0.3) }); P.ball(0.5, 0.3, 0.68, 0.1, p.accent); P.ball(0.75, 0.3, 0.7, 0.08, light(p.accent, 0.3)); },
     globe(P, p) { P.cyl(0.5, 0.6, 0.18, 0, 0.3, "#f6d77a"); P.ball(0.5, 0.6, 0.3, 0.3, "#5b5fe0"); P.at(0.5, 0.6, 0.6, (c, x, y, T) => { const t = performance.now() / 900; c.fillStyle = "#ffffff"; for (let i = 0; i < 5; i++) { c.globalAlpha = 0.6 + 0.4 * Math.sin(t + i); c.beginPath(); c.arc(x + Math.cos(t * 0.5 + i * 1.3) * T * 0.17, y + Math.sin(i * 2.1) * T * 0.15, T * 0.03, 0, 7); c.fill(); } c.globalAlpha = 1; }, 2); },
+    // dream things: big, special, one of each per family
+    fountain(P) {
+      const stone = "#cfd6dc", water = "#7fd0f2";
+      P.cyl(1, 1, 0.9, 0, 0.3, stone); P.cyl(1, 1, 0.74, 0.3, 0.02, water); P.cyl(1, 1, 0.15, 0.32, 0.6, stone); P.cyl(1, 1, 0.42, 0.92, 0.1, stone); P.cyl(1, 1, 0.32, 1.02, 0.02, water);
+      P.at(1, 1, 1.04, (c, x, y, T) => {   // the water jumps up and falls in little drops
+        const t = performance.now() / 500; c.fillStyle = "#e8f8ff";
+        for (let i = 0; i < 10; i++) { const k = (t * 0.5 + i / 10) % 1, a = (i % 5 - 2) * 0.16; c.globalAlpha = 0.9 - k * 0.6; c.beginPath(); c.arc(x + a * k * T * 1.4, y - Math.sin(k * Math.PI) * T * 0.55 + k * T * 0.12, T * 0.045, 0, 7); c.fill(); }
+        c.globalAlpha = 1;
+      }, 3);
+    },
+    glowtree(P, p) {
+      P.cyl(1, 1.1, 0.2, 0, 0.9, p.wood); P.ball(1, 1.1, 0.7, 0.72, "#3f8f86"); P.ball(0.55, 1.15, 1.0, 0.42, "#4aa598"); P.ball(1.45, 1.15, 1.05, 0.42, "#37807a"); P.ball(1, 1.05, 1.55, 0.46, "#56b8a6");
+      P.at(1, 1.1, 1.35, (c, x, y, T) => {   // little lights that twinkle
+        const t = performance.now() / 700;
+        for (let i = 0; i < 9; i++) { c.globalAlpha = 0.45 + 0.55 * Math.sin(t + i * 1.9); c.fillStyle = i % 2 ? "#fff59a" : "#9ff3ff"; c.beginPath(); c.arc(x + Math.cos(i * 2.4) * T * (0.25 + (i % 3) * 0.2), y + Math.sin(i * 1.7) * T * 0.55, T * 0.05, 0, 7); c.fill(); }
+        c.globalAlpha = 1;
+      }, 5);
+    },
+    grand(P, p) {
+      const b = "#2b2226";
+      [[0.3, 0.3], [2.7, 0.3], [1.5, 1.2]].forEach(([u, v]) => P.box(u - 0.07, v - 0.07, u + 0.07, v + 0.07, 0, 0.6, dark(b, 0.2), { r: 0 }));
+      P.box(0.1, 0.1, 2.9, 1.35, 0.6, 0.34, b); P.box(0.1, 0.1, 2.9, 0.24, 0.94, 0.85, dark(b, 0.1), { front: (c, x0, y0, x1, y1) => { c.fillStyle = p.accent; c.fillRect(x0 + 4, y1 - 4, x1 - x0 - 8, 2); } });
+      P.box(0.25, 1.3, 2.75, 1.8, 0.6, 0.18, b);
+      P.box(0.35, 1.38, 2.65, 1.72, 0.78, 0.03, "#ffffff", { r: 0, deco: (c, x0, y0, x1, y1) => { c.fillStyle = "#1a1214"; const n = 21, w = (x1 - x0) / n; for (let i = 0; i < n; i++) if (i % 7 !== 2 && i % 7 !== 6) c.fillRect(x0 + i * w + w * 0.6, y0, w * 0.6, (y1 - y0) * 0.6); } });
+      P.ball(2.3, 0.7, 0.94, 0.1, p.accent);
+    },
+    rocket(P, p) {
+      const red = "#ff6b6b";
+      P.box(0.28, 1.0, 0.62, 1.2, 0, 0.62, red); P.box(1.38, 1.0, 1.72, 1.2, 0, 0.62, red); P.cyl(1, 1.1, 0.3, 0, 0.25, p.metal);
+      P.cyl(1, 1.1, 0.45, 0.25, 1.25, "#f4f6fb"); P.ball(1, 1.1, 1.38, 0.45, red, { sq: 1.15 });
+      P.at(1, 1.1, 0.95, (c, x, y, T) => { c.fillStyle = "#9aa5c4"; c.beginPath(); c.arc(x, y + T * 0.1, T * 0.21, 0, 7); c.fill(); c.fillStyle = "#7fe3ff"; c.beginPath(); c.arc(x, y + T * 0.1, T * 0.15, 0, 7); c.fill(); c.fillStyle = "#ffffffaa"; c.beginPath(); c.arc(x - T * 0.05, y + T * 0.05, T * 0.04, 0, 7); c.fill(); }, 3);
+    },
+    dragon(P) {
+      const gr = "#6fc47a", belly = "#f6e7a8";
+      P.at(1, 1.0, 0.75, (c, x, y, T) => { c.fillStyle = "#b48be0"; [-1, 1].forEach(k => { c.beginPath(); c.moveTo(x + k * T * 0.3, y); c.lineTo(x + k * T * 0.95, y - T * 0.5); c.lineTo(x + k * T * 0.8, y + T * 0.15); c.closePath(); c.fill(); }); }, -0.2);
+      P.ball(1.62, 1.45, 0, 0.2, gr); P.ball(1, 1.2, 0, 0.56, gr, { sq: 0.9 }); P.ball(1, 1.3, 0.12, 0.3, belly, { lift: 0.1 });
+      P.ball(1, 1.15, 0.85, 0.37, gr, { lift: 0.2 }); P.ball(1, 1.2, 0.85, 0.2, light(gr, 0.25), { sq: 0.8, lift: 0.3 });
+      P.ball(0.8, 1.1, 1.5, 0.08, "#ffd84a", { lift: 0.3 }); P.ball(1.2, 1.1, 1.5, 0.08, "#ffd84a", { lift: 0.3 });
+      P.at(1, 1.15, 1.32, (c, x, y, T) => {   // kind eyes and a smile
+        c.fillStyle = "#2a1a10"; [-0.14, 0.14].forEach(k => { c.beginPath(); c.arc(x + k * T, y, T * 0.04, 0, 7); c.fill(); });
+        c.strokeStyle = "#2a1a10"; c.lineWidth = Math.max(1, T * 0.035); c.lineCap = "round"; c.beginPath(); c.arc(x, y + T * 0.2, T * 0.1, 0.3, Math.PI - 0.3); c.stroke();
+      }, 5);
+    },
+    ship(P, p) {
+      P.box(0.9, 0.75, 2.1, 1.35, 0, 0.16, dark(p.wood, 0.2)); P.box(0.35, 0.6, 2.65, 1.5, 0.16, 0.42, p.wood, { front: (c, x0, y0, x1, y1) => { c.fillStyle = p.accent; c.fillRect(x0 + 3, y0 + 2, x1 - x0 - 6, 3); c.fillStyle = dark(p.wood, 0.4); for (let i = 1; i < 5; i++) { c.beginPath(); c.arc(x0 + (x1 - x0) * i / 5, (y0 + y1) / 2 + 2, Math.max(1.5, (y1 - y0) * 0.12), 0, 7); c.fill(); } } });
+      P.at(1.5, 1.05, 0.58, (c, x, y, T) => {   // the mast, two sails and a little flag with a star
+        c.strokeStyle = dark(p.wood, 0.3); c.lineWidth = T * 0.07; c.lineCap = "round"; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - T * 1.75); c.stroke();
+        c.fillStyle = "#fff8ea"; c.beginPath(); c.moveTo(x + T * 0.08, y - T * 1.55); c.quadraticCurveTo(x + T * 1.0, y - T * 0.8, x + T * 0.08, y - T * 0.2); c.closePath(); c.fill();
+        c.beginPath(); c.moveTo(x - T * 0.08, y - T * 1.3); c.quadraticCurveTo(x - T * 0.8, y - T * 0.7, x - T * 0.08, y - T * 0.25); c.closePath(); c.fill();
+        c.fillStyle = p.fabric; c.beginPath(); c.moveTo(x, y - T * 1.75); c.lineTo(x + T * 0.4, y - T * 1.65); c.lineTo(x, y - T * 1.52); c.closePath(); c.fill();
+        c.fillStyle = p.accent; c.beginPath(); c.arc(x + T * 0.14, y - T * 1.64, T * 0.045, 0, 7); c.fill();
+      }, 3);
+    },
+    treehouse(P, p) {
+      [[0.12, 1.0], [1.88, 1.0], [0.12, 2.85], [1.88, 2.85]].forEach(([u, v]) => P.box(u - 0.07, v - 0.07, u + 0.07, v + 0.07, 0, 0.9, dark(p.wood, 0.15), { r: 0 }));
+      P.cyl(0.5, 0.45, 0.3, 0, 1.9, dark(p.wood, 0.05));
+      P.box(0.05, 0.3, 1.95, 2.92, 0.9, 0.14, p.wood); P.box(0.15, 0.95, 1.85, 2.85, 1.04, 0.12, "#fbf6ee"); P.box(0.4, 1.02, 1.6, 1.45, 1.16, 0.1, "#ffffff");
+      P.box(0.12, 1.6, 1.88, 2.88, 1.07, 0.14, p.fabric, { deco: (c, x0, y0, x1, y1) => { c.fillStyle = "#ffffff55"; for (let i = 0; i < 3; i++) c.fillRect(x0, y0 + (y1 - y0) * (0.2 + i * 0.28), x1 - x0, (y1 - y0) * 0.08); } });
+      P.ball(0.5, 0.5, 1.75, 0.62, p.leaf); P.ball(1.25, 0.5, 1.95, 0.5, light(p.leaf, 0.12)); P.ball(0.85, 0.4, 2.4, 0.46, dark(p.leaf, 0.08)); P.ball(1.5, 0.45, 2.35, 0.1, "#ff6b6b", { lift: 0.5 });
+      P.at(1.95, 2.2, 0, (c, x, y, T) => { c.strokeStyle = light(p.wood, 0.1); c.lineWidth = T * 0.06; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - T * 0.85); c.moveTo(x + T * 0.18, y); c.lineTo(x + T * 0.18, y - T * 0.85); for (let i = 1; i < 4; i++) { c.moveTo(x, y - i * T * 0.22); c.lineTo(x + T * 0.18, y - i * T * 0.22); } c.stroke(); }, 3);
+    },
+    bigscope(P, p) {
+      P.cyl(1, 1.1, 0.55, 0, 0.12, dark(p.wood, 0.1)); P.cyl(1, 1.1, 0.13, 0.12, 0.95, p.metal);
+      P.at(1, 1.1, 1.15, (c, x, y, T) => {   // a big blue tube pointing at the stars
+        const t = performance.now() / 600;
+        c.save(); c.translate(x, y); c.rotate(-0.62);
+        rr(c, -T * 0.85, -T * 0.2, T * 1.75, T * 0.4, T * 0.1); c.fillStyle = "#3b4a8c"; c.fill();
+        c.fillStyle = "#f6d77a"; [-0.55, 0.2, 0.78].forEach(k => c.fillRect(k * T, -T * 0.21, T * 0.09, T * 0.42));
+        rr(c, T * 0.78, -T * 0.26, T * 0.22, T * 0.52, T * 0.06); c.fillStyle = "#2c376e"; c.fill();
+        rr(c, -T * 0.4, -T * 0.34, T * 0.6, T * 0.11, T * 0.05); c.fillStyle = p.metal; c.fill();
+        c.restore();
+        c.fillStyle = "#fff8c9"; for (let i = 0; i < 3; i++) { c.globalAlpha = 0.5 + 0.5 * Math.sin(t + i * 2.1); c.beginPath(); c.arc(x + T * (0.75 + i * 0.12), y - T * (0.85 + (i % 2) * 0.22), T * 0.04, 0, 7); c.fill(); }
+        c.globalAlpha = 1;
+      }, 3);
+    },
     // rugs
     rug_round(P, p) { P.flat(0.1, 0.1, 1.9, 1.9, p.fabric2, { round: true }); P.flat(0.45, 0.45, 1.55, 1.55, light(p.fabric2, 0.3), { round: true, z: -0.9 }); },
     rug_stripe(P, p) { P.flat(0.05, 0.1, 2.95, 1.9, p.fabric); [0.45, 0.95, 1.45].forEach((v, i) => P.flat(0.05, v, 2.95, v + 0.25, i === 1 ? p.accent : light(p.fabric, 0.4), { z: -0.9 })); },
@@ -172,7 +247,19 @@
     shelf(c, g, x0, x1, y) { const p = g.pal, T = g.T; rr(c, x0 + T * 0.1, y + T * 0.2, x1 - x0 - T * 0.2, T * 0.14, radius(g, 0.05)); fill(g, p.wood, y + T * 0.2, y + T * 0.34); [[0.3, p.fabric, 0.5], [0.45, p.fabric2, 0.42], [0.58, p.accent, 0.48]].forEach(([k, col, h]) => { rr(c, x0 + T * k, y + T * (0.2 - h), T * 0.12, T * h, 0); fill(g, col, 0, 0); }); c.beginPath(); c.arc(x1 - T * 0.55, y + T * 0.06, T * 0.14, 0, 7); fill(g, p.pot, 0, 0); c.beginPath(); c.arc(x1 - T * 0.55, y - T * 0.12, T * 0.16, 0, 7); fill(g, p.leaf, 0, 0); },
     flags(c, g, x0, x1, y) { const T = g.T, cols = [g.pal.fabric, g.pal.accent, g.pal.fabric2, g.pal.leaf]; c.strokeStyle = g.pal.ink; c.lineWidth = Math.max(1, T * 0.03); c.beginPath(); c.moveTo(x0 + 2, y - T * 0.4); c.quadraticCurveTo((x0 + x1) / 2, y - T * 0.1, x1 - 2, y - T * 0.4); c.stroke(); const n = 6; for (let i = 0; i < n; i++) { const k = (i + 0.5) / n, X = x0 + (x1 - x0) * k, Y = y - T * 0.4 + Math.sin(k * Math.PI) * T * 0.15; c.beginPath(); c.moveTo(X - T * 0.13, Y); c.lineTo(X + T * 0.13, Y); c.lineTo(X, Y + T * 0.34); c.closePath(); fill(g, cols[i % 4], Y, Y + T * 0.3); } },
     banner(c, g, x0, x1, y) { const T = g.T, X = (x0 + x1) / 2; c.beginPath(); c.moveTo(X - T * 0.3, y - T * 0.6); c.lineTo(X + T * 0.3, y - T * 0.6); c.lineTo(X + T * 0.3, y + T * 0.45); c.lineTo(X, y + T * 0.25); c.lineTo(X - T * 0.3, y + T * 0.45); c.closePath(); fill(g, g.pal.fabric, y - T * 0.6, y + T * 0.4); c.fillStyle = g.pal.accent; c.beginPath(); c.arc(X, y - T * 0.12, T * 0.13, 0, 7); c.fill(); rr(c, X - T * 0.38, y - T * 0.66, T * 0.76, T * 0.08, 2); fill(g, g.pal.wood, 0, 0); },
-    wheel(c, g, x0, x1, y) { const T = g.T, X = (x0 + x1) / 2, r = T * 0.6; c.strokeStyle = g.pal.wood; c.lineWidth = T * 0.09; c.lineCap = "round"; c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; c.moveTo(X, y); c.lineTo(X + Math.cos(a) * r * 1.15, y + Math.sin(a) * r * 1.15); } c.stroke(); c.lineWidth = T * 0.11; c.beginPath(); c.arc(X, y, r * 0.8, 0, 7); c.stroke(); c.beginPath(); c.arc(X, y, T * 0.12, 0, 7); fill(g, g.pal.accent, 0, 0); }
+    wheel(c, g, x0, x1, y) { const T = g.T, X = (x0 + x1) / 2, r = T * 0.6; c.strokeStyle = g.pal.wood; c.lineWidth = T * 0.09; c.lineCap = "round"; c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; c.moveTo(X, y); c.lineTo(X + Math.cos(a) * r * 1.15, y + Math.sin(a) * r * 1.15); } c.stroke(); c.lineWidth = T * 0.11; c.beginPath(); c.arc(X, y, r * 0.8, 0, 7); c.stroke(); c.beginPath(); c.arc(X, y, T * 0.12, 0, 7); fill(g, g.pal.accent, 0, 0); },
+    aquarium(c, g, x0, x1, y) {   // a dream thing: a long window of fish on the wall
+      const T = g.T, X = x0 + T * 0.1, W = x1 - x0 - T * 0.2, Y = y - T * 0.55, H = T * 1.1, t = performance.now() / 1000;
+      framePic(c, g, X, Y, W, H, "#4fa8d8", (ix, iy, iw, ih) => {
+        c.fillStyle = "#7fd0f2"; c.fillRect(ix, iy, iw, ih * 0.3); c.fillStyle = "#e9d9a8"; c.fillRect(ix, iy + ih * 0.88, iw, ih * 0.12);
+        c.fillStyle = "#6fc47a"; for (let i = 0; i < 7; i++) { c.beginPath(); c.ellipse(ix + iw * (0.07 + i * 0.145), iy + ih * 0.9, T * 0.05, ih * (0.2 + (i % 3) * 0.07), Math.sin(t + i) * 0.2, 0, 7); c.fill(); }
+        [["#ffa23a", 0, 0.3], ["#ff6b9a", 2.1, 0.5], ["#ffe14a", 4.2, 0.65], ["#c38bff", 1.2, 0.4], ["#ffffff", 3.3, 0.58]].forEach(([col, ph, lane]) => {
+          const k = (Math.sin(t * 0.45 + ph) + 1) / 2, fx = ix + T * 0.2 + (iw - T * 0.4) * k, fy = iy + ih * (lane + 0.05 * Math.sin(ph + t)), dir = Math.cos(t * 0.45 + ph) > 0 ? 1 : -1, q = Math.max(1.5, T * 0.07);
+          c.fillStyle = col; c.beginPath(); c.ellipse(fx, fy, q * 1.6, q, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(fx - dir * q * 1.2, fy); c.lineTo(fx - dir * q * 2.5, fy - q); c.lineTo(fx - dir * q * 2.5, fy + q); c.fill();
+        });
+        c.fillStyle = "#ffffff99"; for (let i = 0; i < 4; i++) { const k = (t * 0.25 + i / 4) % 1; c.beginPath(); c.arc(ix + iw * (0.2 + i * 0.2), iy + ih * (0.85 - k * 0.75), T * 0.025, 0, 7); c.fill(); }
+      });
+    }
   };
   function framePic(c, g, x, y, w, h, bg, inner) {
     rr(c, x, y, w, h, radius(g, 0.06)); fill(g, g.pal.wood, y, y + h);
@@ -264,7 +351,7 @@
       c.save(); c.globalCompositeOperation = "lighter";
       const glow = (x, y, r, col) => { const gr = c.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, col); gr.addColorStop(1, "rgba(0,0,0,0)"); c.fillStyle = gr; c.fillRect(x - r, y - r, r * 2, r * 2); };
       glow(sx(g, R.window[0] + 1), g.fy - g.T * 1.2, g.T * 2.4, "rgba(120,150,255,0.22)"); glow(sx(g, R.w / 2), sy(g, R.d * 0.45), g.T * 5, "rgba(255,190,120,0.16)");
-      for (const it of items) { const d = BY[it.id]; if (!d?.glow) continue; const f = DC.footprint(d, it.rot || 0); glow(sx(g, it.x + f.w / 2), sy(g, it.y + f.h / 2) - g.T * 0.9, g.T * 2.2, d.id === "shroom" ? "rgba(110,210,255,0.35)" : d.id === "robot" || d.id === "spacelamp" ? "rgba(200,140,255,0.32)" : "rgba(255,200,110,0.38)"); }
+      for (const it of items) { const d = BY[it.id]; if (!d?.glow) continue; const f = DC.footprint(d, it.rot || 0); glow(sx(g, it.x + f.w / 2), sy(g, it.y + f.h / 2) - g.T * 0.9, g.T * 2.2, d.id === "shroom" || d.id === "glowtree" ? "rgba(110,210,255,0.35)" : d.id === "robot" || d.id === "spacelamp" ? "rgba(200,140,255,0.32)" : "rgba(255,200,110,0.38)"); }
       c.restore();
     }
   }
@@ -316,7 +403,8 @@
     if (!isOpen) return;
     if (!drag) items = (view?.decor?.room || []).map(x => ({ ...x }));
     if (sel && !items.some(i => i.uid === sel)) { sel = null; hideRing(); }
-    if (result?.decorBought) { host.sfx?.coin(); puff(BY[result.decorBought.id]?.emoji || "✨"); }
+    if (result?.dreamBought) { host.sfx?.goal(); puff("🎉"); }
+    else if (result?.decorBought) { host.sfx?.coin(); puff(BY[result.decorBought.id]?.emoji || "✨"); }
     if (result?.decorPlaced) { host.sfx?.pop(); sel = result.decorPlaced; showRing(); }
     if (result && result.ok === false && sel) showRing();
     refreshBar();
@@ -332,10 +420,16 @@
   }
   function shop() {
     barKind = "shop"; mode = "look"; sel = null; hideRing();
-    const st = stars();
-    host.setBar(`<span class="home-goals"><span class="home-head"><b>🛒 Today’s shop</b><small>You have ${st}⭐ · new things tomorrow</small></span></span>`,
-      [...V().stock.map(s => { const d = BY[s.id], have = count(s.id); return { label: `${d.rare ? "✨" : d.emoji} ${esc(d.name)} ${s.soldOut ? "<small>sold out</small>" : `${d.price}⭐`}${have ? ` <small>×${have}</small>` : ""}`, off: s.soldOut || st < d.price, go: () => host.act("decorBuy", { item: s.id }) }; }),
-        { label: "Back", go: idle }], "wide");
+    // the things to buy scroll (today's, then the dream row); Back stays put by the thumb
+    const st = stars(), was = host.bar.querySelector(".home-title:has([data-buy])")?.scrollTop || 0;
+    const buy = (id, words, off) => `<button data-buy="${id}" ${off ? "disabled" : ""}>${words}</button>`;
+    const today = V().stock.map(s => { const d = BY[s.id], have = count(s.id); return buy(s.id, `${d.rare ? "✨" : d.emoji} ${esc(d.name)} ${s.soldOut ? "<small>sold out</small>" : `${d.price}⭐`}${have ? ` <small>×${have}</small>` : ""}`, s.soldOut || st < d.price); }).join("");
+    const dream = (V().dreams || []).map(s => { const d = BY[s.id]; return buy(s.id, `${d.emoji} ${esc(d.name)} ${s.owned ? "<small>✅ yours</small>" : `${d.price}⭐`}`, s.owned || st < d.price); }).join("");
+    host.setBar(`<span class="home-head"><b>🛒 Today’s shop</b><small>You have ${st}⭐ · new things tomorrow</small></span><div class="home-actions wide room-picks">${today}</div>` +
+      (dream ? `<span class="home-head"><b>⭐ Dream</b><small>Big things to save up for</small></span><div class="home-actions wide room-picks">${dream}</div>` : ""),
+      [{ label: "Back", go: idle }]);
+    host.bar.querySelectorAll("[data-buy]").forEach(b => { b.onclick = () => host.act("decorBuy", { item: b.dataset.buy }); });
+    const sc = host.bar.querySelector(".home-title"); if (sc) sc.scrollTop = was;   // buying keeps your place in the list
   }
   // stored things grouped by kind, as buttons in the panel's scrolling part (tap one to put it out)
   function pickList() {

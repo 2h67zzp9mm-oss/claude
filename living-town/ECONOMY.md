@@ -46,6 +46,7 @@ About **4305⭐ spare a day**, 30132⭐ in the week.
 | Small things (13) | 18⭐ to 30⭐ | 12 a day (cheapest), 7 a day (dearest) | 239 a day (cheapest), 143 a day (dearest) |
 | Big things (20) | 35⭐ to 120⭐ | 6 a day (cheapest), 1 a day (dearest) | 123 a day (cheapest), 35 a day (dearest) |
 | Rare things (3) | 150⭐ to 200⭐ | 1 a day | 28 a day (cheapest), 21 a day (dearest) |
+| Dream things, one each (9) | 500⭐ to 2000⭐ | 3 days to save (cheapest), 9 days to save (dearest) | 8 a day (cheapest), 2 a day (dearest) |
 | Pet seller | 40⭐ | under a day | under a day |
 | Garden upgrade to 8 beds | 25⭐ | under a day | under a day |
 | Garden upgrade to 12 beds | 60⭐ | under a day | under a day |

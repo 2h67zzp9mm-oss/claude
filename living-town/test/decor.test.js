@@ -10,7 +10,7 @@ test("decor: about 30 things with sensible prices", () => {
   for (const d of Decor.CATALOG) {
     assert.ok(["floor", "wall", "rug"].includes(d.kind), d.id);
     assert.ok(d.w >= 1 && d.h >= 1 && d.w <= 3 && d.h <= 3, d.id);
-    assert.ok(d.rare ? d.price >= 150 : d.price >= 10 && d.price <= 120, `${d.id} costs ${d.price}`);
+    assert.ok(d.dream ? d.price >= 500 && d.price <= 2000 : d.rare ? d.price >= 150 : d.price >= 10 && d.price <= 120, `${d.id} costs ${d.price}`);
     assert.ok(d.worlds === "all" || d.worlds.every(w => ["clay", "scifi", "castle", "night", "pirate"].includes(w)), d.id);
   }
 });
@@ -108,4 +108,68 @@ test("decor: Hazel's art picks save for the family and reject unknown styles", (
   assert.strictEqual(Decor.act(h, r, { action: "artPick", key: "room", item: "neon" }, ctx).ok, false);
   assert.strictEqual(Decor.act(h, r, { action: "artPick", key: "stars", item: "A" }, ctx).ok, false);
   assert.deepStrictEqual(Decor.view(h, ctx).art, { room: "pixel", pirate: "C" });
+});
+
+test("decor: every thing in the catalog has a drawing, in every style and every turn", () => {
+  // load the room's drawing code the way the phone does, with a pretend canvas that counts what gets drawn
+  const fs = require("node:fs"), path = require("node:path"), vm = require("node:vm");
+  let calls = 0; const bad = [];
+  const fakeCanvas = () => {
+    const stub = { addColorStop() {} };
+    const ctx = new Proxy({}, {
+      get: (o, k) => (k in o ? o[k] : (...a) => { calls++; if (a.some(v => typeof v === "number" && !Number.isFinite(v))) bad.push(String(k)); return stub; }),
+      set: (o, k, v) => { o[k] = v; return true; }
+    });
+    return { width: 390, height: 500, getContext: () => ctx };
+  };
+  const window = { LivingTownDecor: require("../shared/decor") };
+  const box = { window, document: { createElement: fakeCanvas }, performance: { now: () => 1234 }, location: { search: "" }, URLSearchParams, requestAnimationFrame() {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "public", "house-room.js"), "utf8"), box);
+  const paint = (style, items) => { calls = 0; window.LivingTownRoom.paint(fakeCanvas(), { style, world: "night", items }); return calls; };
+  for (const style of ["clay", "story", "pixel"]) {
+    const empty = paint(style, []);
+    for (const d of Decor.CATALOG) for (let rot = 0; rot < (d.kind === "wall" ? 1 : 4); rot++) {
+      const n = paint(style, [{ uid: 1, id: d.id, x: 3, y: d.kind === "wall" ? 0 : 2, rot }]);
+      assert.ok(n > empty + 3, `${d.id} is drawn in ${style} (turn ${rot})`);
+      assert.deepEqual(bad, [], `${d.id} draws with real numbers in ${style} (turn ${rot})`);
+    }
+  }
+});
+
+test("decor: dream things are always in the shop, never in the daily mix, and bought once per family", () => {
+  const WORLDS = ["clay", "scifi", "castle", "night", "pirate"], dreams = Decor.CATALOG.filter(d => d.dream);
+  assert.ok(dreams.length >= 8 && dreams.length <= 10, `about 8 dream things (${dreams.length})`);
+  for (const w of WORLDS) {
+    const row = Decor.dreams(w);
+    assert.ok(row.length >= 5, `${w} has a dream row`);
+    assert.deepEqual(row, [...row].sort((a, b) => Decor.BY_ID[a].price - Decor.BY_ID[b].price), "cheapest first");
+    if (w !== "clay") assert.ok(row.some(id => Decor.BY_ID[id].worlds !== "all"), `${w} has a dream thing of its own`);
+    for (let i = 1; i <= 30; i++) for (const id of Decor.shopToday(`2026-12-${i}`, w, "h")) assert.ok(!Decor.BY_ID[id].dream, "never in the daily mix");
+    for (const id of row) assert.ok(require("../shared/decor").freeSpot([], id), `${id} fits in an empty room`);
+  }
+
+  const hs = createHomestead();
+  const me = { id: "dad", name: "Sean", stars: 499 }, kid = { id: "hazel", name: "Hazel", stars: 5000 }, state = { residents: [me, kid] };
+  const now = Date.parse("2026-11-15T10:00:00"), later = now + 40 * 86400_000, act = (who, m, t = now) => hs.act(state, "home-1", who, m, t);
+  let v = hs.view(state, "home-1", me, now).decor;
+  assert.deepEqual(v.dreams.map(s => s.id), Decor.dreams("clay")); assert.ok(v.dreams.every(s => !s.owned), "an old save owns none");
+  assert.equal(act(me, { action: "decorBuy", item: "fountain" }).ok, false, "needs all 500 stars"); assert.equal(me.stars, 499);
+  me.stars = 500;
+  const got = act(me, { action: "decorBuy", item: "fountain" });
+  assert.equal(got.ok, true); assert.equal(got.dreamBought, "fountain"); assert.equal(me.stars, 0);
+  assert.equal(act(kid, { action: "decorBuy", item: "fountain" }).ok, false, "one per family"); assert.equal(kid.stars, 5000);
+  assert.equal(act(kid, { action: "decorBuy", item: "fountain" }, later).ok, false, "still one, weeks later");
+  assert.equal(act(kid, { action: "decorBuy", item: "rocket" }).ok, false, "the rocket is only sold in its own world");
+  assert.equal(act(kid, { action: "decorBuy", item: "treehouse" }, later).ok, true, "there on any day"); assert.equal(kid.stars, 3500);
+  v = hs.view(state, "home-1", kid, later).decor;
+  assert.deepEqual(v.dreams.filter(s => s.owned).map(s => s.id).sort(), ["fountain", "treehouse"]);
+  assert.equal(v.storage.filter(s => s.id === "fountain").length, 1);
+  // it goes out like any other thing, and another family can still buy their own
+  assert.equal(act(kid, { action: "decorPlace", uid: got.decorBought.uid, x: 4, y: 3 }, later).ok, true);
+  assert.equal(act(kid, { action: "decorPlace", uid: v.storage.find(s => s.id === "treehouse").uid, x: 4, y: 3 }, later).ok, false, "no two things on one spot");
+  kid.stars = 500; assert.equal(hs.act(state, "home-2", kid, { action: "decorBuy", item: "fountain" }, later).ok, true);
+  // world dream things are sold in their own world
+  kid.stars = 1000; hs.act(state, "home-1", kid, { action: "world", world: "scifi" }, later);
+  assert.ok(hs.view(state, "home-1", kid, later).decor.dreams.some(s => s.id === "rocket"));
+  assert.equal(act(kid, { action: "decorBuy", item: "rocket" }, later).ok, true);
 });

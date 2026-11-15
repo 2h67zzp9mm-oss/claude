@@ -108,8 +108,9 @@ function prices() {
   const kinds = [
     ["Always in the shop", Decor.CATALOG.filter(d => d.basic)],
     ["Small things", Decor.CATALOG.filter(d => !d.basic && !d.rare && d.price <= 30)],
-    ["Big things", Decor.CATALOG.filter(d => !d.rare && d.price > 30)],
-    ["Rare things", Decor.CATALOG.filter(d => d.rare)]
+    ["Big things", Decor.CATALOG.filter(d => !d.rare && !d.dream && d.price > 30)],
+    ["Rare things", Decor.CATALOG.filter(d => d.rare)],
+    ["Dream things, one each", Decor.CATALOG.filter(d => d.dream)]
   ].map(([name, list]) => ({ name, low: Math.min(...list.map(d => d.price)), high: Math.max(...list.map(d => d.price)), n: list.length }));
   const others = [{ name: "Pet seller", price: 40 }, ...LEVELS.filter(l => l.cost).map(l => ({ name: `Garden upgrade to ${l.beds} beds`, price: l.cost }))];
   return { kinds, others };

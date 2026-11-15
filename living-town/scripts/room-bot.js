@@ -55,7 +55,7 @@ async function main() {
     // give the test player some stars to spend: stop, edit the save, start again
     await stop(server);
     const file = fs.readdirSync(dataDir).map(f => path.join(dataDir, f)).find(f => /state.*\.json$/.test(f) && JSON.parse(fs.readFileSync(f, "utf8")).residents);
-    const st = JSON.parse(fs.readFileSync(file, "utf8")); for (const r of st.residents) r.stars = 500; fs.writeFileSync(file, JSON.stringify(st));
+    const st = JSON.parse(fs.readFileSync(file, "utf8")); for (const r of st.residents) r.stars = 700; fs.writeFileSync(file, JSON.stringify(st));
     server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off" }); await waitForStart(server);
     const url = `http://127.0.0.1:${server.port}/`, debugPort = await freePort();
     chrome = spawn(findChrome(), ["--headless", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--window-size=${W},${H}`, `--user-data-dir=${tempDir("room-bot-chrome-")}`, "about:blank"], { stdio: "ignore" });
@@ -102,6 +102,17 @@ async function main() {
     await run(`window.__room.click("Store", document.querySelector(".home-pop"))`);
     d = await run("window.__room.decor()"); ok(d.storage.some(t => t.id === "pic_flower") && !d.room.some(t => t.id === "pic_flower"), "put the picture back in the box");
     await shot("7-decorated");
+    // a dream thing: always in the shop's ⭐ Dream row, bought once, then it says "yours"
+    await run(`window.__room.click("Back")`); await run(`window.__room.click("Shop")`);
+    ok((await run("window.__room.bar()")).includes("⭐ Dream"), "the shop has a Dream row");
+    const starsD = await run("window.__room.stars()");
+    await run(`document.querySelector('[data-buy="fountain"]').scrollIntoView()`); await run(`window.__room.click("Sparkle Fountain")`); await shot("7d-dream-shop");
+    d = await run("window.__room.decor()");
+    ok(d.storage.some(t => t.id === "fountain") && starsD - await run("window.__room.stars()") === 500, "saved up and bought the Sparkle Fountain for 500⭐");
+    ok(await run(`document.querySelector('[data-buy="fountain"]').disabled && document.querySelector('[data-buy="fountain"]').innerText.includes("yours")`), "it can only be bought once: the button now says yours");
+    await run(`window.__room.click("Back")`); await run(`window.__room.click("Stored")`); await run(`window.__room.click("Sparkle Fountain")`);
+    d = await run("window.__room.decor()"); ok(d.room.some(t => t.id === "fountain"), "put the fountain out in the room");
+    await run(`window.__room.click("Done", document.querySelector(".home-pop"))`); await shot("7e-dream-out");
     await run(`window.__room.click("Back")`); await run(`window.__room.click("Style")`);
     await run(`window.__room.click("Storybook")`); await shot("7b-storybook");
     await run(`window.__room.click("Cozy pixel")`); await run(`window.__room.click("Pirate hat")`); await shot("7c-pixel");
