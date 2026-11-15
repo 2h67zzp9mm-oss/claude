@@ -119,6 +119,18 @@
       ctx.fillStyle = "#57e1ff"; ctx.fillRect(x - s * 0.12, top, s * 0.24, s * 0.05);
       glow(ctx, x, top - s * 0.14, s * 0.75 * p, "255,214,120", 0.75);
       ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(x, top - s * 0.14, s * 0.17, 0, TAU); ctx.fill();
+      // Light-moths: `moths: [[glowRGB, wingColour], ...]` on a lamp. Each one loops around the lamp head on its own
+      // wobbly path, drifts out and back, and flaps two little wings.
+      (th.moths || []).forEach(([rgb, wing], i) => {
+        const ph = rnd(th.x * 7 + th.y * 13 + i * 3.7) * TAU, sp = (0.9 + rnd(ph) * 0.7) * (i % 2 ? -1 : 1), a = t * sp + ph;
+        const r = s * (0.5 + 0.14 * Math.sin(t * 0.63 + ph * 2) + 0.1 * Math.sin(t * 0.21 + ph));
+        const mx = x + Math.cos(a) * r * 1.25 + Math.sin(t * 2.3 + ph) * s * 0.04, my = top - s * 0.16 + Math.sin(a) * r * 0.6 + Math.sin(t * 3.1 + ph * 3) * s * 0.05;
+        const flap = 0.25 + 0.75 * Math.abs(Math.sin(t * 13 + ph)), w = s * 0.13, h = s * 0.09;
+        glow(ctx, mx, my, s * 0.2, rgb, 0.4);
+        poly(ctx, [[mx, my - h * 0.2], [mx - w * flap, my - h], [mx - w * flap * 0.8, my + h * 0.6], [mx, my + h * 0.3]], wing);
+        poly(ctx, [[mx, my - h * 0.2], [mx + w * flap, my - h], [mx + w * flap * 0.8, my + h * 0.6], [mx, my + h * 0.3]], wing);
+        ctx.fillStyle = "#fffdf0"; ctx.beginPath(); ctx.ellipse(mx, my, s * 0.018, s * 0.05, 0, 0, TAU); ctx.fill();
+      });
     },
 
     tree(ctx, x, y, s, t, th) {
