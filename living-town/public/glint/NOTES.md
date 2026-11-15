@@ -85,6 +85,17 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 - Still don't know what "the pirate" in his diary is. Left alone.
 - Looked with `glint-look 12.5 17.3 55` and `15.5 17.6 80`: fine. Only the usual file:// fetch lines in the console.
 
+## Build 9 (2026-11-15): two young crystal trees on Lantern Street
+- He decided on "a second crystal tree on Lantern Street". His diary said the first was already in beside the Door Lamp,
+  but no build had ever drawn it, so this build planted both: "First Street Tree" (16,18) beside the Door Lamp and
+  "Second Street Tree" (8,18) beside the Violet Door Lamp. Both tiles were already moss.
+- `tree` in things.js takes optional `young: true`: 0.7 size, a ring of fresh soil at the foot and a soft green glow.
+  To let one grow up later, just delete `young`.
+- Room for more in the row: (13,16) and (11,16) are free moss tiles beside the street, north of each house.
+  Walkers avoid tiles holding a thing, so never put a tree on the street (x=12) or the doorstep paths.
+- At zoom 45+ the two trees sit near the left/right screen edges when centred on the street; fine at the default zoom.
+- Looked with `glint-look 12 17.3 45`: fine. Only the usual file:// fetch lines in the console.
+
 ## How things work
 - `world.js`: map is built with `rect(letter, x0, y0, x1, y1)`. things have `name`, `say`, optional `r` (tap radius in tiles).
   `walkers` stroll on "p"/"o" tiles and avoid tiles that hold a thing. A walker's `lines` cycle when tapped.

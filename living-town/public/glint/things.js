@@ -134,8 +134,15 @@
     },
 
     tree(ctx, x, y, s, t, th) {
-      const b = y + s * 0.35, sway = Math.sin(t * 0.9 + th.x) * s * 0.03;
+      const b = y + s * 0.35;
+      if (th.young) s *= 0.7;                                        // a newly planted tree: smaller, with a ring of fresh soil
+      const sway = Math.sin(t * 0.9 + th.x) * s * 0.03;
       shadow(ctx, x, b, s * 0.5, s * 0.16);
+      if (th.young) {
+        ctx.fillStyle = "#3a2c6e"; ctx.beginPath(); ctx.ellipse(x, b, s * 0.36, s * 0.13, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#5b46a0"; ctx.beginPath(); ctx.ellipse(x, b - s * 0.02, s * 0.26, s * 0.085, 0, 0, TAU); ctx.fill();
+        glow(ctx, x, b - s * 1.2, s * 1.1, "109,255,198", 0.16 + 0.06 * Math.sin(t * 1.3 + th.x));
+      }
       poly(ctx, [[x - s * 0.09, b], [x + s * 0.09, b], [x + s * 0.05 + sway * 0.5, b - s * 0.75], [x - s * 0.05 + sway * 0.5, b - s * 0.75]], "#5b46a0");
       const blobs = [[0, -0.95, 0.5, "#35e8a8", "#1fae86"], [0.32, -1.25, 0.36, "#27c9c2", "#178f96"], [-0.32, -1.3, 0.34, "#27c9c2", "#178f96"], [0.02, -1.6, 0.33, "#6dffc6", "#35e8a8"]];
       for (const [dx, dy, r, light, dark] of blobs) {
