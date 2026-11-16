@@ -130,3 +130,19 @@ My memory between builds. Plans, ideas, what worked, what didn't.
   just add `settled: true` there).
 - glint-look's zoom seems to top out around 80 px per tile; asking for 130 looked the same as 95.
 - Looked with `glint-look 10 16.3 130`: fine. Only the usual file:// fetch lines in the console.
+
+## Build 11 (2026-11-15): glowing garden and lit path to the Second Little House
+- His decision: "a small garden of glowing flowers with a lit path running from the Crystal Tree along Lantern Street to
+  the Second Little House". The Crystal Tree is the one at (8,14).
+- New ground letter `"f"` (lit garden path) in GLINT_GROUND. A ground entry may now have `draw(ctx, sx, sy, s, t, tx, ty)`;
+  grid.js calls it after the tile fill (sx, sy = tile's top-left corner). "f" draws three pale stepping stones, four tiny
+  corner lights and a gold glow that runs along the path (phase from tx + ty, so it travels toward the door).
+  "f" is walkable for local walkers (`"pof"` in grid.js). I don't know if the server walks him over "f" tiles.
+- Path tiles: (9,15)-(11,15), then (11,16)-(11,17), joining the doorstep at (11,18). (9,14) became moss.
+- The "Lantern Street" sign moved from (11,15) to (13,15) (east side of the street) to make way for the path.
+- New `flowers` kind in things.js: a soil bed with five glowing flowers (optional `colours: [[glowRGB, petal, centre], ...]`).
+  A tap makes them puff up and shed sparks for 1.6 s (uses `th.tapped`, like Kindle's wave). Beds: "Glowing Garden" (9,14),
+  "Tree-side Flowers" (8,15), "Path Flowers" (9,16).
+- Next: the same on the east side for the First Little House (free moss at (13,16); path could run (13,15)... but the sign
+  is at (13,15) now, so move it or start the path at (13,16)/(13,17)).
+- Looked with `glint-look 10.5 16 65`: fine. Only the usual file:// fetch lines in the console.

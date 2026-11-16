@@ -23,7 +23,24 @@
     ".": { fill: "#0a1020", line: "#12305a" },   // empty grid
     "p": { fill: "#1b3a63", line: "#3fd0ff" },   // light path
     "o": { fill: "#1d2f66", line: "#7f8dff" },   // plaza
-    "g": { fill: "#0c2a2c", line: "#1c6b5c" }    // glow-moss
+    "g": { fill: "#0c2a2c", line: "#1c6b5c" },   // glow-moss
+    "f": { fill: "#1a2350", line: "#6a58c8",     // lit garden path: pale stepping stones, and little lights that run toward the door one after another
+      draw(ctx, sx, sy, s, t, tx, ty) {
+        const i = tx + ty;                                           // how far along the path this tile is
+        const wave = Math.max(0, Math.sin(t * 1.6 - i * 0.9));       // the running light
+        const stones = [[0.3, 0.3, 0.2, 0.14, -0.3], [0.68, 0.5, 0.19, 0.13, 0.25], [0.34, 0.74, 0.18, 0.12, 0.1]];
+        for (const [fx, fy, rw, rh, rot] of stones) {
+          ctx.fillStyle = "#2f3f86"; ctx.beginPath(); ctx.ellipse(sx + fx * s, sy + fy * s + s * 0.025, rw * s, rh * s, rot, 0, TAU); ctx.fill();
+          ctx.fillStyle = wave > 0.5 ? "#a9c4ff" : "#7f9be6"; ctx.beginPath(); ctx.ellipse(sx + fx * s, sy + fy * s, rw * s, rh * s, rot, 0, TAU); ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.ellipse(sx + (fx - 0.04) * s, sy + (fy - 0.035) * s, rw * s * 0.5, rh * s * 0.4, rot, 0, TAU); ctx.fill();
+        }
+        glow(ctx, sx + s * 0.5, sy + s * 0.5, s * 0.75, "255,214,120", 0.10 + 0.22 * wave);
+        for (const [fx, fy] of [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]]) {     // tiny lights at the corners
+          const k = 0.55 + 0.45 * Math.sin(t * 2.4 + (tx * 3 + ty * 5 + fx * 7 + fy * 11));
+          glow(ctx, sx + fx * s, sy + fy * s, s * (0.1 + 0.06 * wave), "255,236,170", 0.5 + 0.4 * k);
+          ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(sx + fx * s, sy + fy * s, s * 0.028, 0, TAU); ctx.fill();
+        }
+      } }
   };
 
   window.GLINT_THINGS = {
@@ -213,6 +230,25 @@
       }
     },
 
+    flowers(ctx, x, y, s, t, th) {   // a bed of glowing flowers; a tap makes them puff up and shed sparks
+      const b = y + s * 0.34, since = th.tapped != null ? t - th.tapped : 99, puff = since < 1.6 ? Math.sin(Math.min(1, since / 1.6) * Math.PI) : 0;
+      const cols = th.colours || [["255,130,200", "#ff78c4", "#ffd0ea"], ["120,225,255", "#57e1ff", "#d6f8ff"], ["255,214,120", "#ffd166", "#fff6d6"], ["190,150,255", "#a678ff", "#e2d2ff"]];
+      ctx.fillStyle = "#3a2c6e"; ctx.beginPath(); ctx.ellipse(x, b, s * 0.47, s * 0.2, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#4b3a8c"; ctx.beginPath(); ctx.ellipse(x, b - s * 0.02, s * 0.4, s * 0.15, 0, 0, TAU); ctx.fill();
+      const spots = [[-0.28, -0.05, 0.3], [0.0, -0.09, 0.44], [0.27, -0.05, 0.33], [-0.14, 0.05, 0.36], [0.15, 0.06, 0.27]];
+      spots.forEach(([dx, dy, h], i) => {
+        const n = th.x * 7 + th.y * 13 + i, c = cols[(i + th.x + th.y) % cols.length];
+        const sway = Math.sin(t * 1.2 + n) * s * 0.03, fx = x + dx * s, fy = b + dy * s, hh = h * s * (1 + 0.25 * puff), hx = fx + sway, hy = fy - hh;
+        ctx.strokeStyle = "#35e8a8"; ctx.lineWidth = Math.max(1, s * 0.035); ctx.beginPath(); ctx.moveTo(fx, fy); ctx.quadraticCurveTo(fx, fy - hh * 0.6, hx, hy); ctx.stroke();
+        poly(ctx, [[fx, fy - hh * 0.35], [fx + s * 0.1, fy - hh * 0.55], [fx + s * 0.02, fy - hh * 0.3]], "#1fae86");
+        const R = s * (0.085 + 0.03 * puff), pulse = 0.6 + 0.4 * Math.sin(t * 1.7 + n * 1.3);
+        glow(ctx, hx, hy, R * 4.2, c[0], 0.3 + 0.25 * pulse + 0.3 * puff);
+        ctx.fillStyle = c[1];
+        for (let k = 0; k < 5; k++) { const a = k * TAU / 5 + n + t * 0.15; ctx.beginPath(); ctx.ellipse(hx + Math.cos(a) * R * 0.85, hy + Math.sin(a) * R * 0.85, R * 0.62, R * 0.4, a, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = c[2]; ctx.beginPath(); ctx.arc(hx, hy, R * 0.48, 0, TAU); ctx.fill();
+        if (puff) for (let k = 0; k < 3; k++) { const f = Math.min(1, since / 1.6), a = rnd(n + k * 3.1) * TAU; glow(ctx, hx + Math.cos(a) * f * s * 0.35, hy - f * s * (0.5 + rnd(n + k) * 0.5), s * 0.07 * (1 - f) + 1, c[0], 1 - f); }
+      });
+    },
     sign(ctx, x, y, s) {
       const b = y + s * 0.3;
       shadow(ctx, x, b, s * 0.22, s * 0.08);

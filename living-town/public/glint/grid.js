@@ -15,7 +15,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
 
   // Walkers stroll from tile to tile along paths and plaza, around anything standing there.
   const blocked = new Set(W.things.map(th => th.x + "," + th.y));
-  const walkable = (x, y) => "po".includes((W.tiles[y] || "")[x] || ".") && !blocked.has(x + "," + y);
+  const walkable = (x, y) => "pof".includes((W.tiles[y] || "")[x] || ".") && !blocked.has(x + "," + y);
   for (const w of WALKERS) Object.assign(w, { fx: w.x, fy: w.y, tx: w.x, ty: w.y, px: w.x, py: w.y, wait: 1, dx: 0, dy: 0, moving: false });
   function stepWalker(w, dt) {
     const life = window.GLINT_LIFE;
@@ -61,6 +61,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
       if (sx > innerWidth || sy > innerHeight || sx + s < 0 || sy + s < 0) continue;
       ctx.fillStyle = g.fill; ctx.fillRect(sx, sy, s, s);
       ctx.strokeStyle = g.line; ctx.lineWidth = 1; ctx.strokeRect(sx + 0.5, sy + 0.5, s - 1, s - 1);
+      if (g.draw) { ctx.save(); try { g.draw(ctx, sx, sy, s, t, x, y); } catch (e) { console.error("ground", e); } ctx.restore(); }   // some ground draws a little extra (the lit garden path)
     }
     for (const th of [...W.things, ...WALKERS].sort((a, b) => a.y - b.y)) {
       const k = THINGS[th.kind], draw = typeof k === "function" ? k : k?.draw; if (!draw) continue;   // a kind is a draw function, or an object with draw()
