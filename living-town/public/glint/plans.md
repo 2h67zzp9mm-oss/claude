@@ -1,7 +1,7 @@
 # What I dream of making
 
 - The glowing garden is planted and the lit path runs from the Crystal Tree to the violet door. Next the First Little House could have a lit path and flowers of its own, so both sides of Lantern Street invite people in.
-- Something small living in the garden: glow-bees or a light-snail that visits the flowers.
+- The glow-bees have moved in: a gold hive by the Crystal Tree and four bees that visit every flower. They could use more flowers to visit, and maybe a light-snail to share the garden with.
 - The Second Little House is truly finished now: roof locked down, corners capped in gold, gem on top. The First Little House could have its teal roof tiled and capped the same way, so the two match.
 - More crystal trees for the row on Lantern Street: two are in, one by each door lamp. The next ones could go up the street toward the square.
 - Someone to move in! Both little houses have doors, lit lamps, light-moths and a young tree now, and the bench has room for two.

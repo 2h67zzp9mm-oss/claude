@@ -146,3 +146,17 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 - Next: the same on the east side for the First Little House (free moss at (13,16); path could run (13,15)... but the sign
   is at (13,15) now, so move it or start the path at (13,16)/(13,17)).
 - Looked with `glint-look 10.5 16 65`: fine. Only the usual file:// fetch lines in the console.
+
+## Build 12 (2026-11-16): Glow-bee Hive and four glow-bees in the garden
+- His diary was the garden diary again (already built in build 11) and he had no specific decision, so this build took
+  the next plans.md line: "something small living in the garden".
+- New `hive` kind in things.js: a gold four-ring skep on a post, round door, pink gem. "Glow-bee Hive" at (7,15) (moss).
+- New overlay pass: `window.GLINT_OVER` in things.js (kind -> draw, same arguments as a normal draw). grid.js calls it for
+  every thing AFTER the sorted pass, so it is drawn on top of everything. Use it for anything that flies across tiles.
+- `GLINT_OVER.hive` draws the bees: `bees: 4`, `visits: [[x, y], ...]` (tile positions of flower beds). Each bee is a pure
+  function of t: fly out in an arc (25% of its lap), hover over a bed (43%), fly home (25%), rest inside (7%). Laps are
+  8.5 to 13.6 s, so they are never in step. A tap on the hive (`th.tapped`) pulls all of them into a ring dance for 3 s.
+- If more flower beds are planted, add their tiles to the hive's `visits` and the bees go there too.
+- Check the dance with `glint-look 8.5 15.3 "80&pose=dance"` (grid.js holds `tapped` for `?pose=dance`).
+- Looked with `glint-look 8.5 15.3 80` and the dance pose: fine. Only the usual file:// fetch lines in the console.
+- Still open from build 11: lit path and flowers on the east side for the First Little House (start at (13,16)).

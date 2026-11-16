@@ -1,7 +1,7 @@
 // Glint's Grid: the engine. Draws the ground and things, pans with a finger drag, zooms with a pinch, and a tap on a thing says what it is.
 addEventListener("error", e => { document.body.dataset.error = String(e.message || e.error || "error").slice(0, 200); });
 (() => {
-  const W = window.GLINT_WORLD, GROUND = window.GLINT_GROUND, THINGS = window.GLINT_THINGS, LOG = window.GLINT_LOG || [];
+  const W = window.GLINT_WORLD, GROUND = window.GLINT_GROUND, THINGS = window.GLINT_THINGS, LOG = window.GLINT_LOG || [], OVER = window.GLINT_OVER || {};
   const cv = document.getElementById("grid"), ctx = cv.getContext("2d");
   const say = document.getElementById("say"), logPanel = document.getElementById("logPanel");
   const START = W.start || { x: W.size / 2, y: W.size / 2, s: 28 };
@@ -44,6 +44,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     const t = ms / 1000, dt = Math.min(0.1, t - lastT); lastT = t;
     for (const w of WALKERS) stepWalker(w, dt);
     if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } if (POSE === "sit" && BENCHES[0]) { w.fx = BENCHES[0].x; w.fy = BENCHES[0].y + 1; w.moving = false; w.still = 9; } }
+    if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;   // holds the glow-bees in their ring dance
     for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it
       w.still = w.moving ? 0 : (w.still || 0) + dt;
       const bench = w.kind === "glint" && w.still > 0.8 ? BENCHES.find(bn => Math.abs(bn.x - w.fx) + Math.abs(bn.y - w.fy) < 1.1) : null;
@@ -67,6 +68,11 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
       const k = THINGS[th.kind], draw = typeof k === "function" ? k : k?.draw; if (!draw) continue;   // a kind is a draw function, or an object with draw()
       const [sx, sy] = toScreen(th.x, th.y);
       try { ctx.save(); draw.call(k, ctx, sx + s / 2, sy + s / 2, s, t, th); } catch (e) { console.error(th.kind, e); } finally { ctx.restore(); }
+    }
+    for (const th of W.things) {   // a second pass for things that fly over everything (the glow-bees of a hive)
+      const over = OVER[th.kind]; if (!over) continue;
+      const [sx, sy] = toScreen(th.x, th.y);
+      try { ctx.save(); over(ctx, sx + s / 2, sy + s / 2, s, t, th); } catch (e) { console.error(th.kind, e); } finally { ctx.restore(); }
     }
     requestAnimationFrame(frame);
   }

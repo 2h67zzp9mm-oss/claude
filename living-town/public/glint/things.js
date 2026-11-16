@@ -19,6 +19,41 @@
   function shadow(ctx, x, y, w, h) { ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(x, y, w, h, 0, 0, TAU); ctx.fill(); }
   const rnd = n => { const v = Math.sin(n * 127.1) * 43758.5453; return v - Math.floor(v); };
 
+  // Things drawn on top of everything else, after the normal pass. Same arguments as a normal draw.
+  // hive: its glow-bees. Each bee leaves the door, flies in an arc to one of the flower beds in `visits` (tile positions),
+  // hovers from flower to flower, flies home and rests a moment inside. A tap on the hive calls them all out to dance in a ring.
+  window.GLINT_OVER = {
+    hive(ctx, x, y, s, t, th) {
+      const door = [0, -0.22], beds = th.visits || [], n = th.bees || 4;
+      const since = th.tapped != null ? t - th.tapped : 99, dance = since >= 0 && since < 3 ? Math.sin(Math.min(1, since / 3) * Math.PI) : 0;
+      const ease = k => k * k * (3 - 2 * k);
+      for (let i = 0; i < n; i++) {
+        const P = 8.5 + i * 1.7, c = (t + i * 3.3 + rnd(i + th.x) * 5) / P, lap = Math.floor(c), u = c - lap;
+        const bed = beds.length ? beds[(lap + i) % beds.length] : [th.x, th.y];
+        const spot = [bed[0] - th.x + Math.sin(t * 0.9 + i * 2.1) * 0.26, bed[1] - th.y - 0.3 + Math.sin(t * 1.7 + i) * 0.07];
+        let px, py, show = 1;
+        if (u < 0.25) { const k = ease(u / 0.25); px = door[0] + (spot[0] - door[0]) * k; py = door[1] + (spot[1] - door[1]) * k - Math.sin(k * Math.PI) * 0.45; show = Math.min(1, u / 0.03); }
+        else if (u < 0.68) { px = spot[0]; py = spot[1]; }
+        else if (u < 0.93) { const k = ease((u - 0.68) / 0.25); px = spot[0] + (door[0] - spot[0]) * k; py = spot[1] + (door[1] - spot[1]) * k - Math.sin(k * Math.PI) * 0.45; show = Math.min(1, (0.93 - u) / 0.03); }
+        else { px = door[0]; py = door[1]; show = 0; }
+        if (dance) {                                               // the ring dance over the hive
+          const a = t * 3.2 + i * TAU / n, rx = Math.cos(a) * 0.5, ry = -0.95 + Math.sin(a) * 0.22;
+          px += (rx - px) * dance; py += (ry - py) * dance; show = Math.max(show, dance);
+        }
+        if (show <= 0.02) continue;
+        const bx = x + px * s + Math.sin(t * 5.3 + i * 1.9) * s * 0.02, by = y + py * s + Math.sin(t * 6.1 + i * 2.7) * s * 0.025;
+        const R = s * 0.068 * (0.5 + 0.5 * show), flap = 0.3 + 0.7 * Math.abs(Math.sin(t * 22 + i));
+        glow(ctx, bx, by, s * 0.2, "255,214,120", 0.5 * show);
+        ctx.fillStyle = "rgba(190,240,255,0.85)";
+        for (const d of [-1, 1]) { ctx.beginPath(); ctx.ellipse(bx + d * R * 0.7, by - R * (0.5 + 0.7 * flap), R * 0.75, R * 0.45 + R * 0.5 * flap, d * 0.5, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.ellipse(bx, by, R * 1.25, R * 0.9, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#6a3d0a"; ctx.fillRect(bx - R * 0.45, by - R * 0.8, R * 0.3, R * 1.6); ctx.fillRect(bx + R * 0.2, by - R * 0.8, R * 0.3, R * 1.6);
+        ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(bx + R * 1.0, by - R * 0.1, R * 0.4, 0, TAU); ctx.fill();
+        if (dance) glow(ctx, bx, by + s * 0.1, s * 0.06, "255,130,200", 0.7 * dance);
+      }
+    }
+  };
+
   window.GLINT_GROUND = {
     ".": { fill: "#0a1020", line: "#12305a" },   // empty grid
     "p": { fill: "#1b3a63", line: "#3fd0ff" },   // light path
@@ -248,6 +283,24 @@
         ctx.fillStyle = c[2]; ctx.beginPath(); ctx.arc(hx, hy, R * 0.48, 0, TAU); ctx.fill();
         if (puff) for (let k = 0; k < 3; k++) { const f = Math.min(1, since / 1.6), a = rnd(n + k * 3.1) * TAU; glow(ctx, hx + Math.cos(a) * f * s * 0.35, hy - f * s * (0.5 + rnd(n + k) * 0.5), s * 0.07 * (1 - f) + 1, c[0], 1 - f); }
       });
+    },
+    // The Glow-bee Hive: a little gold skep on a post. Its bees are drawn by GLINT_OVER.hive (after everything else, so
+    // they fly in front of the flowers they visit).
+    hive(ctx, x, y, s, t, th) {
+      const b = y + s * 0.32, top = b - s * 0.42, pulse = 0.6 + 0.4 * Math.sin(t * 1.5 + th.x);
+      shadow(ctx, x, b, s * 0.3, s * 0.1);
+      ctx.fillStyle = "#5b46a0"; ctx.fillRect(x - s * 0.045, top, s * 0.09, b - top);
+      poly(ctx, [[x - s * 0.3, top], [x + s * 0.3, top], [x + s * 0.24, top + s * 0.07], [x - s * 0.24, top + s * 0.07]], "#7f6ad0");
+      glow(ctx, x, top - s * 0.25, s * 0.85, "255,214,120", 0.22 + 0.12 * pulse);
+      const bands = [[0.27, 0.0, "#e09a2b", "#ffb92e"], [0.25, 0.13, "#ffb92e", "#ffd166"], [0.2, 0.26, "#e09a2b", "#ffb92e"], [0.13, 0.37, "#ffb92e", "#ffe29a"]];
+      for (const [w, up, dark, light] of bands) {
+        const cy = top - s * (up + 0.07);
+        ctx.fillStyle = dark; ctx.beginPath(); ctx.ellipse(x, cy, s * w, s * 0.085, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(x - s * w * 0.18, cy - s * 0.02, s * w * 0.7, s * 0.045, 0, 0, TAU); ctx.fill();
+      }
+      gem(ctx, x, top - s * 0.56, s * 0.055, s * 0.09, "#ffd0ea", "#ff78c4", "#d0419a");
+      ctx.fillStyle = "#3a2466"; ctx.beginPath(); ctx.ellipse(x, top - s * 0.12, s * 0.075, s * 0.085, 0, 0, TAU); ctx.fill();   // the little round door
+      glow(ctx, x, top - s * 0.12, s * 0.16, "255,240,180", 0.35 + 0.3 * pulse);
     },
     sign(ctx, x, y, s) {
       const b = y + s * 0.3;
