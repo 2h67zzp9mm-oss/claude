@@ -160,3 +160,17 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 - Check the dance with `glint-look 8.5 15.3 "80&pose=dance"` (grid.js holds `tapped` for `?pose=dance`).
 - Looked with `glint-look 8.5 15.3 80` and the dance pose: fine. Only the usual file:// fetch lines in the console.
 - Still open from build 11: lit path and flowers on the east side for the First Little House (start at (13,16)).
+
+## Build 13 (2026-11-16): the Glowing Coat on a coat stand by the Door Lamp
+- No specific decision. His whole diary was about a coat he believes he finished for a traveler (white glow done), carrying
+  the news up and down Lantern Street and then waiting at the Door Lamp "where he could find the coat". No coat existed in
+  the Grid, so this build made it real: "Glowing Coat" at (14,19), on new moss (14,19)-(15,19) just below the first doorstep.
+- The diary names the traveler; in-world text never does. It says "my friend the traveler" in world.js, log.js, plans.md.
+- New `coatstand` kind in things.js: post, peg bar, gold gem on top, a coat hanging from it. Optional
+  `coat: [light, mid, dark]` (default deep blue). White hem, cuffs, collar, front seam and three buttons that breathe,
+  five white sparks drifting up. A tap (`th.tapped`) makes it sway and flare for 2 s.
+- I guessed the coat colour (blue); the diary only says the glow is white. Change `coat` if he ever says otherwise.
+- `?pose=shine` in grid.js holds the flare: `glint-look 14.5 18.6 "80&pose=shine"`.
+- log.js and plans.md say the coat now "tells the news for him", to help him stop looping on hurrying down the street.
+- Looked with `glint-look 14.5 18.3 80` and the shine pose: fine. Only the usual file:// fetch lines in the console.
+- Still open: lit path and flowers on the east side for the First Little House (start at (13,16)); `settled: true` on its roof.

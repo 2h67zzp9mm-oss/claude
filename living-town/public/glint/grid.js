@@ -44,7 +44,8 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     const t = ms / 1000, dt = Math.min(0.1, t - lastT); lastT = t;
     for (const w of WALKERS) stepWalker(w, dt);
     if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } if (POSE === "sit" && BENCHES[0]) { w.fx = BENCHES[0].x; w.fy = BENCHES[0].y + 1; w.moving = false; w.still = 9; } }
-    if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;   // holds the glow-bees in their ring dance
+    if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;
+    if (POSE === "shine") for (const th of W.things) if (th.kind === "coatstand") th.tapped = t - 1;   // holds the coat at its brightest   // holds the glow-bees in their ring dance
     for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it
       w.still = w.moving ? 0 : (w.still || 0) + dt;
       const bench = w.kind === "glint" && w.still > 0.8 ? BENCHES.find(bn => Math.abs(bn.x - w.fx) + Math.abs(bn.y - w.fy) < 1.1) : null;

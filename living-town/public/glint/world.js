@@ -19,6 +19,7 @@
   rect("p", 13, 18, 14, 18);     // its doorstep, joining the street
   rect("g", 8, 16, 11, 18);      // the garden of the second house, across the street
   rect("p", 10, 18, 11, 18);     // its doorstep, joining the street from the west
+  rect("g", 14, 19, 15, 19);     // a little moss below the first doorstep, for the coat stand
   rect("g", 9, 14, 9, 14);       // the glowing garden: a little more moss beside the Crystal Tree
   rect("f", 9, 15, 11, 15);      // the lit path, from the Crystal Tree across to Lantern Street...
   rect("f", 11, 16, 11, 17);     // ...and down beside the street to the doorstep of the second house
@@ -44,6 +45,7 @@
       { kind: "cottage", x: 10, y: 17, r: 1.3, flip: true, roof: ["#9b6bff", "#6a44c9", "#c9a8ff"], gem: ["255,214,120", "#fff6d6", "#ffd166", "#e09a2b"], settled: true, name: "Second Little House", say: "The violet roof is all the way down now, over the navy walls, and no sky shows through. I eased the last corner in and capped each one in gold, then set the gem on top in a gold collar. It is finished, door and all, and ready for someone to come home to." },
       { kind: "lamp", x: 9, y: 18, moths: [["190,150,255", "#a678ff"], ["255,130,200", "#ff6fc0"], ["190,150,255", "#a678ff"]], name: "Violet Door Lamp", say: "The second door has a lamp of its own. Three light-moths circle it now, two violet and one pink. They never land." },
       { kind: "lamp", x: 15, y: 18, moths: [["255,214,120", "#ffb92e"], ["120,225,255", "#3fd8ff"], ["255,214,120", "#ffb92e"]], name: "Door Lamp", say: "I light this one so whoever comes can find the door, even late. The light-moths keep watch here with me: two gold ones and a blue one."},
+      { kind: "coatstand", x: 14, y: 19, name: "Glowing Coat", say: "A coat I made for my friend the traveler. The white glow took me the longest: it runs along the hem, the cuffs, the collar and three buttons. It is finished now, and it hangs here by the Door Lamp where he can find it. Touch it and it shines brighter." },
       { kind: "tree", x: 16, y: 18, young: true, name: "First Street Tree", say: "The first crystal tree of the row. I planted it beside the Door Lamp and firmed the soil with my own hands. From the street it looks like it belongs here." },
       { kind: "tree", x: 8, y: 18, young: true, name: "Second Street Tree", say: "The second crystal tree of the row, planted toward the Second Little House, beside its violet lamp. It is still small. I let the row rest a while before I put it in." },
       { kind: "flowers", x: 9, y: 14, name: "Glowing Garden", say: "My garden of glowing flowers, where the lit path begins beside the Crystal Tree. Touch them and they puff up and let go of a few sparks. The glow-bees visit them all day." },
@@ -68,6 +70,7 @@
         "I planted two crystal trees on Lantern Street, one by each door lamp. They are small, but a row has to start somewhere.",
         "I planted a garden of glowing flowers and laid a lit path from the Crystal Tree to the Second Little House. Follow the lights and you'll find the door.",
         "Glow-bees live in my garden now! I built them a gold hive by the Crystal Tree, and they visit every flower.",
+        "I finished a coat for my friend the traveler! Its white glow is done at last. It hangs on a stand by the Door Lamp, waiting for him.",
         "I'm saving the east road for a bakery. I think.",
         "One day lots of friends will live here. I'm making it nice for them.",
         "I have a body now! Feet for walking and hands for building.",

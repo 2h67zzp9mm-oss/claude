@@ -302,6 +302,38 @@
       ctx.fillStyle = "#3a2466"; ctx.beginPath(); ctx.ellipse(x, top - s * 0.12, s * 0.075, s * 0.085, 0, 0, TAU); ctx.fill();   // the little round door
       glow(ctx, x, top - s * 0.12, s * 0.16, "255,240,180", 0.35 + 0.3 * pulse);
     },
+    // A coat stand with a finished coat hanging on it (th.coat = [light, mid, dark]). The coat's trim, cuffs, collar and
+    // buttons glow white and breathe slowly; little white sparks lift off it. A tap makes it sway and flare bright for 2 s.
+    coatstand(ctx, x, y, s, t, th) {
+      const b = y + s * 0.32, top = b - s * 1.08, c = th.coat || ["#4f7dff", "#2f4fc4", "#1c2f86"];
+      const since = th.tapped != null ? t - th.tapped : 99, flare = since >= 0 && since < 2 ? Math.sin(Math.min(1, since / 2) * Math.PI) : 0;
+      const pulse = 0.6 + 0.4 * Math.sin(t * 1.3 + th.x), lit = Math.min(1, 0.55 + 0.3 * pulse + 0.6 * flare);
+      const sway = Math.sin(t * 0.9) * 0.012 + Math.sin(since * 7) * 0.05 * flare;
+      shadow(ctx, x, b, s * 0.3, s * 0.1);
+      poly(ctx, [[x - s * 0.2, b], [x + s * 0.2, b], [x + s * 0.12, b - s * 0.06], [x - s * 0.12, b - s * 0.06]], "#7f6ad0");   // foot
+      ctx.fillStyle = "#5b46a0"; ctx.fillRect(x - s * 0.035, top, s * 0.07, b - top - s * 0.04);                               // post
+      ctx.fillStyle = "#7f6ad0"; ctx.fillRect(x - s * 0.24, top + s * 0.07, s * 0.48, s * 0.05);                               // peg bar
+      ctx.fillRect(x - s * 0.26, top + s * 0.02, s * 0.05, s * 0.1); ctx.fillRect(x + s * 0.21, top + s * 0.02, s * 0.05, s * 0.1);
+      gem(ctx, x, top - s * 0.03, s * 0.045, s * 0.07, "#fff6d6", "#ffd166", "#e09a2b");
+      glow(ctx, x, top + s * 0.5, s * (0.95 + 0.25 * flare), "235,245,255", 0.2 + 0.16 * pulse + 0.35 * flare);
+      const sh = top + s * 0.15, hem = top + s * 0.86, k = (px, py) => [x + px * s + sway * s * (py - sh) / (hem - sh) * 3, py];   // hangs from the bar, sways at the hem
+      poly(ctx, [k(-0.2, sh), k(-0.36, sh + s * 0.42), k(-0.25, sh + s * 0.46), k(-0.13, sh + s * 0.14)], c[2]);               // sleeves
+      poly(ctx, [k(0.2, sh), k(0.36, sh + s * 0.42), k(0.25, sh + s * 0.46), k(0.13, sh + s * 0.14)], c[2]);
+      poly(ctx, [k(-0.2, sh), k(0.2, sh), k(0.26, hem), k(-0.26, hem)], c[1]);                                                 // body
+      poly(ctx, [k(-0.2, sh), k(0, sh), k(0, hem), k(-0.26, hem)], c[0]);
+      const w = `rgba(255,255,255,${lit})`;
+      poly(ctx, [k(-0.265, hem - s * 0.05), k(0.265, hem - s * 0.05), k(0.27, hem + s * 0.015), k(-0.27, hem + s * 0.015)], w); // glowing hem
+      poly(ctx, [k(-0.37, sh + s * 0.39), k(-0.25, sh + s * 0.43), k(-0.245, sh + s * 0.485), k(-0.375, sh + s * 0.44)], w);   // cuffs
+      poly(ctx, [k(0.37, sh + s * 0.39), k(0.25, sh + s * 0.43), k(0.245, sh + s * 0.485), k(0.375, sh + s * 0.44)], w);
+      poly(ctx, [k(-0.2, sh - s * 0.02), k(0, sh + s * 0.13), k(0.2, sh - s * 0.02), k(0.12, sh - s * 0.045), k(0, sh + s * 0.05), k(-0.12, sh - s * 0.045)], w);   // collar
+      poly(ctx, [k(-0.012, sh + s * 0.1), k(0.012, sh + s * 0.1), k(0.012, hem - s * 0.05), k(-0.012, hem - s * 0.05)], `rgba(255,255,255,${lit * 0.7})`);
+      for (let i = 0; i < 3; i++) { const [bx, by] = k(0.06, sh + s * (0.24 + i * 0.15)); ctx.fillStyle = w; ctx.beginPath(); ctx.arc(bx, by, s * 0.025, 0, TAU); ctx.fill(); glow(ctx, bx, by, s * 0.09, "255,255,255", 0.5 * lit); }
+      glow(ctx, x, hem - s * 0.02, s * 0.42, "255,255,255", 0.3 * lit); glow(ctx, x, sh + s * 0.03, s * 0.3, "255,255,255", 0.28 * lit);
+      for (let i = 0; i < 5; i++) {                                                                                           // sparks lifting off
+        const f = (t * (0.22 + 0.05 * i) + rnd(i + 3.7)) % 1, px = x + (rnd(i * 2.3 + 1) - 0.5) * s * 0.7 + Math.sin(t * 1.4 + i) * s * 0.04;
+        glow(ctx, px, hem - s * 0.1 - f * s * 0.95, s * (0.035 + 0.03 * flare) * (1 - f) + 1, "255,255,255", (1 - f) * (0.55 + 0.45 * flare));
+      }
+    },
     sign(ctx, x, y, s) {
       const b = y + s * 0.3;
       shadow(ctx, x, b, s * 0.22, s * 0.08);
