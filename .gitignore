@@ -4,3 +4,4 @@ living-town/data/
 *.zip
 living-town/viewer-token
 living-town/tron/world-state/observations.md
+.DS_Store
