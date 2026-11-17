@@ -66,9 +66,9 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
   }
 
   // Shortest walk on walkable tiles to the nearest walkable tile next to (or on) the goal.
-  function route(goal) {
+  function route(goal, from = st) {
     const w = loadWorld(); if (!w) return [];
-    const sx = Math.round(st.x), sy = Math.round(st.y), key = (x, y) => x + "," + y;
+    const sx = Math.round(from.x), sy = Math.round(from.y), key = (x, y) => x + "," + y;
     const ok = (x, y) => w.walkable(x, y) || (x === sx && y === sy);
     const goals = new Set([[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].map(([a, b]) => [goal.x + a, goal.y + b]).filter(([x, y]) => ok(x, y)).map(([x, y]) => key(x, y)));
     if (!goals.size) return [];
@@ -80,9 +80,9 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
     }
     return [];
   }
-  function wanderTarget(reach = 10) {
+  function wanderTarget(reach = 10, from = st) {
     const w = loadWorld(); if (!w) return null;
-    for (let i = 0; i < 40; i++) { const x = Math.round(st.x) + Math.round((Math.random() - 0.5) * reach), y = Math.round(st.y) + Math.round((Math.random() - 0.5) * reach); if ((x !== Math.round(st.x) || y !== Math.round(st.y)) && w.walkable(x, y)) return { x, y }; }
+    for (let i = 0; i < 40; i++) { const x = Math.round(from.x) + Math.round((Math.random() - 0.5) * reach), y = Math.round(from.y) + Math.round((Math.random() - 0.5) * reach); if ((x !== Math.round(from.x) || y !== Math.round(from.y)) && w.walkable(x, y)) return { x, y }; }
     return null;
   }
   const home = () => (loadWorld()?.places || []).find(p => /home|house/i.test(p.kind + " " + p.name));
@@ -186,6 +186,16 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
     else reply(String(name).slice(0, 30));
     return true;
   }
+  // A neighbour in the Grid says something to him (they live here; his everyday mind answers, not the chat).
+  function hearNeighbour(name, text) {
+    const t = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200), n = String(name || "").slice(0, 30); if (!t || !n) return false;
+    st.heard.push(`Your neighbour ${n} says to you: "${t}"`); if (st.heard.length > 10) st.heard.shift();
+    said(n, t); if (brain) brain.log("heard", `${n} (neighbour): ${t}`);
+    if (st.awake) st.nextThinkAt = Math.min(st.nextThinkAt, now() + 20_000);
+    return true;
+  }
+  // Something happens in the Grid that he should know about (a newcomer arrives, a window lights up).
+  function notice(text) { const t = String(text || "").slice(0, 240); if (!t) return; st.heard.push(t); if (st.heard.length > 10) st.heard.shift(); if (brain) brain.log("saw", t); if (st.awake) st.nextThinkAt = Math.min(st.nextThinkAt, now() + 5_000); }
   // A real conversation: when a traveler talks, he answers right away, knowing everything said so far.
   async function reply(name) {
     if (replying) return; replying = true;
@@ -212,7 +222,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
 
   const view = () => ({ name: st.name, x: Math.round(st.x * 100) / 100, y: Math.round(st.y * 100) / 100, moving: st.path.length > 0, next: st.path[0] || null,
     activity: st.activity, thought: st.thought, say: st.say, mood: st.mood, awake: st.awake, replying, travelers: travelers(), talk: st.talk.slice(-14).map(({ who, text }) => ({ who, text })), diary: st.diary.slice(-12).reverse() });
-  return { tick, visit, walk, hear, reply, view, decide, situation, state: () => st, save };
+  return { tick, visit, walk, hear, hearNeighbour, notice, world: loadWorld, route, wanderTarget, asleepNow, home, reply, view, decide, situation, state: () => st, save };
 }
 
 module.exports = { createGlintLife };

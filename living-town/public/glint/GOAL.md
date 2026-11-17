@@ -46,3 +46,10 @@ Until Glint makes one, `../glint-life.js` draws a plain little figure of light. 
 looks (he has designed a pirate with a three-cornered hat for one of them, and made a glowing coat for him), build it
 as `THINGS.traveler` (a look per traveler by `th.name` is fine), true to what Glint imagined. Keep the name label
 above their head so the family can tell who's who.
+
+## Neighbours
+When a dream of Glint's comes true, neighbours come to live in the Grid (only when the family allows it). They're walkers
+with `kind: "neighbour"` (`name`, `color`, `moving`, `inside` when they're home for the night); `../glint-life.js`
+moves them and draws a plain figure of light (and a warm glow on their house at night) until there's a
+`THINGS.neighbour` in `things.js`. `window.GLINT_LIFE.folk` lists them with `home` (the house's name) and `homeLit`
+(true while they're home asleep): a house can light its own windows when its neighbour is home.

@@ -21,7 +21,7 @@ function findChrome() {
 async function main() {
   fs.mkdirSync(out, { recursive: true });
   const dataDir = tempDir("room-bot-data-"), log = [], ok = (cond, text) => { log.push(`${cond ? "✓" : "✗"} ${text}`); if (!cond) throw new Error(text); };
-  let server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off" }), chrome = null;
+  let server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off", LIVING_TOWN_FOLK_AI: "off" }), chrome = null;
   try {
     await waitForStart(server);
     const cookie = (await api(server.port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
@@ -29,7 +29,7 @@ async function main() {
     await stop(server);
     const file = fs.readdirSync(dataDir).map(f => path.join(dataDir, f)).find(f => /state.*\.json$/.test(f) && JSON.parse(fs.readFileSync(f, "utf8")).residents);
     const st = JSON.parse(fs.readFileSync(file, "utf8")); for (const r of st.residents) r.stars = 700; fs.writeFileSync(file, JSON.stringify(st));
-    server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off" }); await waitForStart(server);
+    server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off", LIVING_TOWN_FOLK_AI: "off" }); await waitForStart(server);
     const url = `http://127.0.0.1:${server.port}/`, debugPort = await freePort();
     chrome = spawn(findChrome(), ["--headless", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--window-size=${W},${H}`, `--user-data-dir=${tempDir("room-bot-chrome-")}`, "about:blank"], { stdio: "ignore" });
     let target = null;
@@ -71,6 +71,16 @@ async function main() {
     ok(Math.hypot(r.end[0] - r.goal.x, r.end[1] - r.goal.y) < 0.05 && r.onPath, `walked from ${r.start} to ${r.end.map(n => n.toFixed(1))} (goal ${r.goal.x},${r.goal.y}), staying on the paths`);
     const seen = (r.server || []).find(t => t.name === r.me);
     ok(seen && Math.hypot(seen.x - r.end[0], seen.y - r.end[1]) < 1.01, `the server knows where they are (${seen ? seen.x + "," + seen.y : "no"})`);
+    // a neighbour moves in only when the owner allows it, and shows up walking to their home
+    const before = await run(`fetch("../api/glint/life", { credentials: "same-origin" }).then(r => r.json()).then(d => (d.folk || []).length)`);
+    ok(before === 0, "nobody has moved in before it's allowed");
+    const allowed = await run(`fetch("../api/glint/folk/allow", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n: 1, home: "First Little House" }) }).then(r => r.json())`);
+    ok(allowed.allowed === 1 && allowed.free.includes("First Little House"), `allowed one newcomer (free homes: ${allowed.free})`);
+    await sleep(9000);
+    const nb = await run(`(async () => { const d = await (await fetch("../api/glint/life", { credentials: "same-origin" })).json(); return { folk: d.folk, drawn: window.GLINT_GRID.walkers.filter(w => w.kind === "neighbour").map(w => w.name) }; })()`);
+    await shot("2-neighbour");
+    ok(nb.folk.length === 1 && nb.folk[0].home === "First Little House", `${nb.folk[0]?.name} moved in, heading for the ${nb.folk[0]?.home}`);
+    ok(nb.drawn.includes(nb.folk[0]?.name), "they're drawn walking in the Grid");
     ok(!r.error && !errors.length, `no script errors${r.error || errors.length ? ": " + [r.error, ...errors].join("; ") : ""}`);
   } catch (err) { log.push(`✗ ${err.message}`); process.exitCode = 1; }
   finally { chrome?.kill(); await stop(server).catch(() => {}); }

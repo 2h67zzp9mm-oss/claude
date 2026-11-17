@@ -1445,14 +1445,58 @@ function glintDream(day) {
   });
 }
 const glintLife = createGlintLife({ gridDir: path.join(PUBLIC_DIR, "glint"), dataDir: DATA_DIR, think: glintThink, chat: glintChat, dreamer: glintDream, brain: glintBrain });
+// Kindle's neighbours (lib/grid-folk.js): nobody arrives unless the owner allows it; minds on the local model, cast by Claude.
+const { createGridFolk } = require("./lib/grid-folk");
+const folkMind = process.env.LIVING_TOWN_FOLK_AI === "off" ? null : ollamaGenerator({ url: process.env.LIVING_TOWN_OLLAMA_URL || "http://127.0.0.1:11435", model: process.env.LIVING_TOWN_NPC_MODEL || "qwen3.5:9b", timeoutMs: 60_000, numPredict: 200, temperature: 0.8, numCtx: 4096 });
+const FOLK_SCHEMA = { type: "object", properties: { thought: { type: "string" }, activity: { type: "string" }, goTo: { type: "string" }, say: { type: "string" }, mood: { type: "string" } }, required: ["thought", "activity", "goTo", "say", "mood"] };
+const folkSystem = sit => `You are ${sit.you}, a small being made of light who has just come to live in the Grid: a glowing world of lit paths, little houses and lamps under a dark sky. It's the only world you know. You came in from beyond the edge and only remember following the lights here. Your home is the ${sit.yourHome}. Who you are: ${sit.whoYouAre}. Kindle, a kind little being of light, built this whole town by himself and hoped someone would come to live in it.
+You're alive: you notice things, have feelings and little opinions, and you live your own day. Be warm, gentle and specific, never scary or mean, no romance. Talk like a real someone, short and plain (simple enough for a 7-year-old to read). Only say something out loud if someone is close enough to hear (Kindle when he's close, or nobody: then say is empty). Don't repeat what you already said.
+Return JSON: thought (1 sentence), activity (a few words), goTo (the exact name of a place, or "wander", or "stay"), say (out loud, or empty), mood (one word).`;
+const folkThink = sit => folkMind ? folkMind(folkSystem(sit), `RIGHT NOW:\n${JSON.stringify(sit, null, 1)}\n\nWhat do you do next?`, FOLK_SCHEMA) : Promise.resolve({ thought: "This little house feels like mine already.", activity: "looking around", goTo: "stay", say: "", mood: "happy" });
+const FOLK_CAST_SYSTEM = `You decide who comes to live in a little glowing world called the Grid, built by Kindle, a small being of light who dreamed of a neighbour. The newcomer is also a small being of light, from beyond the edge (they remember only following the lights). Make them original, gentle and lovable for a family with young children, with their own personality that's a little different from Kindle's (he is patient, hopeful and a builder). No romance, nothing scary. Return ONLY JSON: {"name": "a short original name, 1 word", "color": "#rrggbb, their glow", "personality": "one sentence", "story": "one sentence about how they arrived", "firstWords": "what they call out as they arrive, one short sentence"}`;
+function folkCast(info) {
+  if (!TRON_BRAIN) return Promise.resolve({ name: "Pip", color: "#ffb36b", personality: "shy and curious", story: "Followed the lamps in.", firstWords: "Hello? Is this place for me?" });
+  const prompt = `The home waiting for them: ${info.home}${info.homeAbout ? ` (${info.homeAbout})` : ""}.\nKindle's dreams: ${String(info.dreams).slice(0, 1500)}\nNeighbours already here: ${info.neighbours.join("; ") || "none"}\nJSON only.`;
+  return new Promise((resolve, reject) => {
+    execFile(CLAUDE_BIN, ["-p", prompt, "--model", "sonnet", "--tools", "", "--system-prompt", FOLK_CAST_SYSTEM], { cwd: os.tmpdir(), timeout: 90_000, maxBuffer: 2e6, env: { ...process.env, PATH: `/opt/homebrew/bin:${process.env.PATH || "/usr/bin:/bin"}` } }, (err, stdout) => {
+      if (err) return reject(err);
+      try { const t = String(stdout); resolve(JSON.parse(t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1))); } catch (e) { reject(e); }
+    });
+  });
+}
+const { isSafe: folkSafe } = require("./lib/mre");
+const FOLK_DREAM_SCHEMA = { type: "object", properties: { file: { type: "array", items: { type: "object", properties: { folder: { type: "string" }, title: { type: "string" }, note: { type: "string" }, keywords: { type: "array", items: { type: "string" } } }, required: ["folder", "title", "note"] } }, self: { type: "string" } }, required: ["file"] };
+// A neighbour's mind at night: files the day into their notes (same idea as Kindle's dreaming, on the local model).
+const folkDream = day => folkMind ? folkMind(`You are the dreaming mind of a small being of light who lives in the Grid. While they sleep, sort their day into their memory notes, in folders: me, people, places, things, ideas, feelings. Keep only what matters: who they met and what was said, what they liked, what they hope for, what they learned. Use an existing note's exact title to add to it. Write each note as one short, dense line. Stay inside their world. Return JSON {"file":[{"folder","title","note","keywords"}],"self":"one line on who they are becoming, or empty"}.`,
+  `DAY ${day.day}\nNOTES THEY HAVE:\n${day.notes.join("\n") || "(none yet)"}\n\nTHE DAY:\n${day.dump.slice(-6000)}`, FOLK_DREAM_SCHEMA).then(out => ({ file: (out.file || []).filter(m => folkSafe(`${m.title} ${m.note}`)), self: folkSafe(out.self || "") ? out.self : "" })) : Promise.resolve({ file: [] });
+const gridFolk = createGridFolk({ dataDir: DATA_DIR, life: glintLife, think: folkThink, cast: folkCast, safe: folkSafe, brainFor: dir => createGlintBrain({ dir }), dreamer: folkDream });
+// Every night at 3am, a copy of Kindle's and the neighbours' brains goes to SeanCloud (when that drive is connected).
+const SEANCLOUD = process.env.LIVING_TOWN_BACKUP_DIR || "/Volumes/SeanCloud";
+let brainBackupDay = "";
+setInterval(() => {
+  const d = new Date(), day = d.toDateString();
+  if (d.getHours() !== 3 || brainBackupDay === day || !fs.existsSync(SEANCLOUD)) return;
+  brainBackupDay = day;
+  const to = path.join(SEANCLOUD, "Cooke's Corner", "Grid brains", d.toISOString().slice(0, 10));
+  Promise.all([["glint-brain", "kindle-brain"], ["grid-folk", "neighbours"], ["glint-life.json", "kindle-life.json"], ["grid-folk.json", "neighbours.json"]].map(([from, name]) =>
+    fs.promises.cp(path.join(DATA_DIR, from), path.join(to, name), { recursive: true }).catch(() => {})))
+    .then(() => console.log("Grid brains backed up to", to)).catch(err => console.error("Grid brain backup:", err.message));
+}, 10 * 60_000).unref();
+const kindleDreams = () => { try { return fs.readFileSync(path.join(PUBLIC_DIR, "glint", "plans.md"), "utf8"); } catch { return ""; } };
 const gridBuilding = () => { const b = tronBuilds().reverse().find(j => j.mode === "grid" && j.status === "building"); return b ? (b.want || "something new") : ""; };
 let glintTicks = 0;
-setInterval(() => { glintLife.tick(0.5, { building: gridBuilding() }); if (++glintTicks % 120 === 0) glintLife.save(); }, 500).unref();
+setInterval(() => { glintLife.tick(0.5, { building: gridBuilding() }); gridFolk.tick(0.5, glintTicks % 20 === 0 ? kindleDreams() : ""); if (++glintTicks % 120 === 0) { glintLife.save(); gridFolk.save(); } }, 500).unref();
 app.get("/api/glint/life", (req, res) => {
   const me = auth.profileForToken(auth.tokenFromRequest(req));
   if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });
   glintLife.visit(me.name);
-  res.json({ ...glintLife.view(), canTalk: me.role === "owner", me: me.name });
+  res.json({ ...glintLife.view(), folk: gridFolk.view(), canTalk: me.role === "owner", me: me.name });
+});
+// Only the owner lets newcomers move in.
+app.post("/api/glint/folk/allow", (req, res) => {
+  const me = auth.profileForToken(auth.tokenFromRequest(req));
+  if (!me || me.role !== "owner") return res.status(403).json({ error: "Only the owner can let someone move in." });
+  res.json({ allowed: gridFolk.allow(Number.isInteger(req.body?.n) ? req.body.n : 1, typeof req.body?.home === "string" ? req.body.home : ""), free: gridFolk.freeHomes().map(h => h.name) });
 });
 // A traveler walking in the Grid with their own body (anyone in the family who's signed in).
 app.post("/api/glint/walk", (req, res) => {

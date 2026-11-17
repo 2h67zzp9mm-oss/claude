@@ -78,7 +78,7 @@
     return [];
   }
   function spawnSpot() {   // the edge of his town: by the welcome sign if there is one, else the nearest path to the start
-    const W = window.GLINT_WORLD, sign = (W.things || []).find(t => t.kind === "sign"), from = sign || W.start || { x: W.size / 2, y: W.size / 2 };
+    const W = window.GLINT_WORLD, h = (W.things || []).find(t => t.kind === "home") || { x: W.size / 2, y: W.size / 2 }, sign = (W.things || []).filter(t => t.kind === "sign").sort((a, b) => Math.hypot(b.x - h.x, b.y - h.y) - Math.hypot(a.x - h.x, a.y - h.y))[0], from = sign || W.start || { x: W.size / 2, y: W.size / 2 };
     let best = null;
     for (let y = 0; y < W.size; y++) for (let x = 0; x < W.size; x++) if (walkable(x, y)) { const d = Math.hypot(x - from.x, y - from.y); if (!best || d < best.d) best = { x, y, d }; }
     return best || { x: Math.round(from.x), y: Math.round(from.y) };
@@ -138,8 +138,33 @@
       let o = others.get(t.name); if (!o) { o = { w: Object.assign(newWalker(t.name), { fx: t.x, fy: t.y, x: t.x, y: t.y }) }; others.set(t.name, o); G.walkers.push(o.w); }
       o.gx = t.x; o.gy = t.y;
     }
-    for (const [n, o] of others) if (!seen.has(n)) { const i = G.walkers.indexOf(o.w); if (i >= 0) G.walkers.splice(i, 1); others.delete(n); }
+    for (const [n, o] of others) if (!n.startsWith("folk:") && !seen.has(n)) { const i = G.walkers.indexOf(o.w); if (i >= 0) G.walkers.splice(i, 1); others.delete(n); }
+    // Kindle's neighbours: they walk on their own; asleep at home, their house glows.
+    const T = window.GLINT_THINGS, W = window.GLINT_WORLD;
+    if (T && !T.neighbour) T.neighbour = function (ctx, x, y, s, t, th) {
+      if (th.inside) {   // home for the night: a warm light in their window
+        const g = ctx.createRadialGradient(x, y - s * 0.5, 0, x, y - s * 0.5, s * 0.9); g.addColorStop(0, "#ffd98a99"); g.addColorStop(1, "#ffd98a00");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - s * 0.5, s * 0.9, 0, 7); ctx.fill(); return;
+      }
+      const c = th.color || "#ffb36b", bob = th.moving ? Math.sin(t * 9) * s * 0.03 : Math.sin(t * 2) * s * 0.015, by = y + s * 0.3;
+      ctx.fillStyle = "#0008"; ctx.beginPath(); ctx.ellipse(x, by, s * 0.2, s * 0.06, 0, 0, 7); ctx.fill();
+      ctx.shadowColor = c; ctx.shadowBlur = s * 0.35; ctx.fillStyle = c;
+      ctx.beginPath(); ctx.roundRect(x - s * 0.14, by - s * 0.5 + bob, s * 0.28, s * 0.42, s * 0.13); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, by - s * 0.64 + bob, s * 0.14, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = "#1b1b2e"; ctx.beginPath(); ctx.arc(x - s * 0.045 + th.dx * s * 0.03, by - s * 0.66 + bob, s * 0.02, 0, 7); ctx.arc(x + s * 0.045 + th.dx * s * 0.03, by - s * 0.66 + bob, s * 0.02, 0, 7); ctx.fill();
+      ctx.font = `600 ${Math.max(9, s * 0.26)}px system-ui`; ctx.textAlign = "center"; ctx.fillStyle = "#ffe9c9"; ctx.fillText(th.name, x, by - s * 0.9 + bob);
+    };
+    const live = new Set();
+    for (const f of L.folk || []) {
+      live.add(f.name);
+      let o = folkWalkers.get(f.name); if (!o) { o = { w: Object.assign(newWalker(f.name), { kind: "neighbour", traveler: false, fx: f.x, fy: f.y, x: f.x, y: f.y }) }; folkWalkers.set(f.name, o); G.walkers.push(o.w); others.set("folk:" + f.name, o); }
+      const home = f.homeLit && (W?.things || []).find(t => t.name === f.home);
+      Object.assign(o.w, { color: f.color, inside: !!home, say: f.say || `${f.name} is ${f.activity}.` });
+      [o.gx, o.gy] = home ? [home.x, home.y + 0.02] : f.moving && f.next ? f.next : [f.x, f.y];
+    }
+    for (const [n, o] of folkWalkers) if (!live.has(n)) { const i = G.walkers.indexOf(o.w); if (i >= 0) G.walkers.splice(i, 1); folkWalkers.delete(n); others.delete("folk:" + n); }
   }
+  const folkWalkers = new Map();
   window.GLINT_ME = me;   // for the test bot
   let brainAdded = false;
   function addBrain() {
