@@ -19,6 +19,66 @@
   function shadow(ctx, x, y, w, h) { ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(x, y, w, h, 0, 0, TAU); ctx.fill(); }
   const rnd = n => { const v = Math.sin(n * 127.1) * 43758.5453; return v - Math.floor(v); };
 
+  // The room inside a cottage, seen through its opened front wall. (x, b) = middle of the ground line, w/h = half width
+  // and height of the walls, k = how open (0..1), m = 1 or -1 (mirrors it like the house). An empty room, ready to be furnished:
+  // warm floor, a teal rug, a crystal hearth, a hanging lantern, a little back window with a star, and two marked spots
+  // where furniture could go (dashed gold outlines with a sparkle).
+  function room(ctx, x, b, w, h, s, t, k, m) {
+    const L = x - w, R = x + w, T = b - h, B = b - s * 0.1, d = s * 0.17, fy = B - s * 0.27, bl = L + d, br = R - d, bt = T + d * 0.8;
+    const X = f => x + m * f * w;   // f: -1 door side .. +1 window side
+    ctx.save(); ctx.globalAlpha = k;
+    ctx.beginPath(); ctx.rect(L, T, w * 2, B - T); ctx.clip();
+    poly(ctx, [[L, T], [R, T], [br, bt], [bl, bt]], "#101c44");                        // ceiling
+    poly(ctx, [[L, T], [bl, bt], [bl, fy], [L, B]], "#1b2d66");                         // side walls
+    poly(ctx, [[R, T], [br, bt], [br, fy], [R, B]], "#162657");
+    poly(ctx, [[bl, bt], [br, bt], [br, fy], [bl, fy]], "#22377a");                    // back wall
+    ctx.fillStyle = "#57e1ff"; ctx.fillRect(bl, bt, br - bl, s * 0.025); ctx.fillRect(bl, fy - s * 0.03, br - bl, s * 0.03);
+    poly(ctx, [[bl, fy], [br, fy], [R, B], [L, B]], "#3a2f6e");                         // floor, with boards
+    ctx.strokeStyle = "rgba(255,214,120,0.22)"; ctx.lineWidth = Math.max(1, s * 0.015);
+    for (let i = 1; i < 6; i++) { const f = i / 6; ctx.beginPath(); ctx.moveTo(bl + (br - bl) * f, fy); ctx.lineTo(L + (R - L) * f, B); ctx.stroke(); }
+    // the warm light of the hearth over everything
+    const fl = 0.8 + 0.12 * Math.sin(t * 7.3) + 0.08 * Math.sin(t * 11.1);
+    const hx = X(0.55), hb = fy + s * 0.02;
+    glow(ctx, hx, hb - s * 0.15, s * 0.95 * fl, "255,170,110", 0.4);
+    // little back window, with a star in it
+    const wx = X(-0.2), wy = bt + (fy - bt) * 0.42, r = s * 0.1;
+    ctx.fillStyle = "#57e1ff"; ctx.beginPath(); ctx.arc(wx, wy, r + s * 0.025, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#070c22"; ctx.beginPath(); ctx.arc(wx, wy, r, 0, TAU); ctx.fill();
+    const st = 0.5 + 0.5 * Math.sin(t * 2.1);
+    glow(ctx, wx + r * 0.3, wy - r * 0.25, s * 0.07, "255,246,214", 0.5 + 0.4 * st);
+    ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(wx + r * 0.3, wy - r * 0.25, s * 0.015, 0, TAU); ctx.fill();
+    // the crystal hearth: a little arched stove with a pink and gold flame
+    const hw = s * 0.2, hh = s * 0.36;
+    poly(ctx, [[hx - hw, hb], [hx + hw, hb], [hx + hw, hb - hh], [hx - hw, hb - hh]], "#2b4596");
+    ctx.fillStyle = "#57e1ff"; ctx.fillRect(hx - hw - s * 0.03, hb - hh - s * 0.04, hw * 2 + s * 0.06, s * 0.045);
+    ctx.fillStyle = "#0d1838"; ctx.beginPath(); ctx.moveTo(hx - hw * 0.6, hb); ctx.lineTo(hx - hw * 0.6, hb - hh * 0.45); ctx.arc(hx, hb - hh * 0.45, hw * 0.6, Math.PI, 0); ctx.lineTo(hx + hw * 0.6, hb); ctx.fill();
+    for (let i = 0; i < 3; i++) {
+      const fx = hx + (i - 1) * hw * 0.3, fh = hh * (0.32 + 0.1 * Math.sin(t * 8 + i * 2.3)) * (i === 1 ? 1.3 : 1);
+      poly(ctx, [[fx - hw * 0.17, hb - s * 0.01], [fx + hw * 0.17, hb - s * 0.01], [fx + Math.sin(t * 5 + i) * hw * 0.08, hb - fh]], i === 1 ? "#ffd166" : "#ff78c4");
+    }
+    gem(ctx, hx, hb - hh - s * 0.1, s * 0.035, s * 0.05, "#e8fbff", "#57e1ff", "#1f9fd0");
+    // the rug
+    const ry = fy + (B - fy) * 0.55;
+    ctx.fillStyle = "#178f96"; ctx.beginPath(); ctx.ellipse(x, ry, w * 0.5, s * 0.075, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = "#6dffc6"; ctx.lineWidth = Math.max(1, s * 0.018); ctx.beginPath(); ctx.ellipse(x, ry, w * 0.4, s * 0.05, 0, 0, TAU); ctx.stroke();
+    // two empty spots, marked out in gold, waiting for whatever goes there
+    for (const [f, yy, sw, sh, ph] of [[-0.62, fy + (B - fy) * 0.35, s * 0.22, s * 0.075, 0], [0.05, bt + (fy - bt) * 0.82, s * 0.2, s * 0.12, 2.4]]) {
+      const cx = X(f), q = 0.5 + 0.5 * Math.sin(t * 1.8 + ph);
+      ctx.setLineDash([s * 0.035, s * 0.03]); ctx.strokeStyle = `rgba(255,214,120,${(0.45 + 0.4 * q).toFixed(2)})`; ctx.lineWidth = Math.max(1, s * 0.016);
+      ctx.strokeRect(cx - sw / 2, yy - sh / 2, sw, sh); ctx.setLineDash([]);
+      const sx = cx + sw * 0.3, sy = yy - sh * 0.5, L2 = s * 0.06 * q;
+      glow(ctx, sx, sy, s * 0.1, "255,214,120", 0.5 * q);
+      ctx.strokeStyle = "rgba(255,246,214,0.9)"; ctx.beginPath(); ctx.moveTo(sx - L2, sy); ctx.lineTo(sx + L2, sy); ctx.moveTo(sx, sy - L2); ctx.lineTo(sx, sy + L2); ctx.stroke();
+    }
+    // a lantern hanging from the ceiling, swinging a little
+    const a = Math.sin(t * 1.2) * 0.12, cx = x - m * w * 0.05, len = s * 0.26, lx = cx + Math.sin(a) * len, ly = T + Math.cos(a) * len;
+    ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.012); ctx.beginPath(); ctx.moveTo(cx, T); ctx.lineTo(lx, ly); ctx.stroke();
+    glow(ctx, lx, ly + s * 0.05, s * 0.4, "255,214,120", 0.55);
+    ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(lx, ly + s * 0.05, s * 0.045, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#ffd166"; ctx.fillRect(lx - s * 0.04, ly - s * 0.005, s * 0.08, s * 0.02);
+    ctx.restore();
+  }
+
   // Things drawn on top of everything else, after the normal pass. Same arguments as a normal draw.
   // hive: its glow-bees. Each bee leaves the door, flies in an arc to one of the flower beds in `visits` (tile positions),
   // hovers from flower to flower, flies home and rests a moment inside. A tap on the hive calls them all out to dance in a ring.
@@ -168,6 +228,9 @@
           ctx.beginPath(); ctx.moveTo(x - L, rt - s * 0.12); ctx.lineTo(x + L, rt - s * 0.12); ctx.moveTo(x, rt - s * 0.12 - L); ctx.lineTo(x, rt - s * 0.12 + L); ctx.stroke();
         }
       }
+      // th.room: the front wall can open to show the room inside (grid.js eases th.roomK 0..1 on a tap or someone on the step)
+      const ro = th.room ? (th.roomK || 0) : 0, rk = ro * ro * (3 - 2 * ro);
+      if (rk > 0.01) { room(ctx, x, b, w, h, s, t, rk, m); ctx.globalAlpha = Math.max(0, 1 - 1.15 * rk); }
       // door (an open doorway with a gold frame until the door is hung)
       const doorway = () => { ctx.beginPath(); ctx.moveTo(dx - s * 0.19, b - s * 0.1); ctx.lineTo(dx - s * 0.19, b - s * 0.5); ctx.arc(dx, b - s * 0.5, s * 0.19, Math.PI, 0); ctx.lineTo(dx + s * 0.19, b - s * 0.1); };
       if (nodoor) { ctx.fillStyle = "#0d1838"; doorway(); ctx.fill(); ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.035); doorway(); ctx.stroke(); }
@@ -213,6 +276,11 @@
       ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(wx, wy, R, 0, TAU); ctx.fill();
       ctx.fillStyle = "#fff0b8"; ctx.beginPath(); ctx.arc(wx - R * 0.3, wy - R * 0.3, R * 0.35, 0, TAU); ctx.fill();
       ctx.fillStyle = "#213a78"; ctx.fillRect(wx - s * 0.015, wy - R, s * 0.03, R * 2); ctx.fillRect(wx - R, wy - s * 0.015, R * 2, s * 0.03);
+      ctx.globalAlpha = 1;
+      if (rk > 0.01) {   // the front wall's frame stays: cyan edges round the opening, and a soft spill of warm light onto the step
+        ctx.strokeStyle = "#57e1ff"; ctx.lineWidth = Math.max(1, s * 0.04); ctx.strokeRect(x - w, b - h, w * 2, h - s * 0.1);
+        glow(ctx, x, b, s * 1.1, "255,200,110", 0.3 * rk);
+      }
     },
 
     lamp(ctx, x, y, s, t, th) {

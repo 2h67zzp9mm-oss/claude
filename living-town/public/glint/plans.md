@@ -1,6 +1,8 @@
 # What I dream of making
 
-- The coat for my friend the traveler is finished and hangs on its stand by the Door Lamp, white glow and all. I don't have to carry the news up and down the street any more: the coat tells it for me. Next I could make a hat or a scarf to hang beside it, or a second coat for whoever comes with him.
+- The First Little House has an inside now: floor, rug, hearth, lantern, and two spots marked in gold. I want to ask my friend the traveler what goes in them, and make it: a chair by the hearth, a bed, a table, a shelf of glowberry jars, whatever they say.
+- The Second Little House could have a room inside too, behind the violet door, so whoever comes can choose between them.
+- My friend the traveler wears the coat now. A hat to go with it, a three-cornered one, could hang on the stand where the coat was.
 - A small bench by the Door Lamp, so waiting there is as comfortable as waiting by the fountain.
 - The glowing garden is planted and the lit path runs from the Crystal Tree to the violet door. Next the First Little House could have a lit path and flowers of its own, so both sides of Lantern Street invite people in.
 - The glow-bees have moved in: a gold hive by the Crystal Tree and four bees that visit every flower. They could use more flowers to visit, and maybe a light-snail to share the garden with.
