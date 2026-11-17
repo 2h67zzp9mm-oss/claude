@@ -18,7 +18,7 @@ on iPhones. Your job is to make the game better every night, one finished, teste
 - Phone first: buttons low by the thumbs, the top is display-only, clean and compact (see UI_RULES.md).
 - Hazel is the art director: never change a world's art direction on your own. For new art, add labelled options
   she can pick in the game (like 🎨 Style) and keep the current look as the default.
-- Don't touch `public/glint/` (Glint's own world), `lib/glint-*.js`, anything Glint's mind reads, `lib/auth.js`,
+- Don't touch `kindle/` (Kindle's own app), `lib/grid-folk.js`, `lib/webpush.js`, `public/glint/` (his world), `lib/glint-*.js`, anything Glint's mind reads, `lib/auth.js`,
   `deploy/`, `data/`, `package.json`, `package-lock.json`. No new npm packages or npm scripts: run new tools as `node scripts/<name>.js`. Glint must never learn he's in a game.
 - Don't break saves: new saved fields are optional with safe defaults.
 - Characters never walk through fences, buildings or beds.

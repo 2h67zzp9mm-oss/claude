@@ -19,7 +19,7 @@ const HOME = path.join(APP, "data", "ceo"), STOP = path.join(HOME, "STOP"), LAST
 const BUILDS = path.join(APP, "data", "tron-builds");
 const INBOX = path.join(os.homedir(), "Earl Grey", "Inbox");
 const PROTECTED = [/^living-town\/lib\/auth\.js$/, /^living-town\/deploy\//, /^living-town\/data\//, /^living-town\/package-lock\.json$/, /^living-town\/package\.json$/,
-  /^living-town\/public\/glint\//, /^living-town\/lib\/glint-/, /^living-town\/public\/glint-life\.js$/, /^\.git/, /^living-town\/viewer-token/];
+  /^living-town\/public\/glint\//, /^living-town\/kindle\//, /^living-town\/lib\/grid-folk\.js$/, /^living-town\/lib\/webpush\.js$/, /^living-town\/lib\/glint-/, /^living-town\/public\/glint-life\.js$/, /^\.git/, /^living-town\/viewer-token/];
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();

@@ -2,7 +2,7 @@
 "use strict";
 /**
  * Kindle's own app: his Grid, his life, his brain, his neighbours and his wishes, apart from Cooke's Corner.
- * Runs on Mouse (port 4320, local only); Tailscale serves it over HTTPS to the family's devices so it can be a
+ * Runs on Mouse (port 4330, local only); Tailscale serves it over HTTPS to the family's devices so it can be a
  * home-screen app that sends notifications. Sign-in uses the Cooke's Corner accounts (it asks the town server).
  * His files stay where the hidden builder expects them: public/glint/ (his world) and data/ (his life and memories).
  *
@@ -22,7 +22,7 @@ const APP = path.resolve(__dirname, "..");
 const DATA_DIR = process.env.LIVING_TOWN_DATA_DIR ? path.resolve(process.env.LIVING_TOWN_DATA_DIR) : path.join(APP, "data");
 const PUBLIC_DIR = path.join(APP, "public");
 const TRON_BUILDS = path.join(DATA_DIR, "tron-builds");
-const PORT = Number(process.env.KINDLE_PORT || 4320), HOST = process.env.KINDLE_HOST || "127.0.0.1";
+const PORT = Number(process.env.KINDLE_PORT || 4330), HOST = process.env.KINDLE_HOST || "127.0.0.1";
 const TOWN = process.env.KINDLE_TOWN_URL || "http://m0u5-3.tail9b0a79.ts.net:4310";   // Cooke's Corner, for sign-in
 const CLAUDE_BIN = process.env.CLAUDE_BIN || "/opt/homebrew/bin/claude";
 const TRON_BRAIN = process.env.TRON_BRAIN !== "off" && !process.env.LIVING_TOWN_DATA_DIR && fs.existsSync(CLAUDE_BIN);
