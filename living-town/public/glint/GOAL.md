@@ -53,3 +53,5 @@ with `kind: "neighbour"` (`name`, `color`, `moving`, `inside` when they're home 
 moves them and draws a plain figure of light (and a warm glow on their house at night) until there's a
 `THINGS.neighbour` in `things.js`. `window.GLINT_LIFE.folk` lists them with `home` (the house's name) and `homeLit`
 (true while they're home asleep): a house can light its own windows when its neighbour is home.
+A traveler can wear the glowing coat Glint made: tap it to put it on. Then their walker has `wearing: "coat"`, and the
+coat stand is drawn empty. If you make `THINGS.traveler`, draw the coat on them when `th.wearing === "coat"`.

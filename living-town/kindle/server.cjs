@@ -185,7 +185,7 @@ app.get("/api/glint/life", (req, res) => {
   const me = auth.profileForToken(auth.tokenFromRequest(req));
   if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });
   glintLife.visit(me.name);
-  res.json({ ...glintLife.view(), folk: gridFolk.view(), canTalk: me.role === "owner", me: me.name });
+  res.json({ ...glintLife.view(), folk: gridFolk.view(), canTalk: me.role === "owner", me: me.name, wearing: glintLife.wearOf(me.name) });
 });
 // Only the owner lets newcomers move in.
 app.post("/api/glint/folk/allow", (req, res) => {
@@ -197,7 +197,7 @@ app.post("/api/glint/folk/allow", (req, res) => {
 app.post("/api/glint/walk", (req, res) => {
   const me = auth.profileForToken(auth.tokenFromRequest(req));
   if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });
-  res.json({ ok: glintLife.walk(me.name, Number(req.body?.x), Number(req.body?.y)) });
+  res.json({ ok: glintLife.walk(me.name, Number(req.body?.x), Number(req.body?.y), typeof req.body?.wearing === "string" ? req.body.wearing : undefined) });
 });
 // The owner's peek into Glint's brain (folders and notes). Glint never sees this page.
 app.get("/api/glint/brain", (req, res) => {

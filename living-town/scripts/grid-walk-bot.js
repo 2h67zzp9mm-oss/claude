@@ -101,12 +101,24 @@ async function main() {
     ok(card.shown && card.top < 200 && card.through === "none", `the card shows up top (${Math.round(card.top)}-${Math.round(card.bottom)}px) and taps go through it`);
     await sleep((Math.min(24, card.words) / 4 + 2) * 1000 + 600);
     ok(await run(`document.getElementById("say").classList.contains("hidden")`), `it went away after reading time (${card.words} words)`);
+    // the coat Kindle made: tap it, walk over, put it on; he finds out
+    const coatAt = await run(`(() => { const G = window.GLINT_GRID, t = window.GLINT_WORLD.things.find(t => t.kind === "coatstand"); G.cam.x = t.x; G.cam.y = t.y - 2; return [innerWidth / 2 + (t.x + 0.5 - G.cam.x) * G.cam.s, innerHeight / 2 + (t.y + 0.5 - G.cam.y) * G.cam.s]; })()`);
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: coatAt[0], y: coatAt[1], button: "left", clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: coatAt[0], y: coatAt[1], button: "left", clickCount: 1 });
+    for (let i = 0; i < 30 && !(await run(`window.GLINT_ME.wearing`)); i++) await sleep(500);
+    await sleep(1500); await shot("1c-coat");
+    await run(`(() => { const me = window.GLINT_ME, G = window.GLINT_GRID; me.x -= 1; G.cam.x = me.x; G.cam.y = me.y; G.cam.s = 70; })()`); await sleep(800); await shot("1d-coat-close");
+    const worn = await run(`fetch("../api/glint/life", { credentials: "same-origin" }).then(r => r.json()).then(d => ({ me: d.wearing, travelers: d.travelers }))`);
+    ok(worn.me === "coat" && worn.travelers.some(t => t.wearing === "coat"), "tapped the coat, walked over and put it on; the server knows");
     // the granted wish let one neighbour move in
     await sleep(9000);
     const nb = await run(`(async () => { const d = await (await fetch("../api/glint/life", { credentials: "same-origin" })).json(); return { folk: d.folk, drawn: window.GLINT_GRID.walkers.filter(w => w.kind === "neighbour").map(w => w.name) }; })()`);
     await shot("2-neighbour");
     ok(nb.folk.length === 1 && nb.folk[0].home === "First Little House", `${nb.folk[0]?.name} moved in, heading for the ${nb.folk[0]?.home}`);
     ok(nb.drawn.includes(nb.folk[0]?.name), "they're drawn walking in the Grid");
+    // leaving: Back goes to Kindle's home, which has a way back to the Games Menu
+    await run(`document.querySelector('a[href="../"]').click()`); await sleep(2500);
+    ok((await run(`location.pathname`)) === "/" && await run(`!!document.querySelector('a[href="https://m0u5-3.tail9b0a79.ts.net/"]')`), "Back leaves the Grid, and Games Menu is there");
     ok(!r.error && !errors.length, `no script errors${r.error || errors.length ? ": " + [r.error, ...errors].join("; ") : ""}`);
   } catch (err) { log.push(`✗ ${err.message}`); process.exitCode = 1; }
   finally { chrome?.kill(); kindle?.kill(); await stop(server).catch(() => {}); }

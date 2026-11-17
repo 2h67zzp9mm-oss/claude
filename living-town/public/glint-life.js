@@ -71,7 +71,7 @@
   // ===== Travelers walk in the Grid with their own bodies =====
   // You appear at the edge of his town and walk where you tap. Other family members who are walking show up too.
   // How a traveler looks is Kindle's to make (THINGS.traveler in his things.js); until he does, a plain little figure of light.
-  const me = { x: 0, y: 0, path: [], walker: null, sentAt: 0, sent: "" }, others = new Map();
+  const me = { x: 0, y: 0, path: [], walker: null, sentAt: 0, sent: "", wearing: "", pendingWear: false }, others = new Map();
   let attached = false;
   function walkable(x, y) {
     const W = window.GLINT_WORLD; if (!W) return false;
@@ -106,11 +106,37 @@
       ctx.shadowColor = "#fff6d0"; ctx.shadowBlur = s * 0.3; ctx.fillStyle = "#fff3cf";
       ctx.beginPath(); ctx.roundRect(x - s * 0.15, by - s * 0.62 + bob, s * 0.3, s * 0.5, s * 0.12); ctx.fill();
       ctx.beginPath(); ctx.arc(x, by - s * 0.76 + bob, s * 0.15, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+      if (th.wearing === "coat") {   // the glowing coat Kindle made: blue, with a white glow at the hem, cuffs and collar
+        const c = (window.GLINT_WORLD?.things || []).find(t => t.kind === "coatstand")?.coat || ["#4f7dff", "#2f4fc4", "#1c2f86"], top = by - s * 0.6 + bob, hem = by - s * 0.1 + bob;
+        ctx.fillStyle = c[2]; ctx.fillRect(x - s * 0.24, top + s * 0.03, s * 0.08, s * 0.3); ctx.fillRect(x + s * 0.16, top + s * 0.03, s * 0.08, s * 0.3);   // sleeves
+        ctx.fillStyle = c[1]; ctx.beginPath(); ctx.moveTo(x - s * 0.17, top); ctx.lineTo(x + s * 0.17, top); ctx.lineTo(x + s * 0.21, hem); ctx.lineTo(x - s * 0.21, hem); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = c[0]; ctx.beginPath(); ctx.moveTo(x - s * 0.17, top); ctx.lineTo(x, top); ctx.lineTo(x, hem); ctx.lineTo(x - s * 0.21, hem); ctx.closePath(); ctx.fill();
+        const lit = 0.75 + 0.25 * Math.sin(t * 1.3); ctx.shadowColor = "#fff"; ctx.shadowBlur = s * 0.2; ctx.fillStyle = `rgba(255,255,255,${lit})`;
+        ctx.fillRect(x - s * 0.21, hem - s * 0.035, s * 0.42, s * 0.035); ctx.fillRect(x - s * 0.24, top + s * 0.3, s * 0.08, s * 0.03); ctx.fillRect(x + s * 0.16, top + s * 0.3, s * 0.08, s * 0.03);
+        ctx.beginPath(); ctx.moveTo(x - s * 0.14, top); ctx.lineTo(x, top + s * 0.1); ctx.lineTo(x + s * 0.14, top); ctx.lineTo(x, top + s * 0.04); ctx.closePath(); ctx.fill();
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + s * 0.04, top + s * (0.15 + i * 0.1), s * 0.018, 0, 7); ctx.fill(); }
+        ctx.shadowBlur = 0;
+      }
       ctx.fillStyle = "#2a2a40"; ctx.beginPath(); ctx.arc(x - s * 0.05 + th.dx * s * 0.03, by - s * 0.78 + bob, s * 0.022, 0, 7); ctx.arc(x + s * 0.05 + th.dx * s * 0.03, by - s * 0.78 + bob, s * 0.022, 0, 7); ctx.fill();
       ctx.font = `600 ${Math.max(9, s * 0.28)}px system-ui`; ctx.textAlign = "center"; ctx.fillStyle = "#dff8ff"; ctx.fillText(th.name, x, by - s * 1.02 + bob);
     };
+    if (T.coatstand && !T.coatstand._wrapped) {   // while someone's wearing the coat, its stand stands empty
+      const full = T.coatstand, k = typeof full === "function" ? full : full.draw;
+      const empty = function (ctx, x, y, s, t, th) {
+        const worn = me.wearing === "coat" || (L.travelers || []).some(v => v.wearing === "coat");
+        if (!worn) return k.call(full, ctx, x, y, s, t, th);
+        const b = y + s * 0.32, top = b - s * 1.08;
+        ctx.fillStyle = "#0006"; ctx.beginPath(); ctx.ellipse(x, b, s * 0.3, s * 0.1, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = "#7f6ad0"; ctx.beginPath(); ctx.moveTo(x - s * 0.2, b); ctx.lineTo(x + s * 0.2, b); ctx.lineTo(x + s * 0.12, b - s * 0.06); ctx.lineTo(x - s * 0.12, b - s * 0.06); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#5b46a0"; ctx.fillRect(x - s * 0.035, top, s * 0.07, b - top - s * 0.04);
+        ctx.fillStyle = "#7f6ad0"; ctx.fillRect(x - s * 0.24, top + s * 0.07, s * 0.48, s * 0.05); ctx.fillRect(x - s * 0.26, top + s * 0.02, s * 0.05, s * 0.1); ctx.fillRect(x + s * 0.21, top + s * 0.02, s * 0.05, s * 0.1);
+        ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(x, top - s * 0.03, s * 0.05, 0, 7); ctx.fill();
+      };
+      empty._wrapped = true; T.coatstand = empty;
+    }
+    me.wearing = L.wearing === "coat" ? "coat" : "";
     const at = spawnSpot(); Object.assign(me, { x: at.x, y: at.y, path: [] });
-    me.walker = newWalker(L.me); Object.assign(me.walker, { fx: at.x, fy: at.y, x: at.x, y: at.y, mine: true, say: "That's you! Tap the ground to walk." });
+    me.walker = newWalker(L.me); Object.assign(me.walker, { fx: at.x, fy: at.y, x: at.x, y: at.y, mine: true, wearing: me.wearing, say: "That's you! Tap the ground to walk." });
     G.walkers.push(me.walker);
     sendWhere(true);
     // tap the ground (or a thing) to walk there; drags and pinches still move the camera
@@ -118,11 +144,22 @@
     cv.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY, n: (down?.n || 0) + 1 }; });
     cv.addEventListener("pointerup", e => {
       const d = down; down = null; if (!d || d.n > 1 || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8) return;
-      const c = G.cam, wx = Math.floor(c.x + (e.clientX - innerWidth / 2) / c.s), wy = Math.floor(c.y + (e.clientY - innerHeight / 2) / c.s);
+      const c = G.cam, fx = c.x + (e.clientX - innerWidth / 2) / c.s, fy = c.y + (e.clientY - innerHeight / 2) / c.s, wx = Math.floor(fx), wy = Math.floor(fy);
+      const coat = (window.GLINT_WORLD.things || []).find(t => t.kind === "coatstand" && Math.hypot(t.x + 0.5 - fx, t.y + 0.5 - fy) < 1);
+      if (coat) {   // tap the coat: walk over and put it on (or hang it back up)
+        if (Math.hypot(coat.x - me.x, coat.y - me.y) <= 1.6) return toggleCoat();
+        const p = routeTo(Math.round(me.x), Math.round(me.y), coat.x, coat.y); if (p.length) { me.path = p; me.pendingWear = true; }
+        return;
+      }
+      me.pendingWear = false;
       const p = routeTo(Math.round(me.x), Math.round(me.y), wx, wy); if (p.length) me.path = p;
     });
     cv.addEventListener("pointercancel", () => { down = null; });
     requestAnimationFrame(stepMe);
+  }
+  function toggleCoat() {
+    me.pendingWear = false; me.wearing = me.wearing === "coat" ? "" : "coat"; me.walker.wearing = me.wearing; sendWhere(true);
+    const box = document.getElementById("say"); if (box) { box.innerHTML = me.wearing ? "<b>🧥 You put on the coat</b><br>Kindle made it just for you." : "<b>🧥 Coat hung back up</b><br>Tap it any time to wear it again."; box.classList.remove("hidden"); }
   }
   let lastStep = 0;
   function stepMe(ms) {
@@ -130,7 +167,7 @@
     const w = me.walker;
     if (me.path.length) {
       const [tx, ty] = me.path[0], dx = tx - me.x, dy = ty - me.y, d = Math.hypot(dx, dy), go = dt * 2;
-      if (d <= go) { me.x = tx; me.y = ty; me.path.shift(); if (!me.path.length) sendWhere(true); } else { me.x += dx / d * go; me.y += dy / d * go; w.dx = Math.sign(Math.round(dx)); w.dy = Math.sign(Math.round(dy)); }
+      if (d <= go) { me.x = tx; me.y = ty; me.path.shift(); if (!me.path.length) { if (me.pendingWear) toggleCoat(); else sendWhere(true); } } else { me.x += dx / d * go; me.y += dy / d * go; w.dx = Math.sign(Math.round(dx)); w.dy = Math.sign(Math.round(dy)); }
     }
     w.fx = me.x; w.fy = me.y; w.moving = me.path.length > 0; w.wait = 1e9;
     for (const o of others.values()) { const dx = o.gx - o.w.fx, dy = o.gy - o.w.fy, d = Math.hypot(dx, dy); if (d > 4) { o.w.fx = o.gx; o.w.fy = o.gy; } else if (d > 0.02) { const go = Math.min(d, dt * 2); o.w.fx += dx / d * go; o.w.fy += dy / d * go; o.w.dx = Math.sign(Math.round(dx)); o.w.dy = Math.sign(Math.round(dy)); } o.w.moving = d > 0.05; o.w.wait = 1e9; }
@@ -140,7 +177,7 @@
   function sendWhere(force) {
     const k = `${me.x.toFixed(1)},${me.y.toFixed(1)}`; if (!force && k === me.sent && performance.now() - me.sentAt < 10000) return;
     me.sentAt = performance.now(); me.sent = k;
-    fetch("../api/glint/walk", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ x: me.x, y: me.y }) }).catch(() => {});
+    fetch("../api/glint/walk", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ x: me.x, y: me.y, wearing: me.wearing }) }).catch(() => {});
   }
   function syncOthers() {
     const G = window.GLINT_GRID; if (!attached || !G) return;
@@ -148,7 +185,7 @@
     for (const t of L.travelers || []) {
       if (t.name === L.me) continue; seen.add(t.name);
       let o = others.get(t.name); if (!o) { o = { w: Object.assign(newWalker(t.name), { fx: t.x, fy: t.y, x: t.x, y: t.y }) }; others.set(t.name, o); G.walkers.push(o.w); }
-      o.gx = t.x; o.gy = t.y;
+      o.gx = t.x; o.gy = t.y; o.w.wearing = t.wearing || "";
     }
     for (const [n, o] of others) if (!n.startsWith("folk:") && !seen.has(n)) { const i = G.walkers.indexOf(o.w); if (i >= 0) G.walkers.splice(i, 1); others.delete(n); }
     // Kindle's neighbours: they walk on their own; asleep at home, their house glows.

@@ -27,6 +27,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
     nextThinkAt: 0, diary: [], visitors: {}, where: {}, heard: [], talk: [], name: "Glint", namePicked: false, namedAt: 0 }, read(file) || {});
   if (!Array.isArray(st.talk)) st.talk = [];
   if (!st.where || typeof st.where !== "object") st.where = {};
+  if (!st.wearing || typeof st.wearing !== "object") st.wearing = {};
   if (!Array.isArray(st.wishes)) st.wishes = [];
   const WISH_GAP = 6 * 3600_000;
   const TALK_MAX = 40;
@@ -157,12 +158,21 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
   }
 
   // A traveler walks in the Grid: their own body, where they are now. The first steps make him notice.
-  function walk(name, x, y) {
+  function walk(name, x, y, wearing) {
     const n = String(name || "").slice(0, 30), w = loadWorld(); if (!n || !Number.isFinite(x) || !Number.isFinite(y)) return false;
     const size = w?.size || 24; x = Math.max(0, Math.min(size - 1, x)); y = Math.max(0, Math.min(size - 1, y));
     const first = !st.where[n] || now() - st.where[n].at > 10 * 60_000;
     st.where[n] = { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, at: now() };
     visit(n);
+    // putting on (or taking off) something he made: the coat
+    if (wearing !== undefined) {
+      const w = wearing === "coat" ? "coat" : "";
+      if (w !== (st.wearing[n] || "")) {
+        st.wearing[n] = w;
+        if (w) { notice(`${n} took the glowing coat you made off its stand and put it on! They're wearing it right now, the white glow and all.`); if (brain) brain.remember({ folder: "people", title: n, text: `${n} put on the glowing coat I made for them.`, keywords: ["coat", "glow", "gift"] }); }
+        else notice(`${n} took off the glowing coat and hung it back on its stand.`);
+      }
+    }
     if (first && st.awake) {
       st.heard.push(`${n} has a body in the Grid now and is walking on the paths with you, really here.`);
       if (brain) brain.log("saw", `${n} walking in the Grid with their own body`);
@@ -170,7 +180,8 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
     }
     return true;
   }
-  const travelers = () => Object.entries(st.where).filter(([, p]) => now() - p.at < 30_000).map(([name, p]) => ({ name, x: p.x, y: p.y }));
+  const travelers = () => Object.entries(st.where).filter(([, p]) => now() - p.at < 30_000).map(([name, p]) => ({ name, x: p.x, y: p.y, wearing: st.wearing[name] || "" }));
+  const wearOf = name => st.wearing[String(name || "").slice(0, 30)] || "";
   // A family member is looking at the Grid. Someone new makes him think soon.
   function visit(name) {
     const n = String(name || "").slice(0, 30); if (!n) return;
@@ -245,7 +256,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
 
   const view = () => ({ name: st.name, x: Math.round(st.x * 100) / 100, y: Math.round(st.y * 100) / 100, moving: st.path.length > 0, next: st.path[0] || null,
     activity: st.activity, thought: st.thought, say: st.say, mood: st.mood, awake: st.awake, replying, travelers: travelers(), talk: st.talk.slice(-14).map(({ who, text }) => ({ who, text })), diary: st.diary.slice(-12).reverse() });
-  return { tick, visit, walk, hear, hearNeighbour, notice, makeWish, answerWish, wishes: () => st.wishes.slice(-20).reverse(), world: loadWorld, route, wanderTarget, asleepNow, home, reply, view, decide, situation, state: () => st, save };
+  return { tick, visit, walk, wearOf, hear, hearNeighbour, notice, makeWish, answerWish, wishes: () => st.wishes.slice(-20).reverse(), world: loadWorld, route, wanderTarget, asleepNow, home, reply, view, decide, situation, state: () => st, save };
 }
 
 module.exports = { createGlintLife };
