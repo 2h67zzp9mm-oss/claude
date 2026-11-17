@@ -16,11 +16,23 @@
   .life-chat .cl p{margin:5px 0;padding:6px 10px;border-radius:12px;max-width:85%;width:fit-content}.life-chat .cl .g{background:#e9fbff;color:#06231a}.life-chat .cl .u{background:#1d4656;margin-left:auto}
   .life-chat .cl .w{opacity:.7;font-style:italic;background:none}.life-chat form{display:flex;gap:6px;padding-top:6px}
   .life-chat input{flex:1;min-width:0;min-height:44px;border-radius:10px;border:1px solid #57e1ff55;background:#04141a;color:#dff8ff;font:500 1rem system-ui;padding:0 10px}
-  .life-chat form button{margin:0}`;
+  .life-chat form button{margin:0}
+  #say{top:calc(100px + env(safe-area-inset-top)) !important;bottom:auto !important;max-width:min(320px,calc(100% - 32px)) !important;padding:7px 12px !important;font-size:.85rem !important;line-height:1.3 !important;pointer-events:none !important;overflow:hidden;display:-webkit-box !important;-webkit-box-orient:vertical;-webkit-line-clamp:3}`;
   document.head.append(css);
   const strip = document.createElement("div"), bubble = document.createElement("div");
   strip.className = "life-strip"; bubble.className = "life-say life-hidden";
   document.body.append(strip, bubble);
+  // His world's "about this place" card (#say, from tapping a thing): up top, taps go through, gone after reading time + 2s.
+  let sayTimer = 0;
+  const watchSay = () => {
+    const box = document.getElementById("say"); if (!box) return setTimeout(watchSay, 500);
+    new MutationObserver(() => {
+      if (box.classList.contains("hidden")) return;
+      bubble.classList.add("life-hidden");   // one card at a time
+      clearTimeout(sayTimer); sayTimer = setTimeout(() => box.classList.add("hidden"), (Math.min(24, box.innerText.split(/\s+/).length) / 4 + 2) * 1000);   // about 3 lines show
+    }).observe(box, { attributes: true, childList: true, subtree: true, characterData: true });
+  };
+  watchSay();
   const esc = v => String(v || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   let talkAdded = false, lastSay = "", bubbleTimer = 0;
   function addTalk() {

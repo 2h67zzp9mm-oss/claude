@@ -92,6 +92,15 @@ async function main() {
     ok(Math.hypot(r.end[0] - r.goal.x, r.end[1] - r.goal.y) < 0.05 && r.onPath, `walked from ${r.start} to ${r.end.map(n => n.toFixed(1))} (goal ${r.goal.x},${r.goal.y}), staying on the paths`);
     const seen = (r.server || []).find(t => t.name === r.me);
     ok(seen && Math.hypot(seen.x - r.end[0], seen.y - r.end[1]) < 1.01, `the server knows where they are (${seen ? seen.x + "," + seen.y : "no"})`);
+    // tapping a thing: its card shows up top, taps go through it, and it goes away after reading time
+    const sign = await run(`(() => { const G = window.GLINT_GRID, t = window.GLINT_WORLD.things.find(t => t.kind === "sign"); return [innerWidth / 2 + (t.x + 0.5 - G.cam.x) * G.cam.s, innerHeight / 2 + (t.y + 0.5 - G.cam.y) * G.cam.s]; })()`);
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: sign[0], y: sign[1], button: "left", clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: sign[0], y: sign[1], button: "left", clickCount: 1 }); await sleep(400);
+    const card = await run(`(() => { const b = document.getElementById("say"), r = b.getBoundingClientRect(); return { shown: !b.classList.contains("hidden"), top: r.top, bottom: r.bottom, through: getComputedStyle(b).pointerEvents, words: b.innerText.split(/\\s+/).length }; })()`);
+    await shot("1b-card");
+    ok(card.shown && card.top < 200 && card.through === "none", `the card shows up top (${Math.round(card.top)}-${Math.round(card.bottom)}px) and taps go through it`);
+    await sleep((Math.min(24, card.words) / 4 + 2) * 1000 + 600);
+    ok(await run(`document.getElementById("say").classList.contains("hidden")`), `it went away after reading time (${card.words} words)`);
     // the granted wish let one neighbour move in
     await sleep(9000);
     const nb = await run(`(async () => { const d = await (await fetch("../api/glint/life", { credentials: "same-origin" })).json(); return { folk: d.folk, drawn: window.GLINT_GRID.walkers.filter(w => w.kind === "neighbour").map(w => w.name) }; })()`);
