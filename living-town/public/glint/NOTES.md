@@ -22,7 +22,8 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 ## The map (world.js, size 24)
 - Spark Square (10-14, 10-14): Spark Fountain (12,12), Fountain Bench (11,13), 4 lamps (Moth Lamp at 14,14), Kindle's House
   (12,8) with KINDLE plate, crystal trees at (9,7) (15,7) (8,14) (16,14). Roads west (y=12), east (y=12), south = Lantern Street
-  (x=12, y 15-19). Signpost (10,19), Welcome Arch (12,20), Lantern Street sign (13,15).
+  (x=12, y 15-19). Signpost (10,19), Welcome Arch (12,20), Lantern Street sign (13,15),
+  West/East Gate Trees (10,21) (14,21) on moss.
 - First Little House (14,17): teal roof, plain gold door, round window, Door Lamp (15,18), First Street Tree (16,18),
   Glowing Coat on its stand (14,19). Doorstep (13,18)-(14,18). Has `room: true` (build 16).
 - Second Little House (10,17): `flip`, violet roof, gold gem, `settled` (tiled roof, gold caps), violet `door` that swings open
@@ -50,8 +51,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Map: Signpost moved (12,19) -> (10,19) (moss (10-11,19-20)); Lantern Street path extended to (12,21) through the arch.
   The road south of the arch is open for whatever comes next (stars were wished for but never built; no star code exists).
 
+## Gate trees (build 18, 2026-11-17)
+- `kind: "tree"` with `gate: -1|1` (side of the arch) -> `gateTree()` in things.js draws extras: flower ring at the foot,
+  gold blossoms, a bough with 3 hanging lights reaching toward the arch. Chimes (glow + falling petals, 4 s) when the arch
+  is `tapped` (walk-under or touch) or the tree itself is tapped. `?pose=welcome` shows it.
+- Placed at y=21, not y=20: at (14,20) the canopy hid the Glowing Coat stand (14,19) and at (10,20) the Signpost.
+  A tree's canopy covers about 1.6 tiles above its own tile, so check what's north of any new tree.
+
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Bench by the Door Lamp, more street trees (two flanking the arch?), third house (pink roof), bakery on the east road, stars in the sky.
+- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, third house (pink roof), bakery on the east road, stars in the sky.

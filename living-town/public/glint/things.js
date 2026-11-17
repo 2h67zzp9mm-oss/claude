@@ -19,6 +19,50 @@
   function shadow(ctx, x, y, w, h) { ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(x, y, w, h, 0, 0, TAU); ctx.fill(); }
   const rnd = n => { const v = Math.sin(n * 127.1) * 43758.5453; return v - Math.floor(v); };
 
+  // A gate tree (th.gate = -1 left of the arch, 1 right): a crystal tree with a ring of glowing flowers at its foot,
+  // gold blossoms in its leaves and a garland bough reaching toward the arch post. When the arch lights up (someone
+  // walks under it, or it's touched) or the tree is touched, its leaves chime brighter and crystal petals drift down.
+  function gateTree(ctx, x, b, s, t, th, sway) {
+    const d = -th.gate, arch = (window.GLINT_WORLD.things || []).find(k => k.kind === "arch");
+    const since = Math.min(arch && arch.tapped != null ? t - arch.tapped : 99, th.tapped != null ? t - th.tapped : 99);
+    const f = since >= 0 && since < 4 ? since / 4 : -1, chime = f >= 0 ? Math.sin(f * Math.PI) : 0;
+    // the garland bough: a curved twig from the canopy toward the arch, hung with little lights
+    const bx0 = x + d * s * 0.3 + sway, by0 = b - s * 1.15, bx1 = x + d * s * 0.78 + sway * 0.5, by1 = b - s * 1.0;
+    ctx.strokeStyle = "#5b46a0"; ctx.lineWidth = Math.max(1, s * 0.05); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(bx0, by0); ctx.quadraticCurveTo((bx0 + bx1) / 2, by0 - s * 0.14, bx1, by1); ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const k = (i + 1) / 3.2, lx = bx0 + (bx1 - bx0) * k, ly = by0 + (by1 - by0) * k - Math.sin(k * Math.PI) * s * 0.07 + s * 0.07;
+      const p = 0.7 + 0.3 * Math.sin(t * 2.6 + i * 2 + d);
+      ctx.strokeStyle = "rgba(255,214,120,0.6)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx, ly - s * 0.07); ctx.lineTo(lx, ly); ctx.stroke();
+      glow(ctx, lx, ly, s * 0.16 * p * (1 + chime), i % 2 ? "255,110,190" : "255,214,120", 0.85);
+      ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(lx, ly, s * 0.03, 0, TAU); ctx.fill();
+    }
+    // gold blossoms in the leaves: five-petal stars that open and close slowly
+    for (let i = 0; i < 4; i++) {
+      const fx = x + (rnd(th.x * 11 + i * 3) - 0.5) * s * 0.8 + sway, fy = b - s * (0.9 + rnd(th.y * 5 + i * 7) * 0.75), r = s * (0.05 + 0.015 * Math.sin(t * 1.5 + i));
+      glow(ctx, fx, fy, s * 0.15 * (1 + chime), "255,214,120", 0.6);
+      ctx.fillStyle = "#ffd166";
+      for (let j = 0; j < 5; j++) { const a = j * TAU / 5 + t * 0.2; ctx.beginPath(); ctx.arc(fx + Math.cos(a) * r, fy + Math.sin(a) * r, r * 0.6, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(fx, fy, r * 0.5, 0, TAU); ctx.fill();
+    }
+    if (chime > 0) {                                                  // the chime: the leaves flash and petals drift down
+      glow(ctx, x + sway, b - s * 1.25, s * 1.0, "109,255,198", 0.35 * chime);
+      for (let i = 0; i < 6; i++) {
+        const g = (f * 1.4 + i / 6) % 1, px = x + (rnd(i * 13 + th.x) - 0.5) * s * 0.9 + Math.sin(g * 6 + i) * s * 0.1, py = b - s * 1.4 + g * s * 1.3;
+        glow(ctx, px, py, s * 0.07 + 1, i % 2 ? "255,130,200" : "109,255,198", (1 - g) * (1 - f) + 0.1);
+      }
+    }
+    // the ring of glowing flowers round its foot (drawn over the trunk base, in front)
+    const cols = ["#ff6fc0", "#57e1ff", "#ffd166", "#b48bff", "#6dffc6", "#ff6fc0", "#ffd166"];
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI * (0.05 + 0.9 * i / 6), fx = x + Math.cos(a) * s * 0.36 * -1, fy = b + Math.sin(a) * s * 0.1 - s * 0.02;
+      const up = s * (0.06 + 0.03 * Math.sin(t * 1.8 + i * 1.3)) * (1 + chime * 0.6);
+      ctx.strokeStyle = "#1fae86"; ctx.lineWidth = Math.max(1, s * 0.02); ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - up); ctx.stroke();
+      glow(ctx, fx, fy - up, s * 0.1, "255,240,220", 0.3);
+      ctx.fillStyle = cols[i]; ctx.beginPath(); ctx.arc(fx, fy - up, s * 0.035, 0, TAU); ctx.fill();
+    }
+  }
+
   // The room inside a cottage, seen through its opened front wall. (x, b) = middle of the ground line, w/h = half width
   // and height of the walls, k = how open (0..1), m = 1 or -1 (mirrors it like the house). An empty room, ready to be furnished:
   // warm floor, a teal rug, a crystal hearth, a hanging lantern, a little back window with a star, and two marked spots
@@ -326,6 +370,7 @@
         const fx = x + (rnd(th.x * 7 + i) - 0.5) * s * 0.9 + sway, fy = b - s * (0.8 + rnd(th.y * 3 + i * 5) * 0.8), p = 0.6 + 0.4 * Math.sin(t * 2.5 + i * 1.7 + th.x);
         glow(ctx, fx, fy, s * 0.22 * p, "255,110,190", 0.9); ctx.fillStyle = "#ffd0ea"; ctx.beginPath(); ctx.arc(fx, fy, s * 0.045, 0, TAU); ctx.fill();
       }
+      if (th.gate) gateTree(ctx, x, b, s, t, th, sway);
     },
 
     fountain(ctx, x, y, s, t) {
