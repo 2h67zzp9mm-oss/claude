@@ -6,11 +6,12 @@
  *   h.rooms[world] = { items: [{ uid, id, x, y, rot }] }   h.storage = [{ uid, id }]   h.decorUid = next uid
  *   h.rareDay = { day, ids }   (a rare thing can be bought once on the day it shows up)
  *   h.dreams = [id]            (dream things the family has bought: one of each, ever; missing on old saves = none)
+ *   h.dreamGoals = { [residentId]: id }   (the dream thing each person is saving up for; missing on old saves = no goal)
  * The catalog and the fit check live in shared/decor.js so the phone can check a drag before asking.
  */
 const D = require("../shared/decor");
 
-const ACTIONS = ["decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick"];
+const ACTIONS = ["decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick", "dreamGoal"];
 // Hazel picks the art in the game: the inside-the-house style and how people look in Pirate Cove. Saved for the whole family.
 const ART = { room: ["clay", "story", "pixel"], pirate: ["A", "B", "C"] };
 const ART_DEFAULT = { room: "clay", pirate: "B" };
@@ -33,21 +34,29 @@ function nextUid(h) {
   h.decorUid = Math.max(Number(h.decorUid) || 1, ...used.map(u => u + 1)); return h.decorUid++;
 }
 const dreamsOf = h => (Array.isArray(h.dreams) ? h.dreams : []);
+const goalsOf = h => (h.dreamGoals && typeof h.dreamGoals === "object" && !Array.isArray(h.dreamGoals) ? h.dreamGoals : {});
+/** The dream thing this person is saving up for (null once the family has it, or if it left the catalog). */
+function goalOf(h, r) {
+  const id = r ? goalsOf(h)[r.id] : null, d = typeof id === "string" ? D.BY_ID[id] : null;
+  if (!d?.dream || dreamsOf(h).includes(id)) return null;
+  const have = Math.max(0, Number(r.stars) || 0);
+  return { id, name: d.name, emoji: d.emoji, have, need: d.price, ready: have >= d.price };
+}
 const num = v => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : NaN);
 
 /** What the phone needs: today's shop, what's in the box, and this world's room. */
-function view(h, { world, householdId, now }) {
+function view(h, { world, householdId, now, me }) {
   const day = dayKey(now), rare = h.rareDay?.day === day ? h.rareDay.ids || [] : [];
   return {
     stock: D.shopToday(day, world, householdId).map(id => ({ id, soldOut: Boolean(D.BY_ID[id].rare && rare.includes(id)) })),
     dreams: D.dreams(world).map(id => ({ id, owned: dreamsOf(h).includes(id) })),
     storage: storageOf(h).map(({ uid, id }) => ({ uid, id })),
     room: roomOf(h, world).items.map(({ uid, id, x, y, rot }) => ({ uid, id, x, y, rot: rot || 0 })),
-    art: artOf(h)
+    art: artOf(h), goal: goalOf(h, me)
   };
 }
 
-/** decorBuy {item}, decorPlace {uid,x,y,rot}, decorMove {uid,x,y}, decorRotate {uid}, decorStore {uid}. Returns { ok, toast, ... }. */
+/** dreamGoal {item}, decorBuy {item}, decorPlace {uid,x,y,rot}, decorMove {uid,x,y}, decorRotate {uid}, decorStore {uid}. Returns { ok, toast, ... }. */
 function act(h, r, msg, { world, householdId, now }) {
   const room = roomOf(h, world), box = storageOf(h), uid = Number(msg.uid);
   switch (msg.action) {
@@ -57,6 +66,14 @@ function act(h, r, msg, { world, householdId, now }) {
       h.art = { ...artOf(h), [key]: v };
       return { ok: true, artPicked: key, toast: "🎨 New look!" };
     }
+    case "dreamGoal": {   // pick a dream thing to save up for; picking another one swaps it
+      const id = typeof msg.item === "string" ? msg.item : "", d = D.BY_ID[id];
+      if (!d?.dream) return { ok: false, toast: "Pick a ⭐ Dream thing to save up for!" };
+      if (!D.inWorld(d, world)) return { ok: false, toast: `The ${d.name} is sold in another world.` };
+      if (dreamsOf(h).includes(id)) return { ok: false, toast: `${d.emoji} You already have the ${d.name}!` };
+      h.dreamGoals = { ...goalsOf(h), [r.id]: id };
+      return { ok: true, dreamGoal: id, toast: `🎯 Saving up for the ${d.name}!` };
+    }
     case "decorBuy": {
       const id = typeof msg.item === "string" ? msg.item : typeof msg.id === "string" ? msg.id : "", d = D.BY_ID[id], day = dayKey(now);
       if (d?.dream) {   // always in the shop, one of each per family
@@ -64,6 +81,7 @@ function act(h, r, msg, { world, householdId, now }) {
         if (dreamsOf(h).includes(id)) return { ok: false, toast: `${d.emoji} You already have the ${d.name}!` };
         if ((Number(r.stars) || 0) < d.price) return { ok: false, toast: `You need ${d.price}⭐ for the ${d.name}. Keep saving!` };
         r.stars -= d.price; h.dreams = [...dreamsOf(h), id];
+        if (h.dreamGoals) h.dreamGoals = Object.fromEntries(Object.entries(goalsOf(h)).filter(([, g]) => g !== id));   // goal reached
         const it = { uid: nextUid(h), id }; box.push(it);
         return { ok: true, decorBought: it, dreamBought: id, toast: `🎉 The ${d.name} is yours! It's in 📦 Stored.` };
       }

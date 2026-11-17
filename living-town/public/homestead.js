@@ -242,7 +242,7 @@
       anim.onfinish = () => { st.remove(); goal.animate([{ transform: "scale(1)" }, { transform: "scale(1.4)" }, { transform: "scale(1)" }], { duration: 260 }); if (i === 0) SFX.coin(); };
     }
   }
-  let bannerAt = 0;
+  let bannerAt = 0, cheered = null;   // cheered: the saving goal we've already said "you saved enough!" for
   function banner(html, cls = "") {
     const wait = Math.max(0, bannerAt - performance.now()); bannerAt = performance.now() + wait + 1500;
     setTimeout(() => {
@@ -355,9 +355,11 @@
     const rows = g.map(x => row(x.icon, esc(x.text), `<small>${x.have}/${x.n} · +${view.goalStars}⭐</small>`, x.have >= x.n)).join("");
     const note = `All 3: +${view?.allBonus ?? 5}⭐${view?.streak ? ` · 🔥 ${view.streak} day${view.streak > 1 ? "s" : ""}${view.streakToday ? "" : ", keep it going!"}` : " and a 🔥 streak"}`;
     const st = view?.story, m = view?.me;
-    const more = (st ? (st.done ? row("📖", "Story finished here. Try another world!") : row("📖", esc(st.job), `<small>${st.have}/${st.n} · +${st.stars}⭐</small>`)) : "")
+    const sg = view?.decor?.goal;   // the dream thing you picked in the house shop
+    const save = sg ? row(sg.emoji, sg.ready ? `You can get the ${esc(sg.name)}!` : `Save for the ${esc(sg.name)}`, `${meter(sg.have, sg.need)}<small>${Math.min(sg.have, sg.need)}/${sg.need}⭐</small>`, sg.ready) : "";
+    const more = save + (st ? (st.done ? row("📖", "Story finished here. Try another world!") : row("📖", esc(st.job), `<small>${st.have}/${st.n} · +${st.stars}⭐</small>`)) : "")
       + (m ? row("⭐", `Level ${m.level} · ${esc(m.title)}`, `${meter(m.into, m.need)}<small>${m.into}/${m.need} XP</small>`) : "");
-    setBar(`<span class="home-goals"><span class="home-head"><b>🎯 Today’s goals</b><small>${note}</small></span>${rows}${more}</span>`,
+    setBar(`<span class="home-goals home-today"><span class="home-head"><b>🎯 Today’s goals</b><small>${note}</small></span>${rows}${more}</span>`,
       [{ label: "📖 Story", big: !!st && !st.done, go: () => questBar("story") }, { label: "🔨 Build", go: () => questBar("build") }, { label: "📚 Book", go: () => questBar("book") }, { label: "⭐ Level", go: () => questBar("level") },
         { label: soundOn ? "🔊 Sound" : "🔈 Muted", go: () => { soundOn = !soundOn; try { localStorage.setItem("lt-sound", soundOn ? "on" : "off"); } catch { /* fine */ } if (soundOn) SFX.pop(); goalsBar(); } }, { label: "↩️ Back", go: idleBar }], "home-dock");
   }
@@ -593,6 +595,9 @@
     if (view.world) setWorld(view.world);
     if (view.house) houseId = view.house;
     window.LivingTownRoom?.onState(view, msg.result);
+    const sg = view.decor?.goal;   // cheer once when you've saved enough for your dream thing
+    if (sg?.ready && cheered !== sg.id) { banner(`🎉 You saved enough!<br>${sg.emoji} <b>${esc(sg.name)}</b> is in your house 🛒 Shop`, "big"); SFX.goal(); if (bar.querySelector(".home-today")) goalsBar(); }
+    cheered = sg?.ready ? sg.id : null;
     for (const o of view.others || []) {
       const cur = others.get(o.id) || { x: o.x, y: o.y, dir: o.dir, step: 0, name: o.name, id: o.id };
       Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, seen: performance.now() }); others.set(o.id, cur);

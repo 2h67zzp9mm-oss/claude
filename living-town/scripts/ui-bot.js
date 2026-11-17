@@ -31,7 +31,9 @@ const SCREENS = [
   ["idle", []], ["goals", ["Goals"]], ["story", ["Goals", "Story"]], ["build", ["Goals", "Build"]], ["book", ["Goals", "Book"]], ["level", ["Goals", "Level"]],
   ["pets", ["Pets"]], ["bag", ["Bag"]], ["look", ["Look"]], ["world", ["World"]], ["house", ["World", "Pick house"]],
   ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]], ["shop", ["pop:crate", "Seed shop"]],
-  ["pop-door", ["pop:door"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]]
+  ["pop-door", ["pop:door"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]],
+  // a saving goal: tap a dream thing in the house shop, then the Goals panel has a have/need row for it
+  ["room-shop-goal", ["pop:door", "Go inside", "Shop", "Sparkle Fountain"]], ["goals-saving", ["Goals"]]
 ];
 // Every menu is pictured once, in the first world that has it (the menus are the same everywhere); these are pictured in every world, to see them on its colours.
 const PICTURED_EVERYWHERE = ["idle", "goals", "pop-plot", "room"];
@@ -172,6 +174,16 @@ async function main() {
       }
       await run("window.__ui.home()");
     }
+    // The saving-goal cheer: pretend the stars arrived (the same message the server sends). One banner, clear of the buttons, and the Goals row turns green.
+    if (!await run(`window.__ui.open(["Goals"])`)) {
+      await run(`(() => { const H = window.LivingTownHome, v = H._test.view(), g = v.decor.goal; if (!g) return; const rich = { ...v, stars: g.need, decor: { ...v.decor, goal: { ...g, have: g.need, ready: true } } }; H.onState({ home: rich }); H.onState({ home: rich }); })()`);
+      let cheer = null; for (let i = 0; i < 24 && !cheer?.n; i++) { await sleep(250); cheer = await run(`(() => { const b = [...document.querySelectorAll(".home-banner")], q = b[0]?.getBoundingClientRect(), bar = document.querySelector(".home-bar"); return { n: b.length, text: b[0]?.innerText || "", clear: !q || (q.bottom <= bar.getBoundingClientRect().top && q.left >= 0 && q.right <= innerWidth), row: bar.innerText.replace(/\\s+/g, " ") }; })()`); }
+      await shot("goal-cheer");
+      if (cheer?.n !== 1 || !cheer.text.includes("You saved enough")) problem("goal-cheer", `expected one "You saved enough" banner, saw ${cheer?.n || 0}: ${JSON.stringify(cheer?.text || "")}`);
+      else if (!cheer.clear) problem("goal-cheer", "the banner covers the buttons or runs off the screen");
+      if (!cheer?.row.includes("You can get the")) problem("goal-cheer", "the Goals row does not say you can get it");
+      report.screens.push({ screen: "goal-cheer", bad: [], text: cheer?.text || "" });
+    } else problem("goal-cheer", "could not open Goals");
     for (const e of [...new Set(errors)]) problem("page", "script error: " + e);
   } catch (err) { problem("ui-bot", String(err.message || err)); }
   finally { chrome?.kill(); await stop(server).catch(() => {}); }

@@ -404,6 +404,7 @@
     if (!drag) items = (view?.decor?.room || []).map(x => ({ ...x }));
     if (sel && !items.some(i => i.uid === sel)) { sel = null; hideRing(); }
     if (result?.dreamBought) { host.sfx?.goal(); puff("🎉"); }
+    else if (result?.dreamGoal) { host.sfx?.pop(); puff("🎯"); }
     else if (result?.decorBought) { host.sfx?.coin(); puff(BY[result.decorBought.id]?.emoji || "✨"); }
     if (result?.decorPlaced) { host.sfx?.pop(); sel = result.decorPlaced; showRing(); }
     if (result && result.ok === false && sel) showRing();
@@ -421,14 +422,22 @@
   function shop() {
     barKind = "shop"; mode = "look"; sel = null; hideRing();
     // the things to buy scroll (today's, then the dream row); Back stays put by the thumb
-    const st = stars(), was = host.bar.querySelector(".home-title:has([data-buy])")?.scrollTop || 0;
+    const st = stars(), was = host.bar.querySelector(".home-title:has(.room-picks)")?.scrollTop || 0;
     const buy = (id, words, off) => `<button data-buy="${id}" ${off ? "disabled" : ""}>${words}</button>`;
     const today = V().stock.map(s => { const d = BY[s.id], have = count(s.id); return buy(s.id, `${d.rare ? "✨" : d.emoji} ${esc(d.name)} ${s.soldOut ? "<small>sold out</small>" : `${d.price}⭐`}${have ? ` <small>×${have}</small>` : ""}`, s.soldOut || st < d.price); }).join("");
-    const dream = (V().dreams || []).map(s => { const d = BY[s.id]; return buy(s.id, `${d.emoji} ${esc(d.name)} ${s.owned ? "<small>✅ yours</small>" : `${d.price}⭐`}`, s.owned || st < d.price); }).join("");
+    // a dream thing you can't pay for yet can still be tapped: it becomes your saving goal (🎯), and goes green when you have enough
+    const goal = V().goal?.id;
+    const dream = (V().dreams || []).map(s => {
+      const d = BY[s.id], mine = s.id === goal;
+      if (s.owned) return buy(s.id, `${d.emoji} ${esc(d.name)} <small>✅ yours</small>`, true);
+      if (st >= d.price) return `<button data-buy="${s.id}" ${mine ? 'class="big"' : ""}>${d.emoji} ${esc(d.name)} ${d.price}⭐</button>`;
+      return `<button data-goal="${s.id}">${mine ? "🎯" : d.emoji} ${esc(d.name)} ${mine ? `<small>${st}/${d.price}⭐</small>` : `${d.price}⭐`}</button>`;
+    }).join("");
     host.setBar(`<span class="home-head"><b>🛒 Today’s shop</b><small>You have ${st}⭐ · new things tomorrow</small></span><div class="home-actions wide room-picks">${today}</div>` +
-      (dream ? `<span class="home-head"><b>⭐ Dream</b><small>Big things to save up for</small></span><div class="home-actions wide room-picks">${dream}</div>` : ""),
+      (dream ? `<span class="home-head"><b>⭐ Dream</b><small>Tap one to save up for it</small></span><div class="home-actions wide room-picks">${dream}</div>` : ""),
       [{ label: "Back", go: idle }]);
     host.bar.querySelectorAll("[data-buy]").forEach(b => { b.onclick = () => host.act("decorBuy", { item: b.dataset.buy }); });
+    host.bar.querySelectorAll("[data-goal]").forEach(b => { b.onclick = () => { if (b.dataset.goal === goal) return host.toast("🎯 That's your goal. Keep saving!"); host.act("dreamGoal", { item: b.dataset.goal }); }; });
     const sc = host.bar.querySelector(".home-title"); if (sc) sc.scrollTop = was;   // buying keeps your place in the list
   }
   // stored things grouped by kind, as buttons in the panel's scrolling part (tap one to put it out)

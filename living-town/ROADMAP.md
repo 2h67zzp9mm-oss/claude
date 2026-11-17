@@ -8,18 +8,15 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **Big things to save up for, part 2: a saving goal** (M): in the shop you can tap a dream item to make it your goal;
-   the Goals panel then shows a `have/need` meter for it, and a `.home-banner` cheers when you can afford it.
-   Keep UI_RULES.md (one green button, Back last). UI bot passes.
-2. **Big things to save up for, part 3: house upgrades** (M): a bigger room (more floor space) at 1,000⭐ and a second
+1. **Big things to save up for, part 3: house upgrades** (M): a bigger room (more floor space) at 1,000⭐ and a second
    room at 2,500⭐, bought from the house door pop-up. Saves stay safe (old houses keep the small room until upgraded).
-3. **The room fills the screen** (M): the inside of the house uses the whole space between the top and the bottom panel
+2. **The room fills the screen** (M): the inside of the house uses the whole space between the top and the bottom panel
    on a phone, in all three styles (clay, storybook, pixel). Room bot still passes.
-4. **Family inside the house** (M): other family members who are at home show up walking around the room.
-5. **Glint's chosen name in the menu** (S): when Glint has picked his own name, World → "◈ Glint's Grid" uses it.
-6. **Grid "🎯 Centre" button wraps** (S): it fits on one line at 390 px.
-7. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
-8. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
+3. **Family inside the house** (M): other family members who are at home show up walking around the room.
+4. **Glint's chosen name in the menu** (S): when Glint has picked his own name, World → "◈ Glint's Grid" uses it.
+5. **Grid "🎯 Centre" button wraps** (S): it fits on one line at 390 px.
+6. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
+7. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
 
 ## Ideas (need Sean's OK before they move up)
 - Kids can talk to Glint in the Grid (owner only right now).
@@ -28,9 +25,17 @@ Up next: split it first.
   (Sean, 2026-11-14: prefers bigger things to save for over slowing stars; left here in case it's still too fast.)
 - The test "Mr. E: owner can ask for a surprise" failed once with a server error and passed on the next run
   (2026-11-15). Worth finding why it wobbles.
+- Let the nightly CEO run `node scripts/room-bot.js` and `npm run lint` (both are blocked for it; only `npm test` and
+  `npm run ui` run), or fold the room bot's checks into the UI bot.
+- A saving goal can only be picked in the world that sells it; a "you're saving for…" note on the shop's first row
+  when the goal lives in another world would help.
 - Hazel looks over the nine dream drawings (they were checked by a test, not by eye) and picks any to redo.
 
 ## Done
+- 2026-11-16 A saving goal: in the house shop, tap a ⭐ Dream thing you can't pay for yet and it becomes your goal
+  (🎯, one each for Sean, Olive and Hazel; tapping another swaps it). 🎯 Goals shows a `have/need` meter for it, a
+  banner cheers when you have enough, and the thing turns green in the shop. The UI bot now checks all of this in
+  every world. The room bot was extended too but still can't be run by the nightly CEO (it isn't allowed to start it).
 - 2026-11-15 Dream items: nine big things at 500⭐ to 2,000⭐ (fountain, grand piano, aquarium wall, treehouse bed,
   giant telescope, plus a rocket, dragon, glow tree and ship in their own worlds) in a "⭐ Dream" row in the house
   shop, always there, one of each per family. The shop list now scrolls with Back pinned. ECONOMY.md has a dream row.

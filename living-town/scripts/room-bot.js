@@ -106,6 +106,11 @@ async function main() {
     await run(`window.__room.click("Back")`); await run(`window.__room.click("Shop")`);
     ok((await run("window.__room.bar()")).includes("⭐ Dream"), "the shop has a Dream row");
     const starsD = await run("window.__room.stars()");
+    // a saving goal: a dream thing you can't pay for yet becomes your goal when you tap it
+    await run(`window.__room.click("Grand Piano")`); await shot("7f-goal-shop");
+    d = await run("window.__room.decor()");
+    ok(d.goal?.id === "grand" && d.goal.have === starsD && d.goal.need === 900 && !d.goal.ready && await run("window.__room.stars()") === starsD, `made the Grand Piano the saving goal for free (${d.goal?.have}/${d.goal?.need})`);
+    ok((await run("window.__room.bar()")).includes(`🎯 Grand Piano ${starsD}/900⭐`), "the shop marks the goal with 🎯 and have/need");
     await run(`document.querySelector('[data-buy="fountain"]').scrollIntoView()`); await run(`window.__room.click("Sparkle Fountain")`); await shot("7d-dream-shop");
     d = await run("window.__room.decor()");
     ok(d.storage.some(t => t.id === "fountain") && starsD - await run("window.__room.stars()") === 500, "saved up and bought the Sparkle Fountain for 500⭐");
@@ -124,6 +129,14 @@ async function main() {
     await run(`window.__room.click("Back")`); await run(`window.__room.click("Back")`);
     ok(!await run("window.LivingTownRoom.isOpen") && (await run("window.__room.bar()")).includes("Town"), "walked back out to the garden");
     await shot("8-outside");
+    await run(`window.__room.click("Goals")`); await shot("9-goals-saving");
+    ok(/Save for the Grand Piano.*\d+\/900⭐/.test(await run("window.__room.bar()")), "the Goals panel shows the saving goal with have/need");
+    // pretend the stars arrived (the same message the server sends): one cheer, and the row turns to "you can get it"
+    await run(`(() => { const v = window.LivingTownHome._test.view(); window.LivingTownHome.onState({ home: { ...v, stars: 900, decor: { ...v.decor, goal: { ...v.decor.goal, have: 900, ready: true } } } }); window.LivingTownHome.onState({ home: window.LivingTownHome._test.view() }); })()`);
+    let cheer = ""; for (let i = 0; i < 24 && !cheer; i++) { await sleep(250); cheer = await run(`[...document.querySelectorAll(".home-banner")].map(b => b.innerText).join("|")`); }
+    await shot("9b-goal-cheer");
+    ok(cheer.includes("You saved enough") && cheer.includes("Grand Piano") && !cheer.includes("|"), `a banner cheers once when there are enough stars (${JSON.stringify(cheer)})`);
+    ok((await run("window.__room.bar()")).includes("You can get the Grand Piano!"), "the Goals row says you can get it");
     ok(!errors.length, `no script errors${errors.length ? ": " + errors.join("; ") : ""}`);
   } catch (err) { log.push(`✗ ${err.message}`); process.exitCode = 1; }
   finally { chrome?.kill(); await stop(server).catch(() => {}); }

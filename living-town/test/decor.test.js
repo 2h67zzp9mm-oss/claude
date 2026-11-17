@@ -136,6 +136,41 @@ test("decor: every thing in the catalog has a drawing, in every style and every 
   }
 });
 
+test("decor: the server lets every house action through", () => {
+  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "server.js"), "utf8");
+  const list = src.match(/const HOME = \[[^\]]*\]/)?.[0] || "";
+  for (const a of Decor.ACTIONS) assert.ok(list.includes(`"${a}"`), `${a} is allowed by the server`);
+});
+
+test("decor: a saving goal: pick a dream thing, watch have/need fill up, and it clears when the family gets it", () => {
+  const hs = createHomestead();
+  const me = { id: "dad", name: "Sean", stars: 120 }, kid = { id: "hazel", name: "Hazel", stars: 40 }, state = { residents: [me, kid] };
+  const now = Date.parse("2026-11-16T10:00:00"), act = (who, m) => hs.act(state, "home-1", who, m, now), goal = who => hs.view(state, "home-1", who, now).decor.goal;
+  assert.equal(goal(me), null, "an old save has no goal");
+  assert.equal(act(me, { action: "dreamGoal", item: "chair" }).ok, false, "only dream things");
+  assert.equal(act(me, { action: "dreamGoal", item: "rocket" }).ok, false, "not one from another world");
+  assert.equal(act(me, { action: "dreamGoal" }).ok, false);
+  const set = act(me, { action: "dreamGoal", item: "fountain" });
+  assert.equal(set.ok, true); assert.equal(set.dreamGoal, "fountain"); assert.equal(me.stars, 120, "picking a goal is free");
+  assert.deepEqual(goal(me), { id: "fountain", name: "Sparkle Fountain", emoji: "⛲", have: 120, need: 500, ready: false });
+  assert.equal(goal(kid), null, "each person has their own goal");
+  assert.equal(act(kid, { action: "dreamGoal", item: "fountain" }).ok, true);
+  assert.equal(act(me, { action: "dreamGoal", item: "grand" }).ok, true, "picking another swaps it");
+  assert.equal(goal(me).id, "grand"); assert.equal(goal(me).need, 900);
+  me.stars = 899; assert.equal(goal(me).ready, false);
+  me.stars = 900; assert.equal(goal(me).ready, true, "ready when you have enough");
+  me.stars = 950; assert.deepEqual([goal(me).have, goal(me).ready], [950, true]);
+  assert.equal(act(me, { action: "decorBuy", item: "grand" }).ok, true);
+  assert.equal(goal(me), null, "bought: the goal is done"); assert.equal(goal(kid).id, "fountain", "Hazel's goal is still hers");
+  me.stars = 500; assert.equal(act(me, { action: "decorBuy", item: "fountain" }).ok, true);
+  assert.equal(goal(kid), null, "the family has the fountain now, so nobody is saving for it");
+  assert.equal(act(kid, { action: "dreamGoal", item: "fountain" }).ok, false, "can't save for one you have");
+  // a damaged or odd save never breaks the view
+  for (const bad of [null, [], "x", { hazel: 7 }, { hazel: "nope" }, { hazel: "chair" }]) { state.homesteads["home-1"].dreamGoals = bad; assert.equal(goal(kid), null); }
+  assert.equal(act(kid, { action: "dreamGoal", item: "treehouse" }).ok, true); assert.equal(goal(kid).id, "treehouse");
+  assert.equal(hs.view(state, "home-1", null, now).decor.goal, null, "someone just looking has no goal");
+});
+
 test("decor: dream things are always in the shop, never in the daily mix, and bought once per family", () => {
   const WORLDS = ["clay", "scifi", "castle", "night", "pirate"], dreams = Decor.CATALOG.filter(d => d.dream);
   assert.ok(dreams.length >= 8 && dreams.length <= 10, `about 8 dream things (${dreams.length})`);

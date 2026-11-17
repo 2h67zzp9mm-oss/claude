@@ -1144,7 +1144,7 @@ function validateClientMessage(raw) {
   }
   if (msg.type === "home") {
     // The home plot (lib/homestead.js): only known actions and plain fields get through.
-    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "give", "giveStars", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName", "till", "dig", "decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick"];
+    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "give", "giveStars", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName", "till", "dig", "decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick", "dreamGoal"];
 
     if (!HOME.includes(msg.action)) return null;
     const word = v => typeof v === "string" && v.length <= 32 ? v : undefined;

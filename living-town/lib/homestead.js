@@ -283,7 +283,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
       seeds: h.seeds, bag: h.bag, caught: h.caught, stars: me?.stars || 0,
       pets: me ? petView(h, id, me.id, now) : null,
       me: me ? (() => { const l = Q.levelOf(player(h, me.id).xp); return { ...l, title: Q.titleOf(l.level), nextStars: Q.levelStars(l.level + 1), perks: Q.PERKS.map(k => ({ level: k.level, icon: k.icon, text: k.text })) }; })() : null,
-      story: storyView(h), build: buildView(h), book: bookView(h), decor: Decor.view(h, { world: worldOf(h), householdId: id, now }),
+      story: storyView(h), build: buildView(h), book: bookView(h), decor: Decor.view(h, { world: worldOf(h), householdId: id, now, me }),
       mail: h.mailDay !== dayKey(now), others,
       goals: daily(h, id, now).goals.map(g => ({ icon: GOALS[g.k].icon, text: GOALS[g.k].text(g.n), have: g.have, n: g.n })),
       streak: streakOf(h, now), streakToday: h.streakDay === dayKey(now), goalStars: me ? goalStars(h, me.id) : GOAL_STARS, allBonus: ALL_BONUS,
