@@ -44,14 +44,17 @@ async function whoIs(token) {
   seen.set(token, { me, at: Date.now() }); if (seen.size > 200) seen.delete(seen.keys().next().value);
   return me;
 }
-app.use(async (req, res, next) => { req.me = await whoIs(cookies(req)[COOKIE]); next(); });
+// Only the owner (Sean) can get in: Kindle and his neighbours are private.
+app.use(async (req, res, next) => { const me = await whoIs(cookies(req)[COOKIE]); req.me = me?.role === "owner" ? me : null; next(); });
 const auth = { tokenFromRequest: req => req, profileForToken: req => req.me };   // the routes below ask "who is this?"
 app.get("/api/auth/status", async (req, res) => {
   let profiles = []; try { profiles = (await (await fetch(`${TOWN}/api/auth/status`)).json()).profiles || []; } catch { /* town is down */ }
-  res.json({ me: req.me, profiles: profiles.map(p => ({ id: p.id, name: p.name, role: p.role })) });
+  res.json({ me: req.me, profiles: profiles.filter(p => p.role === "owner").map(p => ({ id: p.id, name: p.name, role: p.role })) });
 });
 app.post("/api/auth/login", async (req, res) => {
   try {
+    let owners = []; try { owners = ((await (await fetch(`${TOWN}/api/auth/status`)).json()).profiles || []).filter(p => p.role === "owner").map(p => p.id); } catch { /* checked below */ }
+    if (!owners.includes(String(req.body?.profileId || ""))) return res.status(403).json({ error: "This one is private." });
     const r = await fetch(`${TOWN}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profileId: String(req.body?.profileId || ""), pin: String(req.body?.pin || "") }) });
     const set = r.headers.get("set-cookie"); if (set) res.setHeader("Set-Cookie", set.replace(/SameSite=Strict/i, "SameSite=Lax"));
     res.status(r.status).json(await r.json());
