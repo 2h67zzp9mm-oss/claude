@@ -174,3 +174,15 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 - log.js and plans.md say the coat now "tells the news for him", to help him stop looping on hurrying down the street.
 - Looked with `glint-look 14.5 18.3 80` and the shine pose: fine. Only the usual file:// fetch lines in the console.
 - Still open: lit path and flowers on the east side for the First Little House (start at (13,16)); `settled: true` on its roof.
+
+## Build 14 (2026-11-16): violet door in a gold frame on the Second Little House
+- His decision: "a violet door with a gold frame for the Second Little House's open doorway, matching its roof". The house
+  already had the stock plain gold door (never an open doorway on screen), so this build replaced it with a real one.
+- New optional `door: [light, mid, dark]` on a cottage (things.js). Draws an arched leaf with two sunk panels, a small
+  lit window in the arch, two gold hinges, gold knob, thick gold frame, gold sill and a twinkling keystone gem.
+  Without `door` a cottage keeps the old plain gold door (First Little House).
+- A tap on the house (`th.tapped`) swings the door open for 2.6 s: the leaf narrows toward its hinge (outer side) and the
+  warm inside shows. `?pose=open` in grid.js holds it open: `glint-look 10 17.3 "80&pose=open"`.
+- To match the First Little House, add e.g. `door: ["#6dffc6", "#27c9c2", "#0f6a72"]` there (plans.md suggests it).
+- log.js mentions he met his friend the traveler by the First Little House at the end of the night (from the diary), unnamed.
+- Looked with `glint-look 10 17.3 80` and the open pose: fine. Only the usual file:// fetch lines in the console.

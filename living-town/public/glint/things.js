@@ -171,6 +171,40 @@
       // door (an open doorway with a gold frame until the door is hung)
       const doorway = () => { ctx.beginPath(); ctx.moveTo(dx - s * 0.19, b - s * 0.1); ctx.lineTo(dx - s * 0.19, b - s * 0.5); ctx.arc(dx, b - s * 0.5, s * 0.19, Math.PI, 0); ctx.lineTo(dx + s * 0.19, b - s * 0.1); };
       if (nodoor) { ctx.fillStyle = "#0d1838"; doorway(); ctx.fill(); ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.035); doorway(); ctx.stroke(); }
+      else if (th.door) {   // a coloured door hung in a gold frame: th.door = [light, mid, dark]. A tap swings it open for a moment.
+        const D = th.door, dw = s * 0.19, top = b - s * 0.5, bot = b - s * 0.1, hx = dx - m * dw;
+        const e = th.tapped != null ? t - th.tapped : 99, open = e >= 0 && e < 2.6 ? Math.min(1, e / 0.45, (2.6 - e) / 0.45) : 0, k = 1 - 0.72 * open;
+        const X = f => hx + m * dw * (1 + f) * k;   // f: -1 at the hinge side, +1 at the latch side
+        ctx.fillStyle = open ? "#ffe9a8" : D[2]; doorway(); ctx.fill();   // the warm inside shows while it is open
+        if (open) glow(ctx, dx, b - s * 0.4, s * 0.75, "255,220,140", 0.5 * open);
+        // the leaf: arched, hinged on the outer side
+        ctx.fillStyle = D[1]; ctx.beginPath(); ctx.moveTo(X(-1), bot); ctx.lineTo(X(-1), top);
+        for (let i = 0; i <= 10; i++) { const a = Math.PI * (1 - i / 10); ctx.lineTo(X(Math.cos(a)), top - Math.sin(a) * dw); }
+        ctx.lineTo(X(1), bot); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = D[0]; ctx.beginPath(); ctx.moveTo(X(-1), bot); ctx.lineTo(X(-1), top);
+        for (let i = 0; i <= 4; i++) { const a = Math.PI * (1 - i / 10); ctx.lineTo(X(Math.cos(a)), top - Math.sin(a) * dw); }
+        ctx.lineTo(X(-0.3), bot); ctx.closePath(); ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1;
+        // two sunk panels and a little gold-rimmed window in the arch
+        ctx.fillStyle = D[2];
+        const pan = (f0, f1, y0, y1) => poly(ctx, [[X(f0), y0], [X(f1), y0], [X(f1), y1], [X(f0), y1]], D[2]);
+        pan(-0.62, -0.1, top + s * 0.06, bot - s * 0.05); pan(0.1, 0.62, top + s * 0.06, bot - s * 0.05);
+        const wr = s * 0.055, wq = 0.8 + 0.2 * Math.sin(t * 1.7);
+        ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.ellipse(X(0), top - s * 0.055, (wr + s * 0.018) * k, wr + s * 0.018, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#fff0b8"; ctx.globalAlpha = wq; ctx.beginPath(); ctx.ellipse(X(0), top - s * 0.055, wr * k, wr, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+        // gold hinges, knob and latch
+        ctx.fillStyle = "#ffd166";
+        for (const hy of [top + s * 0.03, bot - s * 0.09]) ctx.fillRect(Math.min(X(-1), X(-0.55)), hy, Math.abs(X(-0.55) - X(-1)), s * 0.03);
+        ctx.beginPath(); ctx.arc(X(0.66), b - s * 0.33, s * 0.032, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(X(0.66) - s * 0.01, b - s * 0.34, s * 0.012, 0, TAU); ctx.fill();
+        // the gold frame and a gold sill
+        ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1.5, s * 0.045); ctx.lineJoin = "round"; doorway(); ctx.stroke();
+        ctx.strokeStyle = "#fff6d6"; ctx.lineWidth = Math.max(0.5, s * 0.012); doorway(); ctx.stroke();
+        ctx.fillStyle = "#e09a2b"; ctx.fillRect(dx - dw - s * 0.05, bot - s * 0.015, dw * 2 + s * 0.1, s * 0.04);
+        // a keystone gem that twinkles over the arch
+        const kq = 0.6 + 0.4 * Math.sin(t * 1.9 + 0.7);
+        glow(ctx, dx, top - dw, s * 0.2 * kq + s * 0.12 * open, "255,214,120", 0.55);
+        gem(ctx, dx, top - dw - s * 0.005, s * 0.04, s * 0.055, "#fff6d6", "#ffd166", "#e09a2b");
+      }
       else { ctx.fillStyle = "#ffd166"; doorway(); ctx.fill(); ctx.fillStyle = "#b9791f"; ctx.beginPath(); ctx.arc(dx + m * s * 0.1, b - s * 0.36, s * 0.03, 0, TAU); ctx.fill(); }
       // the round window, with a soft light that breathes
       const R = s * 0.25, q = 0.8 + 0.2 * Math.sin(t * 1.3 + (th.x || 0));
