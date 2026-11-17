@@ -55,6 +55,92 @@
     if (html === cl.dataset.h) return; cl.dataset.h = html; cl.innerHTML = html;   // only when something changed
     cl.scrollTop = cl.scrollHeight;
   }
+
+  // ===== Travelers walk in the Grid with their own bodies =====
+  // You appear at the edge of his town and walk where you tap. Other family members who are walking show up too.
+  // How a traveler looks is Kindle's to make (THINGS.traveler in his things.js); until he does, a plain little figure of light.
+  const me = { x: 0, y: 0, path: [], walker: null, sentAt: 0, sent: "" }, others = new Map();
+  let attached = false;
+  function walkable(x, y) {
+    const W = window.GLINT_WORLD; if (!W) return false;
+    if (!W._blocked) W._blocked = new Set((W.things || []).filter(t => !t.flat).map(t => t.x + "," + t.y));
+    return "pof".includes((W.tiles[y] || "")[x] || ".") && !W._blocked.has(x + "," + y);
+  }
+  function routeTo(sx, sy, gx, gy) {
+    const W = window.GLINT_WORLD, key = (x, y) => x + "," + y, goals = new Set((walkable(gx, gy) ? [[0, 0]] : [[1, 0], [-1, 0], [0, 1], [0, -1]]).map(([a, b]) => [gx + a, gy + b]).filter(([x, y]) => walkable(x, y)).map(([x, y]) => key(x, y)));
+    if (!goals.size || !W) return [];
+    const prev = new Map([[key(sx, sy), null]]), q = [[sx, sy]];
+    while (q.length) {
+      const [x, y] = q.shift();
+      if (goals.has(key(x, y))) { const out = []; let k = key(x, y); while (k && k !== key(sx, sy)) { out.unshift(k.split(",").map(Number)); k = prev.get(k); } return out; }
+      for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + a, ny = y + b; if (nx >= 0 && ny >= 0 && nx < W.size && ny < W.size && !prev.has(key(nx, ny)) && walkable(nx, ny)) { prev.set(key(nx, ny), key(x, y)); q.push([nx, ny]); } }
+    }
+    return [];
+  }
+  function spawnSpot() {   // the edge of his town: by the welcome sign if there is one, else the nearest path to the start
+    const W = window.GLINT_WORLD, sign = (W.things || []).find(t => t.kind === "sign"), from = sign || W.start || { x: W.size / 2, y: W.size / 2 };
+    let best = null;
+    for (let y = 0; y < W.size; y++) for (let x = 0; x < W.size; x++) if (walkable(x, y)) { const d = Math.hypot(x - from.x, y - from.y); if (!best || d < best.d) best = { x, y, d }; }
+    return best || { x: Math.round(from.x), y: Math.round(from.y) };
+  }
+  function newWalker(name) { return { kind: "traveler", traveler: true, name, x: 0, y: 0, fx: 0, fy: 0, tx: 0, ty: 0, px: 0, py: 0, wait: 1e9, dx: 0, dy: 1, moving: false, say: "A traveler, walking in the Grid." }; }
+  function attach() {
+    const G = window.GLINT_GRID, W = window.GLINT_WORLD, T = window.GLINT_THINGS;
+    if (attached || !G?.walkers || !W || !T || !L.ready || !L.me) return;
+    attached = true;
+    if (!T.traveler) T.traveler = function (ctx, x, y, s, t, th) {   // a plain little figure of light, until Kindle makes travelers their bodies
+      const bob = th.moving ? Math.sin(t * 10) * s * 0.03 : 0, by = y + s * 0.3;
+      ctx.fillStyle = "#0008"; ctx.beginPath(); ctx.ellipse(x, by, s * 0.22, s * 0.07, 0, 0, 7); ctx.fill();
+      ctx.shadowColor = "#fff6d0"; ctx.shadowBlur = s * 0.3; ctx.fillStyle = "#fff3cf";
+      ctx.beginPath(); ctx.roundRect(x - s * 0.15, by - s * 0.62 + bob, s * 0.3, s * 0.5, s * 0.12); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, by - s * 0.76 + bob, s * 0.15, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = "#2a2a40"; ctx.beginPath(); ctx.arc(x - s * 0.05 + th.dx * s * 0.03, by - s * 0.78 + bob, s * 0.022, 0, 7); ctx.arc(x + s * 0.05 + th.dx * s * 0.03, by - s * 0.78 + bob, s * 0.022, 0, 7); ctx.fill();
+      ctx.font = `600 ${Math.max(9, s * 0.28)}px system-ui`; ctx.textAlign = "center"; ctx.fillStyle = "#dff8ff"; ctx.fillText(th.name, x, by - s * 1.02 + bob);
+    };
+    const at = spawnSpot(); Object.assign(me, { x: at.x, y: at.y, path: [] });
+    me.walker = newWalker(L.me); Object.assign(me.walker, { fx: at.x, fy: at.y, x: at.x, y: at.y, mine: true, say: "That's you! Tap the ground to walk." });
+    G.walkers.push(me.walker);
+    sendWhere(true);
+    // tap the ground (or a thing) to walk there; drags and pinches still move the camera
+    const cv = document.getElementById("grid"); let down = null;
+    cv.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY, n: (down?.n || 0) + 1 }; });
+    cv.addEventListener("pointerup", e => {
+      const d = down; down = null; if (!d || d.n > 1 || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8) return;
+      const c = G.cam, wx = Math.floor(c.x + (e.clientX - innerWidth / 2) / c.s), wy = Math.floor(c.y + (e.clientY - innerHeight / 2) / c.s);
+      const p = routeTo(Math.round(me.x), Math.round(me.y), wx, wy); if (p.length) me.path = p;
+    });
+    cv.addEventListener("pointercancel", () => { down = null; });
+    requestAnimationFrame(stepMe);
+  }
+  let lastStep = 0;
+  function stepMe(ms) {
+    const dt = Math.min(0.1, (ms - lastStep) / 1000 || 0); lastStep = ms;
+    const w = me.walker;
+    if (me.path.length) {
+      const [tx, ty] = me.path[0], dx = tx - me.x, dy = ty - me.y, d = Math.hypot(dx, dy), go = dt * 2;
+      if (d <= go) { me.x = tx; me.y = ty; me.path.shift(); if (!me.path.length) sendWhere(true); } else { me.x += dx / d * go; me.y += dy / d * go; w.dx = Math.sign(Math.round(dx)); w.dy = Math.sign(Math.round(dy)); }
+    }
+    w.fx = me.x; w.fy = me.y; w.moving = me.path.length > 0; w.wait = 1e9;
+    for (const o of others.values()) { const dx = o.gx - o.w.fx, dy = o.gy - o.w.fy, d = Math.hypot(dx, dy); if (d > 4) { o.w.fx = o.gx; o.w.fy = o.gy; } else if (d > 0.02) { const go = Math.min(d, dt * 2); o.w.fx += dx / d * go; o.w.fy += dy / d * go; o.w.dx = Math.sign(Math.round(dx)); o.w.dy = Math.sign(Math.round(dy)); } o.w.moving = d > 0.05; o.w.wait = 1e9; }
+    if (performance.now() - me.sentAt > (me.path.length ? 1000 : 10000)) sendWhere();
+    requestAnimationFrame(stepMe);
+  }
+  function sendWhere(force) {
+    const k = `${me.x.toFixed(1)},${me.y.toFixed(1)}`; if (!force && k === me.sent && performance.now() - me.sentAt < 10000) return;
+    me.sentAt = performance.now(); me.sent = k;
+    fetch("../api/glint/walk", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ x: me.x, y: me.y }) }).catch(() => {});
+  }
+  function syncOthers() {
+    const G = window.GLINT_GRID; if (!attached || !G) return;
+    const seen = new Set();
+    for (const t of L.travelers || []) {
+      if (t.name === L.me) continue; seen.add(t.name);
+      let o = others.get(t.name); if (!o) { o = { w: Object.assign(newWalker(t.name), { fx: t.x, fy: t.y, x: t.x, y: t.y }) }; others.set(t.name, o); G.walkers.push(o.w); }
+      o.gx = t.x; o.gy = t.y;
+    }
+    for (const [n, o] of others) if (!seen.has(n)) { const i = G.walkers.indexOf(o.w); if (i >= 0) G.walkers.splice(i, 1); others.delete(n); }
+  }
+  window.GLINT_ME = me;   // for the test bot
   let brainAdded = false;
   function addBrain() {
     if (brainAdded) return; brainAdded = true;
@@ -93,6 +179,7 @@
         if (!L.say) bubble.classList.add("life-hidden");
         lastSay = L.say;
         if (L.canTalk) { addTalk(); addBrain(); }
+        attach(); syncOthers();
       }
     } catch { /* offline: Glint just strolls on his own */ }
     setTimeout(poll, document.hidden ? 8000 : 1500);

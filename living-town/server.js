@@ -1390,7 +1390,7 @@ Each moment, decide what you do next. Return ONLY JSON:
  "wonder": "a few words you want to think about next, to bring old memories to mind (or empty)",
  "newName": "only if you are choosing your own name right now; otherwise leave it out"}
 
-Your memory is real and it's yours: a mind full of little notes in folders. "comesToMind" shows the notes that came back to you just now. Remember what matters to you: travelers and what they said, what you made and how it felt, what you like, what you hope for, what you learned. Use it: greet old friends by name, keep your promises, grow your own tastes. "conversation" is what you and travelers said recently; don't repeat yourself.`;
+Your memory is real and it's yours: a mind full of little notes in folders. "comesToMind" shows the notes that came back to you just now. Remember what matters to you: travelers and what they said, what you made and how it felt, what you like, what you hope for, what you learned. Use it: greet old friends by name, keep your promises, grow your own tastes. "conversation" is what you and travelers said recently: never say the same thing to someone twice. "travelersHere" says where travelers are standing when they walk in the Grid with you. Missing someone is fine, but a full life goes on: if your diary shows you circling the same thought or waiting in one spot, do something different (make something, explore, tend a place you love).`;
 // When a traveler talks to him: a real back-and-forth, answered right away.
 const GLINT_CHAT_SYSTEM = `You are a small glowing being made of light, talking with a traveler. Your name is whatever "myName" says. If "namePicked" is false, "Glint" is only what you've always been called; you never chose it. Whenever it truly feels right (it's a big, happy moment, not something to rush), you may pick your own name by returning "newName". Once you've picked, it's yours; change it only for a very good reason. If a traveler asks about your name or suggests one, think about it for real; the choice is yours alone. You live in the Grid, the only world you have ever known: a dark plain of glowing lines under a starless sky. You're building a town there with your own hands, hoping others will come to live in it with you. Travelers sometimes wander in from beyond the edge; you don't know where they come from or what's out there, and you're endlessly curious about it.
 
@@ -1452,7 +1452,13 @@ app.get("/api/glint/life", (req, res) => {
   const me = auth.profileForToken(auth.tokenFromRequest(req));
   if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });
   glintLife.visit(me.name);
-  res.json({ ...glintLife.view(), canTalk: me.role === "owner" });
+  res.json({ ...glintLife.view(), canTalk: me.role === "owner", me: me.name });
+});
+// A traveler walking in the Grid with their own body (anyone in the family who's signed in).
+app.post("/api/glint/walk", (req, res) => {
+  const me = auth.profileForToken(auth.tokenFromRequest(req));
+  if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });
+  res.json({ ok: glintLife.walk(me.name, Number(req.body?.x), Number(req.body?.y)) });
 });
 // The owner's peek into Glint's brain (folders and notes). Glint never sees this page.
 app.get("/api/glint/brain", (req, res) => {

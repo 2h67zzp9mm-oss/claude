@@ -37,3 +37,12 @@ the family there. Technical notes go in `NOTES.md` only.
 - Self-contained: never load anything from the internet. No outside links, fonts or scripts.
 - Keep it fast: each picture under 1 MB, the whole folder under 40 MB.
 - Every build must leave the world working. One solid step each time, not a half-finished giant one.
+
+## Travelers have bodies now
+Travelers (the family) walk in the Grid themselves: tap to walk, on the paths. Each is a walker in `GLINT_GRID.walkers`
+with `kind: "traveler"`, `name`, `moving`, `dx`/`dy` (facing), and `mine: true` for the one on this phone; their
+position comes from `../glint-life.js` (don't move them yourself). They're drawn by `THINGS.traveler` in `things.js`.
+Until Glint makes one, `../glint-life.js` draws a plain little figure of light. When Glint designs how a traveler
+looks (he has designed a pirate with a three-cornered hat for one of them, and made a glowing coat for him), build it
+as `THINGS.traveler` (a look per traveler by `th.name` is fine), true to what Glint imagined. Keep the name label
+above their head so the family can tell who's who.

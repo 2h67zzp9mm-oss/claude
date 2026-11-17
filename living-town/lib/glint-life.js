@@ -24,8 +24,9 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
   const file = path.join(dataDir, "glint-life.json"), wantsFile = path.join(dataDir, "tron-builds", "glint-wants.json");
   let world = null, worldStamp = "", thinking = false, replying = false;
   const st = Object.assign({ x: 12, y: 12, path: [], activity: "waking up", thought: "", say: "", sayAt: 0, mood: "curious", awake: true,
-    nextThinkAt: 0, diary: [], visitors: {}, heard: [], talk: [], name: "Glint", namePicked: false, namedAt: 0 }, read(file) || {});
+    nextThinkAt: 0, diary: [], visitors: {}, where: {}, heard: [], talk: [], name: "Glint", namePicked: false, namedAt: 0 }, read(file) || {});
   if (!Array.isArray(st.talk)) st.talk = [];
+  if (!st.where || typeof st.where !== "object") st.where = {};
   const TALK_MAX = 40;
   // He picks his own name when it feels right (and may change it again, but not often).
   function pickName(v) {
@@ -112,10 +113,13 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
   function situation(extra = {}) {
     const w = loadWorld(), here = (w?.places || []).map(p => ({ ...p, d: Math.hypot(p.x - st.x, p.y - st.y) })).sort((a, b) => a.d - b.d)[0];
     const visitors = Object.entries(st.visitors).filter(([, t]) => now() - t < 60_000).map(([n]) => n);
+    // travelers who walk in the Grid: where they're standing, by the nearest named place
+    const placeNear = (x, y) => { const p = (w?.places || []).map(p => ({ ...p, d: Math.hypot(p.x - x, p.y - y) })).sort((a, b) => a.d - b.d)[0]; return p ? (p.d < 1.6 ? `right by the ${p.name}` : p.d < 4 ? `near the ${p.name}` : "out on the open grid") : "nearby"; };
+    const standing = visitors.filter(n => st.where[n] && now() - st.where[n].at < 60_000).map(n => `${n} is here in the Grid, walking on their own feet, ${placeNear(st.where[n].x, st.where[n].y)}${Math.hypot(st.where[n].x - st.x, st.where[n].y - st.y) < 2.5 ? ", right next to you" : ""}`);
     const tail = (f, n) => { try { return fs.readFileSync(path.join(gridDir, f), "utf8").slice(-n); } catch { return ""; } };
     return { myName: st.name, namePicked: st.namePicked, time: new Date(now()).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" }), mood: st.mood, doing: st.activity,
       near: here ? here.name : "open grid", places: (w?.places || []).map(p => `${p.name} (${p.kind}) at ${p.x},${p.y}${p.about ? ": " + p.about : ""}`),
-      visitors, heard: st.heard.slice(-5), conversation: recentTalk(10), diary: st.diary.slice(-8).map(e => `${new Date(e.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${e.thought}${e.did ? " [" + e.did + "]" : ""}`),
+      visitors, travelersHere: standing, heard: st.heard.slice(-5), conversation: recentTalk(10), diary: st.diary.slice(-8).map(e => `${new Date(e.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${e.thought}${e.did ? " [" + e.did + "]" : ""}`),
       memories: tail("log.js", 900), dreams: tail("plans.md", 900), makingNow: extra.building || "",
       comesToMind: brain ? brain.recall([...visitors, here ? here.name : "", st.activity, st.thought, st.wonder || "", ...st.heard, extra.building || ""], 6) : [],
       brainSize: brain ? brain.count() : 0 };   // all in-world: never NOTES.md (that's the builder's)
@@ -149,6 +153,21 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
     if (st.say && now() - st.sayAt > 45_000) st.say = "";
   }
 
+  // A traveler walks in the Grid: their own body, where they are now. The first steps make him notice.
+  function walk(name, x, y) {
+    const n = String(name || "").slice(0, 30), w = loadWorld(); if (!n || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+    const size = w?.size || 24; x = Math.max(0, Math.min(size - 1, x)); y = Math.max(0, Math.min(size - 1, y));
+    const first = !st.where[n] || now() - st.where[n].at > 10 * 60_000;
+    st.where[n] = { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, at: now() };
+    visit(n);
+    if (first && st.awake) {
+      st.heard.push(`${n} has a body in the Grid now and is walking on the paths with you, really here.`);
+      if (brain) brain.log("saw", `${n} walking in the Grid with their own body`);
+      st.nextThinkAt = Math.min(st.nextThinkAt, now() + 3_000);
+    }
+    return true;
+  }
+  const travelers = () => Object.entries(st.where).filter(([, p]) => now() - p.at < 30_000).map(([name, p]) => ({ name, x: p.x, y: p.y }));
   // A family member is looking at the Grid. Someone new makes him think soon.
   function visit(name) {
     const n = String(name || "").slice(0, 30); if (!n) return;
@@ -192,8 +211,8 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
   }
 
   const view = () => ({ name: st.name, x: Math.round(st.x * 100) / 100, y: Math.round(st.y * 100) / 100, moving: st.path.length > 0, next: st.path[0] || null,
-    activity: st.activity, thought: st.thought, say: st.say, mood: st.mood, awake: st.awake, replying, talk: st.talk.slice(-14).map(({ who, text }) => ({ who, text })), diary: st.diary.slice(-12).reverse() });
-  return { tick, visit, hear, reply, view, decide, situation, state: () => st, save };
+    activity: st.activity, thought: st.thought, say: st.say, mood: st.mood, awake: st.awake, replying, travelers: travelers(), talk: st.talk.slice(-14).map(({ who, text }) => ({ who, text })), diary: st.diary.slice(-12).reverse() });
+  return { tick, visit, walk, hear, reply, view, decide, situation, state: () => st, save };
 }
 
 module.exports = { createGlintLife };

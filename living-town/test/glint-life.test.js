@@ -26,8 +26,9 @@ test("glint life: he thinks, walks the paths to where he decided, notices visito
   assert.ok(seen, "he thought"); assert.deepEqual(seen.visitors, ["Hazel"]); assert.ok(seen.places.some(p => p.startsWith("Spark Fountain")));
   const v = life.view();
   assert.equal(v.say, "Hi Hazel!"); assert.equal(v.mood, "happy"); assert.ok(v.moving, "he set off");
-  for (let i = 0; i < 40; i++) { t += 500; life.tick(0.5); const s = life.state(); assert.ok(s.y === 5 || Math.abs(s.x - 5) < 1e-9, `stays on the paths (${s.x},${s.y})`); }
-  assert.deepEqual([life.state().x, life.state().y], [5, 1], "arrived next to the fountain");
+  let arrived = false;   // once there he may potter off again (idle wandering), so check he got there at some point
+  for (let i = 0; i < 40; i++) { t += 500; life.tick(0.5); const s = life.state(); assert.ok(s.y === 5 || Math.abs(s.x - 5) < 1e-9 || arrived, `stays on the paths (${s.x},${s.y})`); if (s.x === 5 && s.y === 1) arrived = true; }
+  assert.ok(arrived, "arrived next to the fountain");
   assert.equal(JSON.parse(fs.readFileSync(path.join(dataDir, "tron-builds", "glint-wants.json"), "utf8")).text, "a little bridge");
   assert.ok(life.state().diary.length >= 1);
 });
@@ -100,4 +101,15 @@ test("glint life: he can pick his own name, and it sticks", async () => {
   t += 1000; life.hear("Sean", "Who are you?"); await new Promise(r => setTimeout(r, 20));
   assert.strictEqual(life.view().talk.at(-1).text, "I'm Lumen.");
   assert.strictEqual(life.situation().myName, "Lumen");
+});
+
+test("glint life: a traveler walking in the Grid is seen where they stand, and he notices", () => {
+  const gridDir = grid(), dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "glint-data-"));
+  let t = 1_000_000;
+  const life = createGlintLife({ gridDir, dataDir, now: () => t, hour: () => 15, think: async () => ({}) });
+  assert.ok(life.walk("Sean", 5, 4));
+  assert.deepStrictEqual(life.view().travelers, [{ name: "Sean", x: 5, y: 4 }]);
+  assert.ok(life.situation().travelersHere[0].startsWith("Sean is here in the Grid"));
+  assert.ok(life.state().heard.some(h => h.includes("has a body in the Grid")));
+  t += 60_000; assert.deepStrictEqual(life.view().travelers, [], "gone when they stop walking");
 });
