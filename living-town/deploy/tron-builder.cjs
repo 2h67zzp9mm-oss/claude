@@ -189,6 +189,7 @@ function build(file, job) {
     git(dir, "add", "-A", "living-town");
     git(dir, "-c", "user.name=Glint", "-c", "user.email=tron@little-town.local", "commit", "-q", "-m", grid ? `Glint's Grid: ${job.summary.split("\n")[0].slice(0, 60)}\n\nBuilt by Glint on his own.\n\n${job.summary}` : `Glint build: ${job.text.slice(0, 60)}\n\nRequested by ${job.by} in Little Town.\n\n${job.summary}`);
     job.commit = git(dir, "rev-parse", "HEAD");
+    git(dir, "fetch", "-q", "origin", BRANCH); git(dir, "rebase", "-q", `origin/${BRANCH}`);   // someone may have pushed while he was building
     git(dir, "push", "-q", "origin", `HEAD:${BRANCH}`);
     job.status = "deploying"; job.pushedAt = Date.now(); job.files = changed; save(file, job);
     log("pushed:", job.id, job.commit);
