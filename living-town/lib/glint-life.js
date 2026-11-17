@@ -122,7 +122,9 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
     const standing = visitors.filter(n => st.where[n] && now() - st.where[n].at < 60_000).map(n => `${n} is here in the Grid, walking on their own feet, ${placeNear(st.where[n].x, st.where[n].y)}${Math.hypot(st.where[n].x - st.x, st.where[n].y - st.y) < 2.5 ? ", right next to you" : ""}`);
     const tail = (f, n) => { try { return fs.readFileSync(path.join(gridDir, f), "utf8").slice(-n); } catch { return ""; } };
     return { myName: st.name, namePicked: st.namePicked, time: new Date(now()).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" }), mood: st.mood, doing: st.activity,
-      near: here ? here.name : "open grid", places: (w?.places || []).map(p => `${p.name} (${p.kind}) at ${p.x},${p.y}${p.about ? ": " + p.about : ""}`),
+      near: here ? here.name : "open grid",
+      // the places he knows, nearest first (a big town would crowd his thoughts, so the 40 nearest plus his home)
+      places: (w?.places || []).map(p => ({ p, d: Math.hypot(p.x - st.x, p.y - st.y) + (/home/i.test(p.kind) ? -999 : 0) })).sort((a, b) => a.d - b.d).slice(0, 40).map(({ p }) => `${p.name} (${p.kind}) at ${p.x},${p.y}${p.about ? ": " + p.about.slice(0, 80) : ""}`),
       visitors, travelersHere: standing, heard: st.heard.slice(-5), conversation: recentTalk(10), diary: st.diary.slice(-8).map(e => `${new Date(e.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${e.thought}${e.did ? " [" + e.did + "]" : ""}`),
       memories: tail("log.js", 900), dreams: tail("plans.md", 900), makingNow: extra.building || "",
       comesToMind: brain ? brain.recall([...visitors, here ? here.name : "", st.activity, st.thought, st.wonder || "", ...st.heard, extra.building || ""], 6) : [],
