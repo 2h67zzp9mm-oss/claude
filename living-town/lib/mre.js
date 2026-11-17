@@ -374,6 +374,12 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
   }
 
   /** Apply a validated plan to the world. */
+  // Some people (like players who just joined) may not have feelings filled in yet; give them calm defaults first.
+  function feelings(r) {
+    r.mood = r.mood || {}; r.needs = r.needs || {};
+    for (const k of ["valence", "stress"]) if (!Number.isFinite(r.mood[k])) r.mood[k] = k === "valence" ? 60 : 20;
+    if (!Number.isFinite(r.needs.fun)) r.needs.fun = 60;
+  }
   function apply(state, plan, now, helpers) {
     const announcement = plan.announcement || templateAnnouncement(plan, helpers.placeName);
     const effect = (fields) => state.effects.push({ id: `${now}-${plan.type}`, until: now + fields.minutes * 60_000, ...fields });
@@ -405,7 +411,7 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
         where = helpers.spotFor(null, "park");
         break;
       case "gift": {
-        const r = plan.resident;
+        const r = plan.resident; feelings(r);
         r.mood.valence = Math.min(100, r.mood.valence + 12);
         r.mood.stress = Math.max(0, r.mood.stress - 5);
         experience(r, now, `${r.name} found a mysterious surprise: ${plan.item}.`);
@@ -413,7 +419,7 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
         break;
       }
       case "note": {
-        const r = plan.resident;
+        const r = plan.resident; feelings(r);
         r.needs.fun = Math.min(100, r.needs.fun + 10);
         r.mood.valence = Math.min(100, r.mood.valence + 5);
         experience(r, now, `${r.name} found a mysterious riddle note: "${pick(templates.riddles)}"`);
@@ -427,7 +433,7 @@ function createMrE({ generate = null, log = console, random = Math.random } = {}
         nudge(state, [plan.resident.id, plan.other.id]);
         break;
       case "lost_item": {
-        const r = plan.resident;
+        const r = plan.resident; feelings(r);
         r.mood.stress = Math.min(100, r.mood.stress + 6);
         r.mood.valence = Math.max(0, r.mood.valence - 4);
         state.mre.pending.push({ kind: "found", ownerId: r.id, item: plan.item, at: now + (20 + random() * 20) * 60_000 });
