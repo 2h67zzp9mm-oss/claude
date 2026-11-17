@@ -14,7 +14,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
   const POSE = new URLSearchParams(location.search).get("pose");   // ?pose=sleep|wave|walk|sit holds Glint in a pose (for checking how he looks)
 
   // Walkers stroll from tile to tile along paths and plaza, around anything standing there.
-  const blocked = new Set(W.things.map(th => th.x + "," + th.y));
+  const blocked = new Set(W.things.filter(th => !th.flat).map(th => th.x + "," + th.y));   // flat things (a doormat) can be stepped on
   const walkable = (x, y) => "pof".includes((W.tiles[y] || "")[x] || ".") && !blocked.has(x + "," + y);
   for (const w of WALKERS) Object.assign(w, { fx: w.x, fy: w.y, tx: w.x, ty: w.y, px: w.x, py: w.y, wait: 1, dx: 0, dy: 0, moving: false });
   function stepWalker(w, dt) {
@@ -45,6 +45,8 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     for (const w of WALKERS) stepWalker(w, dt);
     if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } if (POSE === "sit" && BENCHES[0]) { w.fx = BENCHES[0].x; w.fy = BENCHES[0].y + 1; w.moving = false; w.still = 9; } }
     if (POSE === "open") for (const th of W.things) if (th.door) th.tapped = t - 1;   // holds a coloured door open
+    for (const th of W.things) if (th.kind === "mat" && !(t - th.tapped < 4) && WALKERS.some(w => Math.round(w.fx) === th.x && Math.round(w.fy) === th.y)) th.tapped = t;   // a mat says welcome when someone steps on it
+    if (POSE === "welcome") for (const th of W.things) if (th.kind === "mat") th.tapped = t - 0.8;   // holds the mat's ring of light
     if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;
     if (POSE === "shine") for (const th of W.things) if (th.kind === "coatstand") th.tapped = t - 1;   // holds the coat at its brightest   // holds the glow-bees in their ring dance
     for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it

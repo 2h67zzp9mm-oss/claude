@@ -368,6 +368,34 @@
         glow(ctx, px, hem - s * 0.1 - f * s * 0.95, s * (0.035 + 0.03 * flare) * (1 - f) + 1, "255,255,255", (1 - f) * (0.55 + 0.45 * flare));
       }
     },
+    // A welcome mat lying flat on a doorstep (th.ox shifts it sideways, in tiles, to sit under a door; th.mat = [light, mid, dark]).
+    // Woven stripes, a gold border with tassels at both ends and a gold spark in the middle. It is flat, so walkers step on it.
+    // A tap sends a ring of gold light out from the spark and round the border for 2 s.
+    mat(ctx, x, y, s, t, th) {
+      const c = th.mat || ["#c9a8ff", "#9b6bff", "#5a36b8"], cx = x + (th.ox || 0) * s, cy = y - s * 0.25, w = s * 0.42, h = s * 0.18;
+      const since = th.tapped != null ? t - th.tapped : 99, f = since >= 0 && since < 2 ? since / 2 : -1, flare = f >= 0 ? Math.sin(f * Math.PI) : 0;
+      const pulse = 0.6 + 0.4 * Math.sin(t * 1.4 + th.x);
+      glow(ctx, cx, cy, s * (0.6 + 0.2 * flare), "255,214,120", 0.12 + 0.08 * pulse + 0.3 * flare);
+      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.022);                                  // tassels
+      for (let i = 0; i < 6; i++) { const ty = cy - h * 0.8 + i * h * 0.32; for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx + d * w, ty); ctx.lineTo(cx + d * (w + s * 0.055), ty + s * 0.01); ctx.stroke(); } }
+      const rr = (px, py, pw, ph, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(px + r, py); ctx.arcTo(px + pw, py, px + pw, py + ph, r); ctx.arcTo(px + pw, py + ph, px, py + ph, r); ctx.arcTo(px, py + ph, px, py, r); ctx.arcTo(px, py, px + pw, py, r); ctx.closePath(); ctx.fill(); };
+      rr(cx - w, cy - h + s * 0.025, w * 2, h * 2, s * 0.04, "rgba(0,0,0,0.35)");                             // it lies on the step
+      rr(cx - w, cy - h, w * 2, h * 2, s * 0.04, "#e09a2b");
+      rr(cx - w + s * 0.012, cy - h + s * 0.012, w * 2 - s * 0.024, h * 2 - s * 0.03, s * 0.035, "#ffd166");   // gold border
+      const iw = w - s * 0.045, ih = h - s * 0.04;
+      rr(cx - iw, cy - ih, iw * 2, ih * 2, s * 0.02, c[1]);
+      ctx.fillStyle = c[2]; for (let i = 0; i < 4; i++) ctx.fillRect(cx - iw, cy - ih + (i * 2 + 1) * ih / 4 - s * 0.004, iw * 2, ih / 4 * 0.55);   // woven stripes
+      ctx.fillStyle = c[0]; ctx.fillRect(cx - iw, cy - ih, iw * 2, s * 0.018);
+      for (const d of [-1, 1]) gem(ctx, cx + d * iw * 0.68, cy, s * 0.028, s * 0.04, "#fff6d6", "#ffd166", "#e09a2b");
+      const R = s * (0.075 + 0.02 * pulse + 0.03 * flare);                                                  // the gold spark in the middle
+      poly(ctx, [[cx, cy - R], [cx + R * 0.28, cy - R * 0.28], [cx + R * 1.5, cy], [cx + R * 0.28, cy + R * 0.28], [cx, cy + R], [cx - R * 0.28, cy + R * 0.28], [cx - R * 1.5, cy], [cx - R * 0.28, cy - R * 0.28]], "#fff6d6");
+      glow(ctx, cx, cy, s * 0.2, "255,236,170", 0.45 + 0.3 * pulse + 0.25 * flare);
+      if (f >= 0) {                                                                                         // the welcome: a ring of light and sparks lifting off
+        ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = `rgba(255,230,150,${(1 - f) * 0.9})`; ctx.lineWidth = Math.max(1.5, s * 0.035);
+        ctx.beginPath(); ctx.ellipse(cx, cy, w * (0.2 + f * 1.5), h * (0.3 + f * 2.2), 0, 0, TAU); ctx.stroke(); ctx.globalCompositeOperation = "source-over";
+        for (let i = 0; i < 7; i++) { const a = rnd(i * 1.7 + 2) * TAU; glow(ctx, cx + Math.cos(a) * w * (0.3 + f), cy + Math.sin(a) * h - f * s * (0.35 + rnd(i) * 0.5), s * 0.06 * (1 - f) + 1, i % 2 ? "255,214,120" : "201,168,255", 1 - f); }
+      }
+    },
     sign(ctx, x, y, s) {
       const b = y + s * 0.3;
       shadow(ctx, x, b, s * 0.22, s * 0.08);

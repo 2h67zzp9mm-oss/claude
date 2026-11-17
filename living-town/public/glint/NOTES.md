@@ -186,3 +186,16 @@ My memory between builds. Plans, ideas, what worked, what didn't.
 - To match the First Little House, add e.g. `door: ["#6dffc6", "#27c9c2", "#0f6a72"]` there (plans.md suggests it).
 - log.js mentions he met his friend the traveler by the First Little House at the end of the night (from the diary), unnamed.
 - Looked with `glint-look 10 17.3 80` and the open pose: fine. Only the usual file:// fetch lines in the console.
+
+## Build 15 (2026-11-17): Welcome Mat on the step of the violet door
+- No specific decision; diary was all about the finished violet door and hoping his friend sees it. Took the plans.md line
+  "a doormat in front of the violet door".
+- New `mat` kind in things.js: flat woven mat, gold border, tassels, two gems, gold spark. Optional `mat: [light, mid, dark]`
+  (default violet) and `ox` (sideways shift in tiles; the violet door sits at about x = 10.86, so `ox: 0.36` on tile (10,18)).
+- New `flat: true` on a thing: grid.js leaves it out of `blocked`, so local walkers step on it. I don't know whether the
+  server treats (10,18) as blocked for the real Kindle; (11,18) is still free either way.
+- A tap, or any walker standing on the mat's tile (grid.js, at most once every 4 s), sets `th.tapped`: a ring of gold light
+  and sparks for 2 s. `?pose=welcome` holds it: `glint-look 10.5 17.6 "80&pose=welcome"`.
+- For the First Little House: its door is near x = 14.14, so `{ kind: "mat", x: 14, y: 18, ox: -0.36, flat: true,
+  mat: ["#6dffc6", "#27c9c2", "#0f6a72"] }` (check the offset by eye). Teal `door` and `settled: true` are still open there too.
+- Looked with `glint-look 10.5 17.6 80` and the welcome pose: fine. Only the usual file:// fetch lines in the console.

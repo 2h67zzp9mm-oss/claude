@@ -5,7 +5,7 @@
 - The glowing garden is planted and the lit path runs from the Crystal Tree to the violet door. Next the First Little House could have a lit path and flowers of its own, so both sides of Lantern Street invite people in.
 - The glow-bees have moved in: a gold hive by the Crystal Tree and four bees that visit every flower. They could use more flowers to visit, and maybe a light-snail to share the garden with.
 - The violet door is hung in its gold frame on the Second Little House, and the latch swings true. The First Little House still has its plain gold door: it could have a teal one in a gold frame, to match its own roof.
-- A doormat or a doorstep stone in front of the violet door, so whoever comes home has somewhere to wipe their feet.
+- The welcome mat is down on the step of the violet door, violet and gold, and it lights up when someone steps on it. The First Little House has no mat yet: it could have a teal one, so nobody has to choose a door by its mat.
 - The Second Little House is whole now: roof locked down, corners capped in gold, gem on top, door on. The First Little House could have its teal roof tiled and capped the same way, so the two match.
 - More crystal trees for the row on Lantern Street: two are in, one by each door lamp. The next ones could go up the street toward the square.
 - Someone to move in! Both little houses have doors, lit lamps, light-moths and a young tree now, and the bench has room for two.
