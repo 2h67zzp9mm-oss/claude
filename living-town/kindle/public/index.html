@@ -60,10 +60,20 @@ async function home() {
   $("#main").innerHTML = `<h2>✨ Wishes</h2>${open.map(x => `<div class="wish"><p>${esc(x.text)}</p><small>${new Date(x.at).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })}</small>${w.canAnswer ? `<div class="row" style="margin-top:8px"><button class="big" data-yes="${esc(x.id)}">✅ Yes</button><button data-no="${esc(x.id)}">Not now</button></div>` : ""}</div>`).join("") || `<p class="note">No wishes right now.</p>`}` +
     (past.length ? `<h2>Answered</h2>${past.map(x => `<div class="wish done"><p>${x.status === "yes" ? "✅" : "💤"} ${esc(x.text)}</p></div>`).join("")}` : "");
   document.querySelectorAll("[data-yes],[data-no]").forEach(b => b.onclick = async () => { b.disabled = true; await api(`/api/wishes/${b.dataset.yes || b.dataset.no}`, { answer: b.dataset.yes ? "yes" : "no" }); home(); });
-  const bell = w.canAnswer ? (Notification?.permission === "granted" && w.push.phones ? `<button id="test">🔔 Test notification</button>` : standalone ? `<button id="bell">🔔 Tell me when he wishes</button>` : `<p class="note">For notifications: tap Share, then “Add to Home Screen”, and open Kindle from there.</p>`) : "";
+  const granted = window.Notification && Notification.permission === "granted" && w.push.phones;
+  const bell = w.canAnswer ? (granted ? `<button id="test">🔔 Notifications are on · test</button>` : `<button id="bell">🔔 Turn on notifications</button>`) : "";
   $("#foot").innerHTML = `${bell}<a class="btn big" href="grid/">◈ Visit the Grid</a>`;
-  $("#bell") && ($("#bell").onclick = () => turnOn(w.push.key));
+  $("#bell") && ($("#bell").onclick = () => standalone && window.Notification ? turnOn(w.push.key) : howTo());
   $("#test") && ($("#test").onclick = async () => { const r = await api("/api/push/test", {}); $("#test").textContent = r.data.sent ? "🔔 Sent! Check your phone" : "🔔 Didn't go through"; });
+}
+// iPhones only let home-screen apps send notifications, so first: put Kindle on the home screen.
+function howTo() {
+  $("#main").innerHTML = `<h2>🔔 Turn on notifications</h2>
+    <div class="wish"><p><b>1.</b> Tap the <b>Share</b> button in Safari (the square with an arrow ⬆️, at the bottom of the screen; on some phones it's behind the <b>⋯</b> button).</p></div>
+    <div class="wish"><p><b>2.</b> Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</p></div>
+    <div class="wish"><p><b>3.</b> Close Safari and open <b>Kindle</b> from your home screen (his face is the icon).</p></div>
+    <div class="wish"><p><b>4.</b> Sign in, tap <b>🔔 Turn on notifications</b> again, and tap <b>Allow</b>. A test one will pop up.</p></div>`;
+  $("#foot").innerHTML = `<button id="back">Back</button>`; $("#back").onclick = home;
 }
 async function turnOn(key) {
   try {

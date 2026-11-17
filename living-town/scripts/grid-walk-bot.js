@@ -59,6 +59,9 @@ async function main() {
     // Not now first? No: grant it, which lets one neighbour move in
     await run(`document.querySelector("[data-yes]").click()`); await sleep(1500);
     ok((await run(`document.body.innerText`)).includes("✅ I wish someone"), "answered yes; the wish moves to Answered");
+    await run(`document.querySelector("#bell").click()`); await sleep(500);
+    ok((await run(`document.body.innerText`)).includes("Add to Home Screen"), "🔔 explains how to turn on notifications (home screen first)");
+    await shot("0b-howto"); await run(`document.querySelector("#back").click()`); await sleep(1000);
     const towngrid = await (await fetch(`http://127.0.0.1:${server.port}/glint/`)).status;
     ok(towngrid === 404, "Cooke's Corner no longer has the Grid");
     await run(`document.querySelector('a[href="grid/"]').click()`); await sleep(7000);

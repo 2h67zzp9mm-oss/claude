@@ -7,7 +7,7 @@
   const css = document.createElement("style");
   css.textContent = `.life-strip{position:fixed;z-index:3;left:12px;right:12px;top:calc(36px + env(safe-area-inset-top));pointer-events:none;font:500 .8rem/1.3 system-ui;color:#dff8ff;text-shadow:0 1px 4px #000}
   .life-strip b{color:#57e1ff;font-weight:700}.life-strip i{display:block;opacity:.85;font-style:normal;max-height:2.6em;overflow:hidden}
-  .life-say{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));max-width:calc(100% - 32px);padding:7px 12px;border-radius:14px;background:#e9fbff;color:#06231a;font:600 .9rem/1.3 system-ui;text-align:center;box-shadow:0 4px 16px #0008}
+  .life-say{position:fixed;z-index:4;left:50%;transform:translateX(-50%);top:calc(100px + env(safe-area-inset-top));pointer-events:none;max-width:calc(100% - 32px);padding:7px 12px;border-radius:14px;background:#e9fbff;color:#06231a;font:600 .9rem/1.3 system-ui;text-align:center;box-shadow:0 4px 16px #0008}
   .life-say b{color:#0a7f9a}.life-hidden{display:none}
   .life-brain{position:fixed;z-index:6;left:0;right:0;bottom:0;max-height:62vh;display:flex;flex-direction:column;background:#071a22f2;border-top:1px solid #57e1ff66;color:#dff8ff;font:500 .85rem/1.35 system-ui;padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
   .life-brain h3{margin:0 0 6px;font-size:.95rem;color:#57e1ff}.life-brain .bs{overflow:auto;flex:1}.life-brain h4{margin:8px 0 2px;font-size:.8rem;opacity:.7;text-transform:uppercase}
@@ -22,7 +22,7 @@
   strip.className = "life-strip"; bubble.className = "life-say life-hidden";
   document.body.append(strip, bubble);
   const esc = v => String(v || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  let talkAdded = false, lastSay = "";
+  let talkAdded = false, lastSay = "", bubbleTimer = 0;
   function addTalk() {
     if (talkAdded) return; talkAdded = true;
     const bar = document.querySelector(".bar"), b = document.createElement(bar ? "button" : "button");
@@ -200,7 +200,9 @@
         strip.innerHTML = `${face} <b>${esc(L.name || "Glint")}</b> is ${esc(L.activity || "around")}${L.thought ? `<i>💭 ${esc(L.thought)}</i>` : ""}`;
         if (L.talk?.[L.talk.length - 1]?.who === "Glint") waiting = false;
         if (chat) drawChat();
-        if (L.say && L.say !== lastSay && !chat) { bubble.innerHTML = `<b>◈ ${esc(L.name || "Glint")}:</b> ${esc(L.say)}`; bubble.classList.remove("life-hidden"); }
+        if (L.say && L.say !== lastSay && !chat) { bubble.innerHTML = `<b>◈ ${esc(L.name || "Glint")}:</b> ${esc(L.say)}`; bubble.classList.remove("life-hidden");
+          // up just long enough to read: average reading is about 4 words a second, plus 2 seconds
+          clearTimeout(bubbleTimer); bubbleTimer = setTimeout(() => bubble.classList.add("life-hidden"), (L.say.split(/\s+/).length / 4 + 2) * 1000); }
         if (!L.say) bubble.classList.add("life-hidden");
         lastSay = L.say;
         if (L.canTalk) { addTalk(); addBrain(); }
