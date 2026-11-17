@@ -20,13 +20,15 @@ const THINK_MIN = 10 * 60_000, THINK_MAX = 15 * 60_000;
 const SLEEP_FROM = 22.5, SLEEP_TO = 7;     // local hours
 const DIARY_MAX = 60;
 
-function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null, brain = null, now = () => Date.now(), hour = () => { const d = new Date(now()); return d.getHours() + d.getMinutes() / 60; } }) {
+function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, dreamer = null, brain = null, now = () => Date.now(), hour = () => { const d = new Date(now()); return d.getHours() + d.getMinutes() / 60; } }) {
   const file = path.join(dataDir, "glint-life.json"), wantsFile = path.join(dataDir, "tron-builds", "glint-wants.json");
   let world = null, worldStamp = "", thinking = false, replying = false;
   const st = Object.assign({ x: 12, y: 12, path: [], activity: "waking up", thought: "", say: "", sayAt: 0, mood: "curious", awake: true,
     nextThinkAt: 0, diary: [], visitors: {}, where: {}, heard: [], talk: [], name: "Glint", namePicked: false, namedAt: 0 }, read(file) || {});
   if (!Array.isArray(st.talk)) st.talk = [];
   if (!st.where || typeof st.where !== "object") st.where = {};
+  if (!Array.isArray(st.wishes)) st.wishes = [];
+  const WISH_GAP = 6 * 3600_000;
   const TALK_MAX = 40;
   // He picks his own name when it feels right (and may change it again, but not often).
   function pickName(v) {
@@ -102,6 +104,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
     const target = place ? place : (where && where !== "stay" ? wanderTarget() : null);
     if (target) st.path = route(target);
     if (d.newName) pickName(d.newName);
+    if (d.wish) makeWish(clean(d.wish, 200));
     const build = clean(d.build, 300);
     for (const m of (Array.isArray(d.remember) ? d.remember : []).slice(0, 3)) if (brain && m && typeof m === "object") brain.remember({ folder: clean(m.folder, 12).toLowerCase(), title: clean(m.title, 60), text: clean(m.note || m.text, 400), keywords: Array.isArray(m.keywords) ? m.keywords.slice(0, 8).map(String) : [] });
     st.wonder = clean(d.wonder, 80);
@@ -186,6 +189,26 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
     else reply(String(name).slice(0, 30));
     return true;
   }
+  // A wish: something he hopes for that he can't make with his own hands. The owner hears about it (a notification) and answers.
+  function makeWish(text) {
+    if (!text || text.length < 8) return null;
+    const last = st.wishes[st.wishes.length - 1], words = t => new Set(t.toLowerCase().match(/[a-z]{4,}/g) || []);
+    if (last && now() - last.at < WISH_GAP) return null;
+    const w0 = words(text);
+    if (st.wishes.some(w => w.status === "open" && [...words(w.text)].filter(x => w0.has(x)).length >= 3)) return null;   // already wished that
+    const wish = { id: `w${now()}`, text, at: now(), status: "open" };
+    st.wishes.push(wish); if (st.wishes.length > 40) st.wishes.shift();
+    note(`I made a wish: ${text}`, "made a wish"); if (brain) brain.log("wished", text);
+    try { onWish?.(wish, st.name); } catch { /* the wish still counts */ }
+    return wish;
+  }
+  function answerWish(id, yes, by = "the traveler") {
+    const w = st.wishes.find(x => x.id === id && x.status === "open"); if (!w) return null;
+    w.status = yes ? "yes" : "no"; w.answeredAt = now();
+    notice(yes ? `Something wonderful: ${by} heard your wish ("${w.text}") and said yes. It's going to come true.` : `${by} heard your wish ("${w.text}") and gently said not yet. Maybe another time.`);
+    if (brain) brain.remember({ folder: "feelings", title: "My wishes", text: `${yes ? "Granted" : "Not yet"}: ${w.text}`, keywords: ["wish", "hope"] });
+    return w;
+  }
   // A neighbour in the Grid says something to him (they live here; his everyday mind answers, not the chat).
   function hearNeighbour(name, text) {
     const t = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200), n = String(name || "").slice(0, 30); if (!t || !n) return false;
@@ -222,7 +245,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, dreamer = null,
 
   const view = () => ({ name: st.name, x: Math.round(st.x * 100) / 100, y: Math.round(st.y * 100) / 100, moving: st.path.length > 0, next: st.path[0] || null,
     activity: st.activity, thought: st.thought, say: st.say, mood: st.mood, awake: st.awake, replying, travelers: travelers(), talk: st.talk.slice(-14).map(({ who, text }) => ({ who, text })), diary: st.diary.slice(-12).reverse() });
-  return { tick, visit, walk, hear, hearNeighbour, notice, world: loadWorld, route, wanderTarget, asleepNow, home, reply, view, decide, situation, state: () => st, save };
+  return { tick, visit, walk, hear, hearNeighbour, notice, makeWish, answerWish, wishes: () => st.wishes.slice(-20).reverse(), world: loadWorld, route, wanderTarget, asleepNow, home, reply, view, decide, situation, state: () => st, save };
 }
 
 module.exports = { createGlintLife };

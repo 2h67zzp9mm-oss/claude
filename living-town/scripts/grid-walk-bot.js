@@ -1,7 +1,7 @@
 "use strict";
 /**
- * Walks in Glint's Grid as a traveler on a private throwaway server with a test account (never the live one):
- * the traveler appears at the edge of town, taps a path tile, walks there, and the server sees where they are.
+ * Plays Kindle's own app (kindle/server.cjs) on private throwaway servers with a test account (never the live ones):
+ * signs in, answers a wish, visits the Grid, walks as a traveler, and lets a neighbour move in.
  *
  *   node scripts/grid-walk-bot.js [outDir]
  */
@@ -21,7 +21,7 @@ function findChrome() {
 async function main() {
   fs.mkdirSync(out, { recursive: true });
   const dataDir = tempDir("room-bot-data-"), log = [], ok = (cond, text) => { log.push(`${cond ? "✓" : "✗"} ${text}`); if (!cond) throw new Error(text); };
-  let server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off", LIVING_TOWN_FOLK_AI: "off" }), chrome = null;
+  let server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off", LIVING_TOWN_FOLK_AI: "off" }), chrome = null, kindle = null;
   try {
     await waitForStart(server);
     const cookie = (await api(server.port, "POST", "/api/auth/setup", { code: server.setupCode(), pin: "246810" })).cookie;
@@ -30,7 +30,14 @@ async function main() {
     const file = fs.readdirSync(dataDir).map(f => path.join(dataDir, f)).find(f => /state.*\.json$/.test(f) && JSON.parse(fs.readFileSync(f, "utf8")).residents);
     const st = JSON.parse(fs.readFileSync(file, "utf8")); for (const r of st.residents) r.stars = 700; fs.writeFileSync(file, JSON.stringify(st));
     server = spawnServer(dataDir, await freePort(), { LIVING_TOWN_MRE_AI: "off", LIVING_TOWN_FOLK_AI: "off" }); await waitForStart(server);
-    const url = `http://127.0.0.1:${server.port}/`, debugPort = await freePort();
+    // Kindle's app beside the test town, signing in through it; he has one wish waiting
+    fs.writeFileSync(path.join(dataDir, "glint-life.json"), JSON.stringify({ name: "Kindle", namePicked: true, wishes: [{ id: "w1", text: "I wish someone would come to live in the First Little House.", at: Date.now(), status: "open" }] }));
+    const kport = await freePort();
+    kindle = spawn(process.execPath, [path.join(__dirname, "..", "kindle", "server.cjs")], { env: { ...process.env, LIVING_TOWN_DATA_DIR: dataDir, KINDLE_PORT: String(kport), KINDLE_TOWN_URL: `http://127.0.0.1:${server.port}`, LIVING_TOWN_FOLK_AI: "off" }, stdio: ["ignore", "pipe", "pipe"] });
+    let klog = ""; kindle.stdout.on("data", d => { klog += d; }); kindle.stderr.on("data", d => { klog += d; });
+    for (let i = 0; i < 40 && !/Kindle's Grid on/.test(klog); i++) await sleep(250);
+    if (!/Kindle's Grid on/.test(klog)) throw new Error("Kindle's app didn't start: " + klog.slice(-400));
+    const url = `http://127.0.0.1:${kport}/`, debugPort = await freePort();
     chrome = spawn(findChrome(), ["--headless", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--window-size=${W},${H}`, `--user-data-dir=${tempDir("room-bot-chrome-")}`, "about:blank"], { stdio: "ignore" });
     let target = null;
     for (let i = 0; i < 40 && !target; i++) { await sleep(250); try { target = (await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()).find(t => t.type === "page"); } catch { /* not up yet */ } }
@@ -42,8 +49,19 @@ async function main() {
     const shot = async name => { const r = await send("Page.captureScreenshot", { format: "jpeg", quality: 75 }); fs.writeFileSync(path.join(out, name + ".jpg"), Buffer.from(r.result.data, "base64")); };
     await send("Runtime.enable"); await send("Page.enable");
     await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: 2, mobile: true });
-    const [cname, ...cval] = cookie.split("="); await send("Network.setCookie", { name: cname, value: cval.join("="), url });
-    await send("Page.navigate", { url: url + "glint/" }); await sleep(7000);
+    await send("Page.navigate", { url }); await sleep(2500);
+    // sign in through Kindle's app with the town's PIN
+    ok(await run(`!!document.querySelector("#pin")`), "Kindle's app asks who's visiting");
+    await run(`document.querySelector("#pin").value = "246810"; document.querySelector("#go").click()`); await sleep(2500);
+    const home = await run(`document.body.innerText`);
+    ok(/Kindle's Grid/.test(home) && home.includes("First Little House"), "signed in with the town PIN and his wish is waiting");
+    await shot("0-wishes");
+    // Not now first? No: grant it, which lets one neighbour move in
+    await run(`document.querySelector("[data-yes]").click()`); await sleep(1500);
+    ok((await run(`document.body.innerText`)).includes("✅ I wish someone"), "answered yes; the wish moves to Answered");
+    const towngrid = await (await fetch(`http://127.0.0.1:${server.port}/glint/`)).status;
+    ok(towngrid === 404, "Cooke's Corner no longer has the Grid");
+    await run(`document.querySelector('a[href="grid/"]').click()`); await sleep(7000);
     const r0 = await run(`(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms)), me = window.GLINT_ME, G = window.GLINT_GRID, W = window.GLINT_WORLD;
       if (!me?.walker) return { attached: false };
@@ -71,11 +89,7 @@ async function main() {
     ok(Math.hypot(r.end[0] - r.goal.x, r.end[1] - r.goal.y) < 0.05 && r.onPath, `walked from ${r.start} to ${r.end.map(n => n.toFixed(1))} (goal ${r.goal.x},${r.goal.y}), staying on the paths`);
     const seen = (r.server || []).find(t => t.name === r.me);
     ok(seen && Math.hypot(seen.x - r.end[0], seen.y - r.end[1]) < 1.01, `the server knows where they are (${seen ? seen.x + "," + seen.y : "no"})`);
-    // a neighbour moves in only when the owner allows it, and shows up walking to their home
-    const before = await run(`fetch("../api/glint/life", { credentials: "same-origin" }).then(r => r.json()).then(d => (d.folk || []).length)`);
-    ok(before === 0, "nobody has moved in before it's allowed");
-    const allowed = await run(`fetch("../api/glint/folk/allow", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n: 1, home: "First Little House" }) }).then(r => r.json())`);
-    ok(allowed.allowed === 1 && allowed.free.includes("First Little House"), `allowed one newcomer (free homes: ${allowed.free})`);
+    // the granted wish let one neighbour move in
     await sleep(9000);
     const nb = await run(`(async () => { const d = await (await fetch("../api/glint/life", { credentials: "same-origin" })).json(); return { folk: d.folk, drawn: window.GLINT_GRID.walkers.filter(w => w.kind === "neighbour").map(w => w.name) }; })()`);
     await shot("2-neighbour");
@@ -83,7 +97,7 @@ async function main() {
     ok(nb.drawn.includes(nb.folk[0]?.name), "they're drawn walking in the Grid");
     ok(!r.error && !errors.length, `no script errors${r.error || errors.length ? ": " + [r.error, ...errors].join("; ") : ""}`);
   } catch (err) { log.push(`✗ ${err.message}`); process.exitCode = 1; }
-  finally { chrome?.kill(); await stop(server).catch(() => {}); }
+  finally { chrome?.kill(); kindle?.kill(); await stop(server).catch(() => {}); }
   console.log(log.join("\n") + `\nPictures: ${out}`);
 }
 main();
