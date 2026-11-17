@@ -45,13 +45,13 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     for (const w of WALKERS) stepWalker(w, dt);
     if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } if (POSE === "sit" && BENCHES[0]) { w.fx = BENCHES[0].x; w.fy = BENCHES[0].y + 1; w.moving = false; w.still = 9; } }
     if (POSE === "open") for (const th of W.things) if (th.door) th.tapped = t - 1;   // holds a coloured door open
-    for (const th of W.things) if (th.kind === "mat" && !(t - th.tapped < 4) && WALKERS.some(w => Math.round(w.fx) === th.x && Math.round(w.fy) === th.y)) th.tapped = t;   // a mat says welcome when someone steps on it
+    for (const th of W.things) if ((th.kind === "mat" || th.kind === "arch") && !(t - th.tapped < 4) && WALKERS.some(w => Math.round(w.fx) === th.x && Math.round(w.fy) === th.y)) th.tapped = t;   // a mat says welcome when someone steps on it
     for (const th of W.things) if (th.room) {   // a house with a room: someone on its doorstep (th.step) gets a look inside
       th.near = (th.step || []).some(([sx, sy]) => WALKERS.some(w => Math.round(w.fx ?? w.x) === sx && Math.round(w.fy ?? w.y) === sy));
       const want = POSE === "inside" || th.near || (th.tapped != null && t - th.tapped < 6);
       th.roomK = POSE === "inside" ? 1 : Math.max(0, Math.min(1, (th.roomK || 0) + (want ? dt : -dt) * 1.8));
     }
-    if (POSE === "welcome") for (const th of W.things) if (th.kind === "mat") th.tapped = t - 0.8;   // holds the mat's ring of light
+    if (POSE === "welcome") for (const th of W.things) if (th.kind === "mat" || th.kind === "arch") th.tapped = t - (th.kind === "arch" ? 2.2 : 0.8);   // holds the mat's ring of light
     if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;
     if (POSE === "shine") for (const th of W.things) if (th.kind === "coatstand") th.tapped = t - 1;   // holds the coat at its brightest   // holds the glow-bees in their ring dance
     for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it

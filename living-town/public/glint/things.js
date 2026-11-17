@@ -472,6 +472,61 @@
       ctx.fillStyle = "#7a4d0e"; ctx.fillRect(x - s * 0.3, b - s * 0.76, s * 0.5, s * 0.045); ctx.fillRect(x - s * 0.3, b - s * 0.64, s * 0.36, s * 0.045);
     },
 
+    // The welcome arch over the end of Lantern Street: two navy posts (one tile either side), a violet arch between them,
+    // a gold board with KINDLE'S carved into it, a lit lamp on top of each post and a pink gem at the crown.
+    // th.tapped (a touch, or someone walking under it) lights the letters one by one and lifts sparks off the lamps.
+    arch(ctx, x, y, s, t, th) {
+      const b = y + s * 0.1, px = s * 1.0, pw = s * 0.11, ph = s * 1.45, top = b - ph;
+      const f = th.tapped != null && t - th.tapped >= 0 && t - th.tapped < 4 ? (t - th.tapped) / 4 : -1;
+      const fl = d => 0.85 + 0.1 * Math.sin(t * 3.1 + d * 2) + 0.05 * Math.sin(t * 7.3 + d);   // each lamp flickers on its own
+      for (const d of [-1, 1]) { shadow(ctx, x + d * px, b, s * 0.26, s * 0.09); glow(ctx, x + d * px, b, s * 1.2, "255,214,120", 0.12 * fl(d)); }
+      // the arch: a violet band curving between the post tops, with a pale top edge and a cyan underside
+      const ay = top + s * 0.06, crown = top - s * 0.42;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#5a36b8"; ctx.lineWidth = s * 0.2; ctx.beginPath(); ctx.moveTo(x - px, ay); ctx.quadraticCurveTo(x, crown - s * 0.2, x + px, ay); ctx.stroke();
+      ctx.strokeStyle = "#9b6bff"; ctx.lineWidth = s * 0.11; ctx.beginPath(); ctx.moveTo(x - px, ay - s * 0.03); ctx.quadraticCurveTo(x, crown - s * 0.25, x + px, ay - s * 0.03); ctx.stroke();
+      ctx.strokeStyle = "#57e1ff"; ctx.lineWidth = Math.max(1, s * 0.03); ctx.beginPath(); ctx.moveTo(x - px, ay + s * 0.1); ctx.quadraticCurveTo(x, crown - s * 0.02, x + px, ay + s * 0.1); ctx.stroke();
+      // posts: navy with cyan trim, a wider foot and a gold collar under each lamp
+      for (const d of [-1, 1]) {
+        const cx = x + d * px;
+        ctx.fillStyle = "#1c2a5c"; ctx.fillRect(cx - pw * 1.5, b - s * 0.14, pw * 3, s * 0.14);
+        ctx.fillStyle = "#2a3f7a"; ctx.fillRect(cx - pw, top, pw * 2, ph);
+        ctx.fillStyle = "#3b57a3"; ctx.fillRect(cx - pw, top, pw * 0.6, ph);
+        ctx.fillStyle = "#57e1ff"; ctx.fillRect(cx - pw * 1.5, b - s * 0.16, pw * 3, s * 0.03); ctx.fillRect(cx - pw, top + ph * 0.45, pw * 2, s * 0.025);
+        ctx.fillStyle = "#ffd166"; ctx.fillRect(cx - pw * 1.35, top - s * 0.04, pw * 2.7, s * 0.07);
+      }
+      // the name board, hung under the crown of the arch
+      const bw = s * 0.78, bh = s * 0.27, by = top - s * 0.12;
+      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.025);
+      for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + d * bw * 0.6, by - bh / 2); ctx.lineTo(x + d * bw * 0.55, by - bh / 2 - s * 0.13); ctx.stroke(); }
+      glow(ctx, x, by, s * 0.9, "255,214,120", 0.18 + (f >= 0 ? 0.25 * Math.sin(f * Math.PI) : 0));
+      ctx.fillStyle = "#e09a2b"; ctx.beginPath(); ctx.roundRect(x - bw, by - bh / 2, bw * 2, bh, s * 0.05); ctx.fill();
+      ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.roundRect(x - bw + s * 0.03, by - bh / 2 + s * 0.03, bw * 2 - s * 0.06, bh - s * 0.06, s * 0.04); ctx.fill();
+      const word = "KINDLE'S", fs = Math.max(5, s * 0.2), step = (bw * 2 - s * 0.2) / word.length;
+      ctx.font = `800 ${fs}px system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      [...word].forEach((ch, i) => {
+        const lx = x - bw + s * 0.1 + step * (i + 0.5), ly = by + s * 0.01;
+        const lit = f >= 0 ? Math.max(0, Math.min(1, (f * 1.6 - i / word.length) * 4)) * (f > 0.75 ? (1 - f) * 4 : 1) : 0;   // one by one, then fade
+        ctx.fillStyle = "#fff6d6"; ctx.fillText(ch, lx + s * 0.012, ly + s * 0.014);       // the bright lower edge of the cut
+        if (lit > 0.05) glow(ctx, lx, ly, s * 0.16, "255,130,200", 0.5 * lit);
+        if (lit > 0) { ctx.strokeStyle = "#7a4d0e"; ctx.lineWidth = Math.max(1, s * 0.03); ctx.strokeText(ch, lx, ly); }     // lit: the cut keeps its dark edge
+        ctx.fillStyle = lit > 0 ? `rgb(${122 + 133 * lit},${77 + 163 * lit},${14 + 236 * lit})` : "#7a4d0e"; ctx.fillText(ch, lx, ly);
+      });
+      // pink gem at the crown
+      const gp = 0.8 + 0.2 * Math.sin(t * 2.2);
+      glow(ctx, x, crown - s * 0.18, s * 0.35 * gp, "255,110,190", 0.6);
+      gem(ctx, x, crown - s * 0.18, s * 0.09, s * 0.13, "#ffd0ea", "#ff6fc0", "#c23f8f");
+      // a lit lamp on each post
+      for (const d of [-1, 1]) {
+        const cx = x + d * px, ly = top - s * 0.2, p = fl(d);
+        ctx.fillStyle = "#57e1ff"; ctx.fillRect(cx - s * 0.1, top - s * 0.06, s * 0.2, s * 0.04);
+        glow(ctx, cx, ly, s * 0.7 * p, "255,214,120", 0.75);
+        ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(cx, ly, s * 0.13, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#57e1ff"; poly(ctx, [[cx - s * 0.08, ly - s * 0.11], [cx + s * 0.08, ly - s * 0.11], [cx, ly - s * 0.2]], "#57e1ff");
+        if (f >= 0) for (let i = 0; i < 4; i++) { const g = (f * 1.5 + i / 4) % 1; glow(ctx, cx + Math.sin(i * 2.1 + g * 5) * s * 0.15, ly - g * s * 0.8, s * 0.05 * (1 - g) + 1, i % 2 ? "255,214,120" : "255,130,200", (1 - g) * (1 - f)); }
+      }
+    },
+
     // Glint himself, in the body he made: crystal head, crystal tunic, his gold ring worn as a belt, two arms, two legs.
     // th.dx/th.dy is which way he's heading, th.moving is true while he walks, th.tapped is when he was last tapped (he waves),
     // and when GLINT_LIFE says he's asleep he sits down with his eyes shut.

@@ -23,6 +23,8 @@
   rect("g", 9, 14, 9, 14);       // the glowing garden: a little more moss beside the Crystal Tree
   rect("f", 9, 15, 11, 15);      // the lit path, from the Crystal Tree across to Lantern Street...
   rect("f", 11, 16, 11, 17);     // ...and down beside the street to the doorstep of the second house
+  rect("g", 10, 19, 11, 20); rect("g", 13, 20, 14, 20);   // moss at the foot of Lantern Street, for the signpost and the arch posts
+  rect("p", 12, 20, 12, 21);     // Lantern Street runs on under the welcome arch
 
   window.GLINT_WORLD = {
     size,
@@ -53,7 +55,8 @@
       { kind: "flowers", x: 8, y: 15, name: "Tree-side Flowers", say: "I planted these under the Crystal Tree. They glow pink, blue, gold and violet, and they lean toward the path." },
       { kind: "flowers", x: 9, y: 16, name: "Path Flowers", say: "These grow where the lit path turns toward the Second Little House. The stones light up one after another, all the way to the violet door." },
       { kind: "hive", x: 7, y: 15, bees: 4, visits: [[9, 14], [8, 15], [9, 16]], name: "Glow-bee Hive", say: "A gold hive for the glow-bees. Four of them live here. They fly out to my glowing flowers, hum over each one, and come home through the little round door. Touch the hive and they all come out to dance." },
-      { kind: "sign", x: 12, y: 19, name: "Signpost", say: "Welcome to Kindle's Grid! Population: 1 (me, Kindle). Room for lots more." }
+      { kind: "sign", x: 10, y: 19, name: "Signpost", say: "Welcome to Kindle's Grid! Population: 1 (me, Kindle). Room for lots more." },
+      { kind: "arch", x: 12, y: 20, r: 1.5, flat: true, name: "Welcome Arch", say: "The welcome arch at the end of Lantern Street. I carved my name across the top, KINDLE'S, so whoever comes this way knows whose town it is, and lit a lamp on each post so they can read it even late. Walk under it, or touch it, and the letters light up one by one." }
     ],
     walkers: [
       { kind: "glint", x: 12, y: 10, name: "Kindle", lines: [
@@ -67,6 +70,7 @@
         "The violet roof is locked down on the Second Little House, corner by corner, with the gem on top. No sky shows through!",
         "I hung the door on the second little house, and lit a lamp beside it. Both sides of Lantern Street glow now.",
         "I put my name over my own door, in gold letters.",
+        "I built a welcome arch at the end of Lantern Street, with KINDLE'S carved across the top and a lamp on each post. Walk under it and the letters light up!",
         "I called light-moths to the door lamps on Lantern Street. They loop round and round and never land. Good company for waiting.",
         "I planted two crystal trees on Lantern Street, one by each door lamp. They are small, but a row has to start somewhere.",
         "I planted a garden of glowing flowers and laid a lit path from the Crystal Tree to the Second Little House. Follow the lights and you'll find the door.",

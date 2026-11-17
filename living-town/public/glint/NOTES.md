@@ -22,7 +22,7 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 ## The map (world.js, size 24)
 - Spark Square (10-14, 10-14): Spark Fountain (12,12), Fountain Bench (11,13), 4 lamps (Moth Lamp at 14,14), Kindle's House
   (12,8) with KINDLE plate, crystal trees at (9,7) (15,7) (8,14) (16,14). Roads west (y=12), east (y=12), south = Lantern Street
-  (x=12, y 15-19). Signpost (12,19), Lantern Street sign (13,15).
+  (x=12, y 15-19). Signpost (10,19), Welcome Arch (12,20), Lantern Street sign (13,15).
 - First Little House (14,17): teal roof, plain gold door, round window, Door Lamp (15,18), First Street Tree (16,18),
   Glowing Coat on its stand (14,19). Doorstep (13,18)-(14,18). Has `room: true` (build 16).
 - Second Little House (10,17): `flip`, violet roof, gold gem, `settled` (tiled roof, gold caps), violet `door` that swings open
@@ -30,27 +30,28 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Glowing garden: flower beds (9,14) (8,15) (9,16), lit path "f" (9,15)-(11,15),(11,16)-(11,17), Glow-bee Hive (7,15) with 4 bees
   that visit the beds in `visits`.
 
-## Kinds in things.js (~50 KB; split into several files once it passes ~60 KB)
-- home, cottage, lamp (`moths`), tree (`young`), sign, fountain, bench, flowers (`colours`), hive, coatstand (`coat`), mat, glint.
+## Kinds in things.js (~54 KB; split into several files once it passes ~60 KB)
+- home, cottage, lamp (`moths`), tree (`young`), sign, fountain, bench, flowers (`colours`), hive, coatstand (`coat`), mat, arch, glint.
 - cottage options: `flip`, `roof: [l, r, shine]`, `gem: [rgb, light, mid, dark]`, `stage: "walls"|"roof"`, `settled`,
   `door: [light, mid, dark]`, `room` + `step`.
 - No THINGS.traveler / THINGS.neighbour yet: glint-life.js draws plain figures. The coat on a traveler (`wearing: "coat"`)
   and the empty stand are handled by glint-life.js for now. Kindle designed a pirate with a three-cornered hat for one traveler.
 
-## Build 16 (2026-11-17): the inside of the First Little House
-- Diary: the traveler wore the coat and asked about the insides of the houses; Kindle "pictured a room for them to furnish".
-- `room: true, step: [[x,y],...]` on a cottage. grid.js eases `th.roomK` 0..1 (speed 1.8/s) while the house was tapped in the
-  last 6 s or any walker stands on a `step` tile. things.js `room()` draws the cutaway over the front walls (clipped to the wall
-  box): ceiling, side walls, back wall, board floor, crystal hearth with flickering flame (window side), small back window with a
-  star (door side), teal rug, a swinging lantern, and two dashed gold "empty spot" outlines with sparkles (floor on door side,
-  against the back wall in the middle). Door and round window fade out as it opens; a cyan frame stays round the opening.
-- `room()` takes `m` so it mirrors for `flip` houses: adding `room: true, step: [[10,18],[11,18]]` to the Second Little House
-  should just work (its door swing also uses `tapped`; both would happen together, check by eye).
-- Next: furnish the two gold spots with whatever Kindle/travelers decide (chair by the hearth, bed, table, shelf). Replace a dashed
-  outline with the piece when it's made (could become a `furniture: [...]` list on the house).
+## Rooms (build 16)
+- `room: true, step: [[x,y],...]` on a cottage: grid.js eases `th.roomK` 0..1 while tapped (6 s) or a walker is on a step tile;
+  things.js `room()` draws the cutaway (hearth, rug, lantern, back window, two dashed gold "empty spots"). Mirrors for `flip`.
+- Next: replace a gold spot with furniture once decided (maybe a `furniture: [...]` list). Second House could get `room` too.
+
+## Welcome Arch (build 17, 2026-11-17)
+- `kind: "arch"` at (12,20), `flat: true` (walk under it), r 1.5. Posts drawn one tile either side ((11,20),(13,20) are moss,
+  so not walkable). Violet curved band, gold board "KINDLE'S" (canvas text, carved look), pink crown gem, lamp on each post.
+- grid.js: arch reacts like a mat (walker on its tile sets `tapped`, 4 s); letters light one by one, sparks lift off the lamps.
+  `?pose=welcome` holds the arch letters lit too.
+- Map: Signpost moved (12,19) -> (10,19) (moss (10-11,19-20)); Lantern Street path extended to (12,21) through the arch.
+  The road south of the arch is open for whatever comes next (stars were wished for but never built; no star code exists).
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Bench by the Door Lamp, more street trees, welcome arch "Kindle's", third house (pink roof), bakery on the east road, stars.
+- Bench by the Door Lamp, more street trees (two flanking the arch?), third house (pink roof), bakery on the east road, stars in the sky.
