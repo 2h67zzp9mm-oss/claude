@@ -112,7 +112,8 @@ function prices() {
     ["Rare things", Decor.CATALOG.filter(d => d.rare)],
     ["Dream things, one each", Decor.CATALOG.filter(d => d.dream)]
   ].map(([name, list]) => ({ name, low: Math.min(...list.map(d => d.price)), high: Math.max(...list.map(d => d.price)), n: list.length }));
-  const others = [{ name: "Pet seller", price: 40 }, ...LEVELS.filter(l => l.cost).map(l => ({ name: `Garden upgrade to ${l.beds} beds`, price: l.cost }))];
+  const others = [{ name: "Pet seller", price: 40 }, ...LEVELS.filter(l => l.cost).map(l => ({ name: `Garden upgrade to ${l.beds} beds`, price: l.cost })),
+    { name: "Bigger room in the house, once", price: Decor.BIG_ROOM_PRICE }];
   return { kinds, others };
 }
 

@@ -208,3 +208,52 @@ test("decor: dream things are always in the shop, never in the daily mix, and bo
   assert.ok(hs.view(state, "home-1", kid, later).decor.dreams.some(s => s.id === "rocket"));
   assert.equal(act(kid, { action: "decorBuy", item: "rocket" }, later).ok, true);
 });
+
+test("decor: the bigger room costs 1,000⭐ once, adds floor for the whole family, and old houses stay small until then", () => {
+  const hs = createHomestead();
+  const me = { id: "dad", name: "Sean", stars: 600 }, kid = { id: "hazel", name: "Hazel", stars: 0 }, state = { residents: [me, kid] };
+  const now = Date.parse("2026-11-17T10:00:00"), act = (who, m) => hs.act(state, "home-1", who, m, now), decor = who => hs.view(state, "home-1", who, now).decor;
+  assert.deepEqual([Decor.ROOM.w, Decor.ROOM.d, Decor.BIG_ROOM.w, Decor.BIG_ROOM.d, Decor.BIG_ROOM_PRICE], [9, 7, 9, 11, 1000]);
+  assert.deepEqual([Decor.BIG_ROOM.door, Decor.BIG_ROOM.window, Decor.BIG_ROOM.mat], [Decor.ROOM.door, Decor.ROOM.window, Decor.ROOM.mat], "same door, window and doormat");
+  assert.deepEqual([decor(me).big, decor(me).bigPrice], [false, 1000], "an old save has the small room");
+  act(me, { action: "decorBuy", item: "chair" }); act(me, { action: "decorBuy", item: "plant" });
+  const [chair, plant] = decor(me).storage.map(s => s.uid);
+  assert.equal(act(me, { action: "decorPlace", uid: chair, x: 8, y: 6 }).ok, true, "the front row of the small room");
+  assert.equal(act(me, { action: "decorPlace", uid: plant, x: 4, y: 9 }).ok, false, "the small room stops at 7 rows");
+  // not enough stars: nothing changes
+  const before = me.stars, no = act(me, { action: "roomUpgrade" });
+  assert.equal(no.ok, false); assert.match(no.toast, /1000⭐/); assert.equal(me.stars, before); assert.equal(decor(me).big, false);
+  me.stars = 1200;
+  const yes = act(me, { action: "roomUpgrade" });
+  assert.deepEqual([yes.ok, yes.roomUpgraded, me.stars], [true, true, 200]);
+  assert.equal(decor(kid).big, true, "the whole family gets it");
+  assert.deepEqual(decor(me).room.find(t => t.uid === chair), { uid: chair, id: "chair", x: 8, y: 6, rot: 0 }, "nothing inside moved");
+  me.stars = 5000;
+  assert.equal(act(me, { action: "roomUpgrade" }).ok, false, "only once"); assert.equal(me.stars, 5000);
+  // the new floor works: place, move, and still not past the new front or the sides
+  assert.equal(act(kid, { action: "decorPlace", uid: plant, x: 4, y: 9 }).ok, true, "the new rows take things");
+  assert.equal(act(kid, { action: "decorMove", uid: plant, x: 8, y: 10 }).ok, true, "right to the new front corner");
+  assert.equal(act(kid, { action: "decorMove", uid: plant, x: 8, y: 11 }).ok, false, "not past the new front");
+  assert.equal(act(kid, { action: "decorMove", uid: plant, x: 9, y: 10 }).ok, false, "no wider than before");
+  assert.equal(act(kid, { action: "decorMove", uid: chair, x: 0, y: 0 }).ok, false, "the doormat still stays clear");
+  // a long thing turned at the new front slides back in, not back to the old front
+  const sofaDay = Array.from({ length: 200 }, (_, i) => new Date(now + i * 86400_000)).find(d => Decor.shopToday(Decor.dayKey(d), "clay", "home-1").includes("sofa")), t2 = sofaDay.getTime();
+  const sofa = hs.act(state, "home-1", me, { action: "decorBuy", item: "sofa" }, t2).decorBought.uid;
+  assert.equal(hs.act(state, "home-1", me, { action: "decorPlace", uid: sofa, x: 3, y: 10 }, t2).ok, true);
+  assert.equal(hs.act(state, "home-1", me, { action: "decorRotate", uid: sofa }, t2).ok, true);
+  const s = hs.view(state, "home-1", me, t2).decor.room.find(t => t.uid === sofa);
+  assert.deepEqual([s.rot, s.x, s.y], [1, 3, 8]);
+  // every world's house is bigger, and other families are not
+  hs.act(state, "home-1", me, { action: "world", world: "pirate" }, t2);
+  assert.equal(hs.view(state, "home-1", me, t2).decor.big, true);
+  assert.equal(hs.view(state, "home-2", me, t2).decor.big, false);
+  // an odd saved value is the small room, never a crash
+  for (const bad of [null, 1, "yes", {}, []]) { state.homesteads["home-1"].bigRoom = bad; assert.equal(hs.view(state, "home-1", me, t2).decor.big, false); }
+  // the phone's helpers: the free-spot finder uses the room it is given
+  const full = []; let uid = 1;
+  for (let y = 0; y < 7; y++) for (let x = 0; x < 9; x++) if (Decor.fits(full, "chair", x, y)) full.push({ uid: uid++, id: "chair", x, y, rot: 0 });
+  const D = require("../shared/decor");
+  assert.equal(D.freeSpot(full, "chair"), null, "a full small room has no spot");
+  assert.deepEqual(D.freeSpot(full, "chair", 0, D.BIG_ROOM), { x: 0, y: 7, rot: 0 }, "the bigger room has the new rows");
+  assert.equal(D.roomFor(true), D.BIG_ROOM); for (const v of [false, undefined, null, 1, "true"]) assert.equal(D.roomFor(v), D.ROOM);
+});

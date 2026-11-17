@@ -16,6 +16,11 @@
   // The room: 9 tiles across, 7 deep, and a back wall 9 tiles wide with the door and a window in it.
   // The tiles just inside the door are the doormat, so nothing ever blocks the way out.
   const ROOM = { w: 9, d: 7, door: [0, 2], window: [5, 2], mat: { x: 0, y: 0, w: 2, h: 1 } };
+  // The bigger room a family can save up for: the same walls, door and window, with four more rows of floor.
+  // (Deeper, not wider, so the tiles stay the same size on a phone.) Every house the family has gets it.
+  const BIG_ROOM = { ...ROOM, d: 11 };
+  const BIG_ROOM_PRICE = 1000;
+  const roomFor = big => (big === true ? BIG_ROOM : ROOM);
 
   const T = (id, name, emoji, price, w, h, kind = "floor", worlds = "all", extra = {}) => ({ id, name, emoji, price, w, h, kind, worlds, ...extra });
   const CATALOG = [
@@ -96,8 +101,9 @@
   /** The tiles a thing covers when turned rot quarter-turns (wall things don't turn). */
   function footprint(d, rot = 0) { return d.kind === "wall" ? { w: d.w, h: 1 } : rot % 2 ? { w: d.h, h: d.w } : { w: d.w, h: d.h }; }
   const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  /** Can this thing go at x,y turned rot in this room? items: what's already placed ({uid,id,x,y,rot}); skip: a uid to ignore (the thing being moved). */
-  function fits(items, id, x, y, rot = 0, skip = null) {
+  /** Can this thing go at x,y turned rot in this room? items: what's already placed ({uid,id,x,y,rot}); skip: a uid to ignore (the thing being moved); room: ROOM (the default) or BIG_ROOM. */
+  function fits(items, id, x, y, rot = 0, skip = null, room = null) {
+    const ROOM = room || roomFor(false);
     const d = BY_ID[id]; if (!d || !Number.isInteger(x) || !Number.isInteger(y) || !Number.isInteger(rot)) return false;
     const f = footprint(d, rot), box = { x, y: d.kind === "wall" ? 0 : y, ...f };
     if (box.x < 0 || box.y < 0 || box.x + f.w > ROOM.w) return false;
@@ -115,12 +121,12 @@
     return true;
   }
   /** The first spot a thing fits, scanning from the back of the room (or null if the room is full). */
-  function freeSpot(items, id, rot = 0) {
+  function freeSpot(items, id, rot = 0, room = ROOM) {
     const d = BY_ID[id]; if (!d) return null;
-    for (let y = 0; y < (d.kind === "wall" ? 1 : ROOM.d); y++) for (let x = 0; x < ROOM.w; x++) if (fits(items, id, x, y, rot)) return { x, y, rot };
-    if (d.kind !== "wall" && d.w !== d.h && rot === 0) return freeSpot(items, id, 1);
+    for (let y = 0; y < (d.kind === "wall" ? 1 : room.d); y++) for (let x = 0; x < room.w; x++) if (fits(items, id, x, y, rot, null, room)) return { x, y, rot };
+    if (d.kind !== "wall" && d.w !== d.h && rot === 0) return freeSpot(items, id, 1, room);
     return null;
   }
 
-  return { ROOM, CATALOG, BY_ID, inWorld, shopToday, dreams, footprint, fits, freeSpot };
+  return { ROOM, BIG_ROOM, BIG_ROOM_PRICE, roomFor, CATALOG, BY_ID, inWorld, shopToday, dreams, footprint, fits, freeSpot };
 });

@@ -8,8 +8,9 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **Big things to save up for, part 3: house upgrades** (M): a bigger room (more floor space) at 1,000⭐ and a second
-   room at 2,500⭐, bought from the house door pop-up. Saves stay safe (old houses keep the small room until upgraded).
+1. **Big things to save up for, part 3b: a second room** (M): a second room at 2,500⭐, bought from the house door
+   like the bigger room (`🏗️ Big room`), with a doorway to walk between the two. Saves stay safe (old houses have one
+   room until upgraded). Split off from part 3 on 2026-11-17: the bigger room is done.
 2. **The room fills the screen** (M): the inside of the house uses the whole space between the top and the bottom panel
    on a phone, in all three styles (clay, storybook, pixel). Room bot still passes.
 3. **Family inside the house** (M): other family members who are at home show up walking around the room.
@@ -29,9 +30,18 @@ Up next: split it first.
   `npm run ui` run), or fold the room bot's checks into the UI bot.
 - A saving goal can only be picked in the world that sells it; a "you're saving for…" note on the shop's first row
   when the goal lives in another world would help.
+- The bigger room as a saving goal too (🎯 in Goals, with the cheer), like a dream thing. Right now its meter only
+  shows on the house door's Big room panel.
+- The UI bot didn't notice a round pop-up button whose words were cut off with "…" ("Bigger ro…" on the door, fixed
+  by a shorter name). Its check for cut-off ring words needs mending.
 - Hazel looks over the nine dream drawings (they were checked by a test, not by eye) and picks any to redo.
 
 ## Done
+- 2026-11-17 A bigger room (part 3a of house upgrades): tap the house door, then `🏗️ Big room`, to see a have/need
+  meter and `🏗️ Build it 1000⭐`. It adds four more rows of floor (9 by 11 instead of 9 by 7) to the family's house in
+  every world, bought once; nothing already placed moves, and old saves keep the small room until it's bought. The UI
+  bot checks the new panel in every world and measures that the bigger room fits the phone under every room menu.
+  ECONOMY.md lists it. The second room (2,500⭐) was split off and is next.
 - 2026-11-16 A saving goal: in the house shop, tap a ⭐ Dream thing you can't pay for yet and it becomes your goal
   (🎯, one each for Sean, Olive and Hazel; tapping another swaps it). 🎯 Goals shows a `have/need` meter for it, a
   banner cheers when you have enough, and the thing turns green in the shop. The UI bot now checks all of this in

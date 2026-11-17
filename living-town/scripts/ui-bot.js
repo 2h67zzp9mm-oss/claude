@@ -31,7 +31,7 @@ const SCREENS = [
   ["idle", []], ["goals", ["Goals"]], ["story", ["Goals", "Story"]], ["build", ["Goals", "Build"]], ["book", ["Goals", "Book"]], ["level", ["Goals", "Level"]],
   ["pets", ["Pets"]], ["bag", ["Bag"]], ["look", ["Look"]], ["world", ["World"]], ["house", ["World", "Pick house"]],
   ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]], ["shop", ["pop:crate", "Seed shop"]],
-  ["pop-door", ["pop:door"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]],
+  ["pop-door", ["pop:door"]], ["room-up", ["pop:door", "Big room"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]],
   // a saving goal: tap a dream thing in the house shop, then the Goals panel has a have/need row for it
   ["room-shop-goal", ["pop:door", "Go inside", "Shop", "Sparkle Fountain"]], ["goals-saving", ["Goals"]]
 ];
@@ -184,6 +184,24 @@ async function main() {
       if (!cheer?.row.includes("You can get the")) problem("goal-cheer", "the Goals row does not say you can get it");
       report.screens.push({ screen: "goal-cheer", bad: [], text: cheer?.text || "" });
     } else problem("goal-cheer", "could not open Goals");
+    // The bigger room (bought at the house door): pretend the family has it, go inside, and measure that the whole
+    // room still sits between the top and the bottom panel with tiles big enough to tap, under every room menu.
+    await run(`(() => { const D = window.LivingTownDecor; D.roomFor = () => D.BIG_ROOM; })()`);
+    for (const [name, steps] of [["room-big", ["pop:door", "Go inside"]], ["room-big-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-big-shop", ["pop:door", "Go inside", "Shop"]]]) {
+      const miss = await run(`window.__ui.open(${JSON.stringify(steps)})`);
+      if (miss) { problem(name, miss === "missing" ? "could not get into the room" : miss); continue; }
+      await sleep(600);
+      const a = await run("window.__ui.audit()"); for (const b of a.bad) problem(name, b);
+      const m = await run(`(() => { const R = window.LivingTownRoom._test, r = R.room(), c = document.querySelector("canvas.house-room").getBoundingClientRect(), [x0, y0] = R.screenOf(0, 0), [x1, y1] = R.screenOf(r.w, r.d), T = (x1 - x0) / r.w;
+        return { d: r.d, T, left: c.left + x0, right: c.left + x1, wallTop: c.top + y0 - 2.5 * T, floorBottom: c.top + y1, barTop: document.querySelector(".home-bar").getBoundingClientRect().top, topBottom: document.querySelector(".home-top").getBoundingClientRect().bottom }; })()`);
+      await shot(name);
+      if (m.d !== 11) problem(name, `the bigger room should be 11 rows deep, it is ${m.d}`);
+      if (m.floorBottom > m.barTop + 0.5) problem(name, `the floor runs ${Math.round(m.floorBottom - m.barTop)}px under the bottom panel`);
+      if (m.wallTop < m.topBottom - 0.5) problem(name, "the back wall runs under the top display");
+      if (m.left < -0.5 || m.right > W + 0.5) problem(name, "the room runs off the side of the screen");
+      if (m.T < 24) problem(name, `the floor tiles are only ${Math.round(m.T)}px wide (too small to tap)`);
+      report.screens.push({ screen: name, bad: a.bad, text: `${Math.round(m.T)}px tiles, floor ends ${Math.round(m.barTop - m.floorBottom)}px above the panel` });
+    }
     for (const e of [...new Set(errors)]) problem("page", "script error: " + e);
   } catch (err) { problem("ui-bot", String(err.message || err)); }
   finally { chrome?.kill(); await stop(server).catch(() => {}); }

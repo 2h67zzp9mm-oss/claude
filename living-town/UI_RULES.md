@@ -38,6 +38,9 @@ like a finished game, not a web page.
   panel that scrolls) and `.home-pop.room-ring` (`↻ Turn`, `📦 Store`, `Done` on the thing you picked, one row). `🎨 Style` in the room is where Hazel picks the art (house style, Pirate Cove look) for the whole family.
 - A saving goal (a ⭐ Dream thing tapped in the house shop) is marked `🎯` with `have/need⭐` on its shop button, gets
   one row with a meter in 🎯 Goals, and its shop button is the green one once you have enough.
+- The bigger room (`🏗️ Big room` on the house door, until the family has it) is one panel: a `have/need⭐` row with a
+  meter, and `🏗️ Build it 1000⭐`, which is the green button only once you have enough. The bigger room is deeper, never
+  wider, so floor tiles stay the same size on a phone.
 - A new menu reuses these. If it truly needs a new piece, add it once in `public/map.css` and list it here.
 - Progress is always shown the same way: `have/need` in small text, plus a meter when there's room.
 - Rewards are always written `+N⭐` (and `🍪` for treats). Prices and what you have are `N⭐`, no space.

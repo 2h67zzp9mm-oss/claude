@@ -6,12 +6,13 @@
  *   h.rooms[world] = { items: [{ uid, id, x, y, rot }] }   h.storage = [{ uid, id }]   h.decorUid = next uid
  *   h.rareDay = { day, ids }   (a rare thing can be bought once on the day it shows up)
  *   h.dreams = [id]            (dream things the family has bought: one of each, ever; missing on old saves = none)
+ *   h.bigRoom = true           (the family bought the bigger room; missing on old saves = the small room)
  *   h.dreamGoals = { [residentId]: id }   (the dream thing each person is saving up for; missing on old saves = no goal)
  * The catalog and the fit check live in shared/decor.js so the phone can check a drag before asking.
  */
 const D = require("../shared/decor");
 
-const ACTIONS = ["decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick", "dreamGoal"];
+const ACTIONS = ["decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick", "dreamGoal", "roomUpgrade"];
 // Hazel picks the art in the game: the inside-the-house style and how people look in Pirate Cove. Saved for the whole family.
 const ART = { room: ["clay", "story", "pixel"], pirate: ["A", "B", "C"] };
 const ART_DEFAULT = { room: "clay", pirate: "B" };
@@ -33,6 +34,7 @@ function nextUid(h) {
   const used = [...storageOf(h), ...Object.values(h.rooms || {}).flatMap(r => r.items || [])].map(it => it.uid);
   h.decorUid = Math.max(Number(h.decorUid) || 1, ...used.map(u => u + 1)); return h.decorUid++;
 }
+const sizeOf = h => D.roomFor(h.bigRoom === true);   // the small room unless the family bought the bigger one
 const dreamsOf = h => (Array.isArray(h.dreams) ? h.dreams : []);
 const goalsOf = h => (h.dreamGoals && typeof h.dreamGoals === "object" && !Array.isArray(h.dreamGoals) ? h.dreamGoals : {});
 /** The dream thing this person is saving up for (null once the family has it, or if it left the catalog). */
@@ -52,14 +54,20 @@ function view(h, { world, householdId, now, me }) {
     dreams: D.dreams(world).map(id => ({ id, owned: dreamsOf(h).includes(id) })),
     storage: storageOf(h).map(({ uid, id }) => ({ uid, id })),
     room: roomOf(h, world).items.map(({ uid, id, x, y, rot }) => ({ uid, id, x, y, rot: rot || 0 })),
-    art: artOf(h), goal: goalOf(h, me)
+    art: artOf(h), goal: goalOf(h, me), big: h.bigRoom === true, bigPrice: D.BIG_ROOM_PRICE
   };
 }
 
 /** dreamGoal {item}, decorBuy {item}, decorPlace {uid,x,y,rot}, decorMove {uid,x,y}, decorRotate {uid}, decorStore {uid}. Returns { ok, toast, ... }. */
 function act(h, r, msg, { world, householdId, now }) {
-  const room = roomOf(h, world), box = storageOf(h), uid = Number(msg.uid);
+  const room = roomOf(h, world), box = storageOf(h), uid = Number(msg.uid), size = sizeOf(h);
   switch (msg.action) {
+    case "roomUpgrade": {   // the bigger room: bought once, for every house the family has; nothing inside moves
+      if (h.bigRoom === true) return { ok: false, toast: "🏠 Your room is already the big one!" };
+      if ((Number(r.stars) || 0) < D.BIG_ROOM_PRICE) return { ok: false, toast: `You need ${D.BIG_ROOM_PRICE}⭐ for the bigger room. Keep saving!` };
+      r.stars -= D.BIG_ROOM_PRICE; h.bigRoom = true;
+      return { ok: true, roomUpgraded: true };   // the phone cheers with a banner
+    }
     case "artPick": {
       const key = String(msg.key || ""), v = String(msg.item || "");
       if (!ART[key]?.includes(v)) return { ok: false, toast: "Hmm, I don't know that style." };
@@ -97,7 +105,7 @@ function act(h, r, msg, { world, householdId, now }) {
       const i = box.findIndex(it => it.uid === uid); if (i < 0) return { ok: false, toast: "That isn't in your box." };
       const d = D.BY_ID[box[i].id], x = num(msg.x), y = d.kind === "wall" ? 0 : num(msg.y), rot = d.kind === "wall" ? 0 : ((num(msg.rot) || 0) % 4 + 4) % 4;
       if (!D.inWorld(d, world)) return { ok: false, toast: `The ${d.name} belongs in another world's house.` };
-      if (!D.fits(room.items, d.id, x, y, rot)) return { ok: false, toast: "It doesn't fit there. Try another spot!" };
+      if (!D.fits(room.items, d.id, x, y, rot, null, size)) return { ok: false, toast: "It doesn't fit there. Try another spot!" };
       const [it] = box.splice(i, 1); room.items.push({ uid: it.uid, id: it.id, x, y, rot });
       return { ok: true, decorPlaced: it.uid, toast: `${d.emoji} Nice spot!` };
     }
@@ -106,14 +114,14 @@ function act(h, r, msg, { world, householdId, now }) {
       const d = D.BY_ID[it.id];
       if (msg.action === "decorMove") {
         const x = num(msg.x), y = d.kind === "wall" ? 0 : num(msg.y);
-        if (!D.fits(room.items, it.id, x, y, it.rot || 0, uid)) return { ok: false, toast: "It doesn't fit there." };
+        if (!D.fits(room.items, it.id, x, y, it.rot || 0, uid, size)) return { ok: false, toast: "It doesn't fit there." };
         it.x = x; it.y = y; return { ok: true };
       }
       if (d.kind === "wall") return { ok: false, toast: "That one hangs on the wall." };
       const rot = ((it.rot || 0) + 1) % 4, f = D.footprint(d, rot);
       // turning a long thing near a wall: slide it back into the room if it would poke out
-      const x = Math.min(it.x, D.ROOM.w - f.w), y = Math.min(it.y, D.ROOM.d - f.h);
-      if (!D.fits(room.items, it.id, x, y, rot, uid)) return { ok: false, toast: "No room to turn it here. Move it first!" };
+      const x = Math.min(it.x, size.w - f.w), y = Math.min(it.y, size.d - f.h);
+      if (!D.fits(room.items, it.id, x, y, rot, uid, size)) return { ok: false, toast: "No room to turn it here. Move it first!" };
       Object.assign(it, { x, y, rot }); return { ok: true };
     }
     case "decorStore": {
@@ -125,4 +133,4 @@ function act(h, r, msg, { world, householdId, now }) {
   return { ok: false, toast: "Hmm, I don't know how to do that." };
 }
 
-module.exports = { ACTIONS, ART, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, shopToday: D.shopToday, dreams: D.dreams, fits: D.fits, footprint: D.footprint, view, act, dayKey };
+module.exports = { ACTIONS, ART, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, BIG_ROOM: D.BIG_ROOM, BIG_ROOM_PRICE: D.BIG_ROOM_PRICE, shopToday: D.shopToday, dreams: D.dreams, fits: D.fits, footprint: D.footprint, view, act, dayKey };

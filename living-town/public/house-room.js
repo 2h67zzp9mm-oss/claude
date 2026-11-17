@@ -5,7 +5,8 @@
 (function () {
   "use strict";
   const DC = window.LivingTownDecor;
-  const R = DC.ROOM, BY = DC.BY_ID;
+  const BY = DC.BY_ID;
+  let R = DC.ROOM;   // the small room, or the bigger one once the family has bought it (set from the server's view)
   // Art styles for Hazel to pick from: A soft clay, B storybook (ink lines), C cozy pixel. ?roomstyle=b to preview.
   const STYLES = { a: "clay", b: "story", c: "pixel" };
   // Hazel picks it in the game (🎨 Style, saved for the family); ?roomstyle=b still overrides for a preview.
@@ -383,7 +384,7 @@
   const stars = () => host?.view()?.stars ?? 0;
 
   function open(h) {
-    host = h; isOpen = true; mode = "look"; sel = null; drag = null; fx = [];
+    host = h; isOpen = true; mode = "look"; sel = null; drag = null; fx = []; R = DC.roomFor(V().big);
     if (!canvas) {
       canvas = document.createElement("canvas"); canvas.className = "house-room";
       canvas.addEventListener("pointerdown", onDown); canvas.addEventListener("pointermove", onMove); canvas.addEventListener("pointerup", onUp); canvas.addEventListener("pointercancel", () => { drag = null; });
@@ -400,6 +401,7 @@
   }
   function onState(view, result) {
     const pick = view?.decor?.art?.room; if (!URL_STYLE && Object.values(STYLES).includes(pick)) STYLE = pick;
+    R = DC.roomFor(view?.decor?.big);
     if (!isOpen) return;
     if (!drag) items = (view?.decor?.room || []).map(x => ({ ...x }));
     if (sel && !items.some(i => i.uid === sel)) { sel = null; hideRing(); }
@@ -475,7 +477,7 @@
   }
   function putOut(uid) {
     const s = V().storage.find(x => x.uid === uid); if (!s) return;
-    const spot = DC.freeSpot(items, s.id);
+    const spot = DC.freeSpot(items, s.id, 0, R);
     if (!spot) return host.toast("No room! Put something away first.");
     if (barKind !== "decorate") decorate();
     host.act("decorPlace", { uid, x: spot.x, y: spot.y, rot: spot.rot });
@@ -527,7 +529,7 @@
     const [tx, ty] = tileAt(px, py), d = BY[it.id];
     it.x = Math.round(tx - drag.dx); it.y = d.kind === "wall" ? 0 : Math.round(ty - drag.dy);
     const f = DC.footprint(d, it.rot || 0); it.x = Math.max(0, Math.min(R.w - f.w, it.x)); if (d.kind !== "wall") it.y = Math.max(0, Math.min(R.d - f.h, it.y));
-    drag.ok = DC.fits(items, it.id, it.x, it.y, it.rot || 0, it.uid);
+    drag.ok = DC.fits(items, it.id, it.x, it.y, it.rot || 0, it.uid, R);
   }
   function onUp(e) {
     const dr = drag; drag = null; if (!dr || !G) return;
@@ -617,6 +619,6 @@
   window.LivingTownRoom = {
     open, close, onState, paint, STYLES,
     get isOpen() { return isOpen; },
-    _test: { items: () => items, sel: () => sel, mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
+    _test: { room: () => R, items: () => items, sel: () => sel, mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
   };
 })();
