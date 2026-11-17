@@ -55,3 +55,13 @@ moves them and draws a plain figure of light (and a warm glow on their house at 
 (true while they're home asleep): a house can light its own windows when its neighbour is home.
 A traveler can wear the glowing coat Glint made: tap it to put it on. Then their walker has `wearing: "coat"`, and the
 coat stand is drawn empty. If you make `THINGS.traveler`, draw the coat on them when `th.wearing === "coat"`.
+
+## Keep growing (so he can build for months)
+- The map can grow: raise `size` in world.js when the town needs room (keep existing coordinates; add space on the
+  right and bottom, or shift everything consistently and update `start`).
+- Keep each file easy to work with: when `things.js` passes about 60 KB, split it into several files (for example
+  `things-homes.js`, `things-nature.js`), each adding to `window.GLINT_THINGS`, with a script tag for each in index.html.
+- Keep `NOTES.md` short (under about 8 KB): a summary of how things work and what's next, not a history. Fold old
+  entries into a line or two.
+- Every build should leave the Grid a little more alive: new places he can walk to (give them a `name`), things
+  that move or react, and room for the next idea in plans.md.

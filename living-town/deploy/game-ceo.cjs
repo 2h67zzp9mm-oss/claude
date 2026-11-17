@@ -52,7 +52,7 @@ function main() {
     fs.symlinkSync(path.join(APP, "node_modules"), nm);
     const rules = fs.readFileSync(path.join(APP, "deploy", "game-ceo.md"), "utf8");
     log("working");
-    const ai = spawnSync(CLAUDE, ["-p", `${rules}\n\nToday is ${today()}. Start now.`, "--permission-mode", "acceptEdits",
+    const ai = spawnSync(CLAUDE, ["-p", `${rules}\n\nToday is ${today()}. Start now.`, "--model", process.env.CEO_MODEL || "opus", "--permission-mode", "acceptEdits",
       "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash(npm test:*),Bash(npm run ui:*),Bash(node --check:*),Bash(node --test:*),Bash(node scripts/:*),Bash(ls:*),Bash(git diff:*),Bash(git status:*)"],
       { cwd: app, input: "", encoding: "utf8", timeout: 80 * 60_000, maxBuffer: 30e6 });
     const said = String(ai.stdout || "").trim();

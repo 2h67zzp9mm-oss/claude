@@ -35,6 +35,7 @@ const BRANCH = process.env.LIVING_TOWN_BRANCH || "claude/code-review-4vrxjs";
 const QUEUE = path.join(APP, "data", "tron-builds");
 const LOCK = path.join(QUEUE, ".lock");
 const CLAUDE = process.env.CLAUDE_BIN || "/opt/homebrew/bin/claude";
+const MODEL = process.env.TRON_MODEL || "opus";   // pinned: the default model can change to one that needs paid credits
 const GRID = "living-town/public/glint/";
 const GRID_EVERY = 90 * 60_000, GRID_PER_DAY = 10, STOP = path.join(QUEUE, "STOP");
 const BLENDER = path.join(APP, "deploy", "glint-blender"), LOOK = path.join(APP, "deploy", "glint-look");
@@ -158,9 +159,9 @@ function build(file, job) {
     // Grid builds: Claude Code's sandbox keeps every shell command inside the grid folder with no internet; Blender runs via its own sandboxed wrapper.
     const sandbox = { sandbox: { enabled: true, autoAllowBashIfSandboxed: true, allowUnsandboxedCommands: false, excludedCommands: [`${BLENDER}:*`, `${LOOK}:*`] } };
     const ai = grid
-      ? spawnSync(CLAUDE, ["-p", GRID_PROMPT(job), "--permission-mode", "acceptEdits", "--settings", JSON.stringify(sandbox), "--allowedTools", `Read,Edit,Write,Glob,Grep,Bash`],
+      ? spawnSync(CLAUDE, ["-p", GRID_PROMPT(job), "--model", MODEL, "--permission-mode", "acceptEdits", "--settings", JSON.stringify(sandbox), "--allowedTools", `Read,Edit,Write,Glob,Grep,Bash`],
         { cwd: gridDir, env: { ...process.env, GLINT_DIR: gridDir }, input: "", encoding: "utf8", timeout: 45 * 60_000, maxBuffer: 20e6 })
-      : spawnSync(CLAUDE, ["-p", PROMPT(job.text), "--permission-mode", "acceptEdits",
+      : spawnSync(CLAUDE, ["-p", PROMPT(job.text), "--model", MODEL, "--permission-mode", "acceptEdits",
         "--allowedTools", "Read,Edit,Write,Glob,Grep,Bash(npm test:*),Bash(node --check:*),Bash(node --test:*),Bash(ls:*),Bash(git diff:*),Bash(git status:*)"],
         { cwd: app, encoding: "utf8", timeout: 40 * 60_000, maxBuffer: 20e6 });
     if (ai.status !== 0) return fail("Claude couldn't finish the build.", [ai.error?.message, ai.signal && `signal ${ai.signal}`, ai.stderr, ai.stdout].filter(Boolean).join("\n"));
