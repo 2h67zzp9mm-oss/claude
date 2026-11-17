@@ -108,7 +108,9 @@ test("glint life: a traveler walking in the Grid is seen where they stand, and h
   let t = 1_000_000;
   const life = createGlintLife({ gridDir, dataDir, now: () => t, hour: () => 15, think: async () => ({}) });
   assert.ok(life.walk("Sean", 5, 4));
-  assert.deepStrictEqual(life.view().travelers, [{ name: "Sean", x: 5, y: 4 }]);
+  assert.deepStrictEqual(life.view().travelers, [{ name: "Sean", x: 5, y: 4, wearing: "" }]);
+  life.walk("Sean", 5, 4, "coat");
+  assert.strictEqual(life.wearOf("Sean"), "coat"); assert.ok(life.state().heard.some(h => h.includes("put it on")), "he finds out they're wearing his coat");
   assert.ok(life.situation().travelersHere[0].startsWith("Sean is here in the Grid"));
   assert.ok(life.state().heard.some(h => h.includes("has a body in the Grid")));
   t += 60_000; assert.deepStrictEqual(life.view().travelers, [], "gone when they stop walking");
