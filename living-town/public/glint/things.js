@@ -155,6 +155,41 @@
         ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(bx + R * 1.0, by - R * 0.1, R * 0.4, 0, TAU); ctx.fill();
         if (dance) glow(ctx, bx, by + s * 0.1, s * 0.06, "255,130,200", 0.7 * dance);
       }
+    },
+    // stars: th.stars = [[x, y, size, colour, lift]], x/y the tile spot (absolute, tile centre = n + 0.5) a star hangs over,
+    // lift how high (tiles). Each twinkles on its own; a star brightens when someone walks beneath it; when the arch
+    // lights up (or the stars are touched) a wave of light runs down the street and a little shooting star crosses the gate.
+    stars(ctx, x, y, s, t, th) {
+      const C = [["220,235,255", "#f4f8ff"], ["255,220,140", "#fff1c4"], ["150,235,255", "#dcfaff"], ["255,170,215", "#ffe0f0"]];
+      const arch = (window.GLINT_WORLD.things || []).find(k => k.kind === "arch"), walkers = window.GLINT_GRID?.walkers || [];
+      const since = Math.min(arch && arch.tapped != null ? t - arch.tapped : 99, th.tapped != null ? t - th.tapped : 99);
+      const X = px => x + (px - th.x - 0.5) * s, Y = py => y + (py - th.y - 0.5) * s;
+      (th.stars || []).forEach(([px, py, sz, ci, lift], i) => {
+        const near = walkers.reduce((m, w) => Math.max(m, 1 - Math.hypot((w.fx ?? w.x) + 0.5 - px, (w.fy ?? w.y) + 0.5 - py) / 1.7), 0);
+        const wave = since < 5 ? Math.exp(-Math.pow(since * 4 - (py - 15), 2) / 2) : 0;
+        const tw = 0.62 + 0.38 * Math.sin(t * (1.1 + rnd(i) * 1.4) + i * 2.3), b = tw + near * 0.7 + wave * 0.9;
+        const sx = X(px), gy = Y(py), sy = gy - lift * s + Math.sin(t * 0.8 + i) * s * 0.03, R = s * 0.2 * sz * (0.9 + 0.15 * b);
+        glow(ctx, sx, gy, s * (0.35 + 0.25 * b) * sz, C[ci][0], 0.07 + 0.12 * b);            // a faint pool of starlight on the ground
+        const th1 = ctx.createLinearGradient(sx, sy - s * 0.9, sx, sy);                        // the silver thread it hangs from
+        th1.addColorStop(0, "rgba(200,220,255,0)"); th1.addColorStop(1, "rgba(200,220,255,0.35)");
+        ctx.strokeStyle = th1; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx, sy - s * 0.9); ctx.lineTo(sx, sy - R * 0.6); ctx.stroke();
+        glow(ctx, sx, sy, R * (2.6 + 1.2 * b), C[ci][0], 0.45 + 0.3 * Math.min(1.5, b));
+        const pts = []; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5 + Math.sin(t * 0.5 + i) * 0.15, r = k % 2 ? R * 0.45 : R; pts.push([sx + Math.cos(a) * r, sy + Math.sin(a) * r]); }
+        poly(ctx, pts, C[ci][1]);
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(sx, sy, R * 0.28, 0, TAU); ctx.fill();
+        if (b > 1.05) {                                                                        // a bright star throws a little cross of light
+          const L = R * (1.2 + 1.6 * (b - 1.05)); ctx.strokeStyle = `rgba(${C[ci][0]},${Math.min(0.9, b - 0.9)})`; ctx.lineWidth = Math.max(1, s * 0.015);
+          ctx.beginPath(); ctx.moveTo(sx - L, sy); ctx.lineTo(sx + L, sy); ctx.moveTo(sx, sy - L); ctx.lineTo(sx, sy + L); ctx.stroke();
+        }
+      });
+      // a little shooting star over the gate: now and then, and always when the arch lights up
+      const u = since < 1.6 ? since / 1.6 : ((t % 11) - 9) / 1.6;
+      if (u >= 0 && u <= 1) {
+        const ax = X(th.x - 1.2) + u * s * 3.4, ay = Y(th.y - 0.9) + u * s * 1.0, al = Math.sin(u * Math.PI);
+        const g = ctx.createLinearGradient(ax - s * 0.9, ay - s * 0.26, ax, ay); g.addColorStop(0, "rgba(255,240,200,0)"); g.addColorStop(1, `rgba(255,240,200,${0.8 * al})`);
+        ctx.strokeStyle = g; ctx.lineWidth = Math.max(1.5, s * 0.035); ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(ax - s * 0.9, ay - s * 0.26); ctx.lineTo(ax, ay); ctx.stroke();
+        glow(ctx, ax, ay, s * 0.2, "255,240,200", 0.9 * al);
+      }
     }
   };
 
@@ -183,6 +218,7 @@
   };
 
   window.GLINT_THINGS = {
+    stars() {},   // the hanging stars are drawn over everything, by GLINT_OVER.stars
     home(ctx, x, y, s, t, th = {}) {
       const b = y + s * 0.45, w = s * 1.15, h = s * 1.25;           // b = ground line
       shadow(ctx, x, b, w * 1.15, s * 0.28);

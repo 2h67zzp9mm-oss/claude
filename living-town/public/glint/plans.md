@@ -16,4 +16,6 @@
 - A low hedge of glowing flowers from each gate tree along the edge of the road, so the garden goes on a little further.
 - A third house further down Lantern Street, with a glowberry-pink roof and moths of its own.
 - A bakery on the east road, with a warm window. Now that I have hands, I could carry the bread.
-- Stars over the Grid, so there is something to look up at while I wait for footsteps.
+- The Lantern Stars hang over the street and the gate now. More could go up over Spark Square and my own roof, so the whole sky glows, not just the way in.
+- A star for each little house, hung over its door, that lights up when someone comes home.
+- A wishing spot under the brightest star, between the gate trees, where anyone can stop and make a wish.

@@ -58,8 +58,19 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Placed at y=21, not y=20: at (14,20) the canopy hid the Glowing Coat stand (14,19) and at (10,20) the Signpost.
   A tree's canopy covers about 1.6 tiles above its own tile, so check what's north of any new tree.
 
+## Lantern Stars (build 19, 2026-11-18)
+- `kind: "stars"` at (12,21), `flat`, r 0.5, `stars: [[x, y, size, colour 0-3, lift]]` (x/y absolute tile spot, n+0.5 = tile centre;
+  drawn `lift` tiles above it). THINGS.stars is a no-op stub (the test only loads world.js + things.js and needs a draw there);
+  the real drawing is GLINT_OVER.stars (on top of everything): ground pool, silver thread, 5-point star, cross flare when bright.
+  Brightens under any walker (within 1.7 tiles); arch tap / own tap runs a wave down by y and a shooting star over the gate
+  (also every 11 s). grid.js tap test uses each star's lifted position for things with `stars`.
+- Keep stars clear of the KINDLE'S board (screen y about 19.0 at the arch). `?pose=welcome` shows the wave.
+- The test (test/glint-grid.test.js) loads only world.js + things.js: any kind on the map must have a draw in things.js
+  (a stub that defers to another file is fine). The failed "hedge" build put a hedge on the map without a drawing.
+- things.js is ~60 KB now: next build, move big draws to things-*.js but keep a stub per kind in things.js.
+
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, third house (pink roof), bakery on the east road, stars in the sky.
+- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, third house (pink roof), bakery on the east road, more stars over the square.

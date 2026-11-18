@@ -106,7 +106,8 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
   cv.addEventListener("pointerup", e => {
     pts.delete(e.pointerId); if (moved > 8 || pinch) return;
     const [wx, wy] = toWorld(e.clientX, e.clientY);
-    const hit = [...W.things, ...WALKERS].filter(th => Math.hypot(th.x + 0.5 - wx, th.y + 0.5 - wy) < (th.r || 1)).sort((a, b) => Math.hypot(a.x + 0.5 - wx, a.y + 0.5 - wy) - Math.hypot(b.x + 0.5 - wx, b.y + 0.5 - wy))[0];
+    const dist = th => th.stars ? Math.min(...th.stars.map(([px, py, , , lift]) => Math.hypot(px - wx, py - lift - wy))) : Math.hypot(th.x + 0.5 - wx, th.y + 0.5 - wy);   // hanging stars: tap any one of them
+    const hit = [...W.things, ...WALKERS].filter(th => dist(th) < (th.r || 1)).sort((a, b) => dist(a) - dist(b))[0];
     if (hit) { hit.tapped = lastT; const real = hit.kind === "glint" && window.GLINT_LIFE?.ready ? (window.GLINT_LIFE.say || window.GLINT_LIFE.thought) : "";
       const line = real ? real : hit.lines ? hit.lines[hit.lineAt = ((hit.lineAt ?? -1) + 1) % hit.lines.length] : hit.say; if (hit.lines) hit.wait = 2.5;
       say.innerHTML = `<b>${esc(hit.name || hit.kind)}</b>${line ? "<br>" + esc(line) : ""}`; say.classList.remove("hidden"); clearTimeout(sayTimer); sayTimer = setTimeout(() => say.classList.add("hidden"), 5000); }
