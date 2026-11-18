@@ -170,17 +170,23 @@ const SEANCLOUD = process.env.LIVING_TOWN_BACKUP_DIR || "/Volumes/SeanCloud";
 let brainBackupDay = "";
 setInterval(() => {
   const d = new Date(), day = d.toDateString();
-  if (d.getHours() !== 3 || brainBackupDay === day || !fs.existsSync(SEANCLOUD)) return;
+  if (d.getHours() !== 3 || brainBackupDay === day) return;
   brainBackupDay = day;
+  if (!fs.existsSync(SEANCLOUD)) return console.warn(d.toISOString(), `WARNING: ${SEANCLOUD} isn't mounted, so Kindle's and the neighbours' brains were NOT backed up tonight.`);
   const to = path.join(SEANCLOUD, "Cooke's Corner", "Grid brains", d.toISOString().slice(0, 10));
   Promise.all([["glint-brain", "kindle-brain"], ["grid-folk", "neighbours"], ["glint-life.json", "kindle-life.json"], ["grid-folk.json", "neighbours.json"]].map(([from, name]) =>
     fs.promises.cp(path.join(DATA_DIR, from), path.join(to, name), { recursive: true }).catch(() => {})))
     .then(() => console.log("Grid brains backed up to", to)).catch(err => console.error("Grid brain backup:", err.message));
 }, 10 * 60_000).unref();
 const kindleDreams = () => { try { return fs.readFileSync(path.join(PUBLIC_DIR, "glint", "plans.md"), "utf8"); } catch { return ""; } };
+// The Grid's weather (lib/grid-weather.js): fetched when he wakes up, at most every 3 hours; he only hears it as the Grid's sky.
+const gridWeather = require("../lib/grid-weather").createGridWeather({ dataDir: DATA_DIR });
+let weatherNow = gridWeather.describe(), wasAwake = glintLife.state().awake;
+const freshWeather = () => gridWeather.refresh().then(() => { weatherNow = gridWeather.describe(); });
+if (!process.env.LIVING_TOWN_DATA_DIR) freshWeather();
 const gridBuilding = () => { const b = tronBuilds().reverse().find(j => j.mode === "grid" && j.status === "building"); return b ? (b.want || "something new") : ""; };
 let glintTicks = 0;
-setInterval(() => { glintLife.tick(0.5, { building: gridBuilding() }); gridFolk.tick(0.5, glintTicks % 20 === 0 ? kindleDreams() : ""); if (++glintTicks % 120 === 0) { glintLife.save(); gridFolk.save(); } }, 500).unref();
+setInterval(() => { glintLife.tick(0.5, { building: gridBuilding(), weather: weatherNow }); if (glintLife.state().awake && !wasAwake && !process.env.LIVING_TOWN_DATA_DIR) freshWeather(); wasAwake = glintLife.state().awake; gridFolk.tick(0.5, glintTicks % 20 === 0 ? kindleDreams() : ""); if (++glintTicks % 120 === 0) { glintLife.save(); gridFolk.save(); } }, 500).unref();
 app.get("/api/glint/life", (req, res) => {
   const me = auth.profileForToken(auth.tokenFromRequest(req));
   if (!me) return res.status(401).json({ error: "Sign in to visit Glint." });

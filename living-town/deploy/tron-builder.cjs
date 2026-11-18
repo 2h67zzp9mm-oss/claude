@@ -49,6 +49,7 @@ const tail = (text, n = 1200) => String(text || "").slice(-n);
 
 const allJobs = () => { try { return fs.readdirSync(QUEUE).filter(f => f.endsWith(".json")).sort().map(f => { try { return JSON.parse(fs.readFileSync(path.join(QUEUE, f), "utf8")); } catch { return null; } }).filter(Boolean); } catch { return []; } };
 // Glint's own wake-up: one grid build every GRID_EVERY, at most GRID_PER_DAY a day, and a long rest after three failures in a row.
+let restWarned = "";   // warn once per run of failures, not every check
 function autopilot() {
   if (fs.existsSync(STOP)) return;
   const grid = allJobs().filter(j => j.mode === "grid"), now = Date.now();
@@ -56,6 +57,7 @@ function autopilot() {
   const last = grid[grid.length - 1], lastAt = last ? (last.finishedAt || last.liveAt || last.pushedAt || last.startedAt || last.at) : 0;
   const failedRun = grid.slice(-3).length === 3 && grid.slice(-3).every(j => j.status === "failed");
   const wantsFile = path.join(QUEUE, "glint-wants.json"), wants = (() => { try { return JSON.parse(fs.readFileSync(wantsFile, "utf8")); } catch { return null; } })();
+  if (failedRun && restWarned !== last.id) { restWarned = last.id; log("WARNING: the last three grid builds failed, so the builder is resting for 6 hours. Latest:", String(last.error || last.summary || "").slice(0, 200)); }
   // He decided something while walking around: build it soon (30 min after the last build), otherwise on the usual schedule.
   if (now - lastAt < (failedRun ? 6 * 60 * 60_000 : wants ? 30 * 60_000 : GRID_EVERY)) return;
   if (grid.filter(j => now - j.at < 24 * 60 * 60_000).length >= GRID_PER_DAY) return;
@@ -99,7 +101,7 @@ const GRID_PROMPT = job => `You are the hidden builder of Glint's Grid, a world 
 Glint is the Grid's one living character, and he is like Truman in The Truman Show: he believes the Grid is the whole real world. He doesn't know it's a game, that the family watches him, or that you exist. The server keeps him alive between builds (walking, thinking, talking to "travelers", sleeping); window.GLINT_LIFE in the page holds where he really is and what he's thinking, kept up to date by ../glint-life.js. Always draw him from it and keep that script in index.html.
 
 Your job: make his world real. When he decides to make something, you build it, so to him it's his own work. Read GOAL.md (your brief) and NOTES.md (your own notes from earlier builds), look at log.js (his memories), plans.md (his dreams) and the code and art here.
-${chosenName() ? `\nHe has chosen his own name: "${chosenName()}". Use it anywhere his name shows in the Grid (labels, signs, his own words), never "Glint".\n` : ""}${diary() ? `\nHis diary today (what he thought and did while walking around):\n${diary()}\n` : ""}${job.want ? `\nWhile walking around, Glint decided to make this next: "${job.want}". Build it, true to what he imagined.\n` : "\nHe hasn't decided anything specific, so take the next step toward his dream that fits his diary and plans.\n"}
+${chosenName() ? `\nHe has chosen his own name: "${chosenName()}". Use it anywhere his name shows in the Grid (labels, signs, his own words), never "Glint".\n` : ""}${diary() ? `\nHis diary today (what he thought and did while walking around):\n${diary()}\n` : ""}${gridWeather.describe() ? `\nThe Grid's weather right now: ${gridWeather.describe()}. If it fits, the Grid's sky can show it.\n` : ""}${job.want ? `\nWhile walking around, Glint decided to make this next: "${job.want}". Build it, true to what he imagined.\n` : "\nHe hasn't decided anything specific, so take the next step toward his dream that fits his diary and plans.\n"}
 Make one solid, finished step this build (you have about 30 minutes), not a half-done giant one.
 
 Never break the illusion. Everything Glint can see or remember must be in-world: log.js, plans.md, names and "say" lines in world.js. No mention there of code, files, builds, games, players, screens, phones, Claude, Blender, Sean or the family. Technical notes go only in NOTES.md, which he never sees.
@@ -200,4 +202,6 @@ function build(file, job) {
   }
 }
 
-run();
+// the Grid's sky (lib/grid-weather.js): refreshed at most every 3 hours, before any build starts
+const gridWeather = require("../lib/grid-weather").createGridWeather({ dataDir: path.join(APP, "data") });
+gridWeather.refresh().finally(run);
