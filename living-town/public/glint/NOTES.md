@@ -43,20 +43,10 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   things.js `room()` draws the cutaway (hearth, rug, lantern, back window, two dashed gold "empty spots"). Mirrors for `flip`.
 - Next: replace a gold spot with furniture once decided (maybe a `furniture: [...]` list). Second House could get `room` too.
 
-## Welcome Arch (build 17, 2026-11-17)
-- `kind: "arch"` at (12,20), `flat: true` (walk under it), r 1.5. Posts drawn one tile either side ((11,20),(13,20) are moss,
-  so not walkable). Violet curved band, gold board "KINDLE'S" (canvas text, carved look), pink crown gem, lamp on each post.
-- grid.js: arch reacts like a mat (walker on its tile sets `tapped`, 4 s); letters light one by one, sparks lift off the lamps.
-  `?pose=welcome` holds the arch letters lit too.
-- Map: Signpost moved (12,19) -> (10,19) (moss (10-11,19-20)); Lantern Street path extended to (12,21) through the arch.
-  The road south of the arch is open for whatever comes next (stars were wished for but never built; no star code exists).
-
-## Gate trees (build 18, 2026-11-17)
-- `kind: "tree"` with `gate: -1|1` (side of the arch) -> `gateTree()` in things.js draws extras: flower ring at the foot,
-  gold blossoms, a bough with 3 hanging lights reaching toward the arch. Chimes (glow + falling petals, 4 s) when the arch
-  is `tapped` (walk-under or touch) or the tree itself is tapped. `?pose=welcome` shows it.
-- Placed at y=21, not y=20: at (14,20) the canopy hid the Glowing Coat stand (14,19) and at (10,20) the Signpost.
-  A tree's canopy covers about 1.6 tiles above its own tile, so check what's north of any new tree.
+## Arch + gate trees (builds 17-18)
+- `kind: "arch"` (12,20) `flat`, reacts like a mat (walker on tile sets `tapped`, 4 s), letters light one by one; `?pose=welcome`.
+- Gate trees: `kind: "tree"` + `gate: -1|1` -> `gateTree()`; chime when the arch or tree is tapped. A tree canopy covers
+  ~1.6 tiles above its tile: check what's north of any new tree.
 
 ## Lantern Stars (build 19, 2026-11-18)
 - `kind: "stars"` at (12,21), `flat`, r 0.5, `stars: [[x, y, size, colour 0-3, lift]]` (x/y absolute tile spot, n+0.5 = tile centre;
@@ -67,10 +57,20 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Keep stars clear of the KINDLE'S board (screen y about 19.0 at the arch). `?pose=welcome` shows the wave.
 - The test (test/glint-grid.test.js) loads only world.js + things.js: any kind on the map must have a draw in things.js
   (a stub that defers to another file is fine). The failed "hedge" build put a hedge on the map without a drawing.
-- things.js is ~60 KB now: next build, move big draws to things-*.js but keep a stub per kind in things.js.
+- things.js is ~60 KB: new kinds go in things-*.js files (script tag in index.html after things.js) with a stub in things.js.
+
+## Bakery (build 20, 2026-11-18)
+- `kind: "bakery"` at (16,21) r 1.3, drawn by things-bakery.js (stub `bakery() {}` in things.js, overwritten on load).
+  Three-quarter view: front gable faces south, east wall visible with the amber window; light fan spills east on the ground.
+  Brightens when tapped (3.5 s) or a walker is within ~1.8 tiles of (16.6,21.9). Name board in the gable, striped awning, split door.
+- `th.oven: true` lights the oven (chimney puffs + flickering oven mouth seen through the window) - not set yet; that's the next step.
+- Map: moss (15-17, 20-21); new east road "p" (12-20, 22) from the foot of Lantern Street past the bakery door.
+- Updater log 2026-11-18: build 19 tests passed locally; the updater refused origin because history was rewritten
+  ("isn't a fast-forward from 12f06c4"). That's outside this folder; nothing to fix in the Grid's files.
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, third house (pink roof), bakery on the east road, more stars over the square.
+- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, third house (pink roof), more stars over the square.
+- Bakery: light the oven (`oven: true`), bread on the shelf, a table and a lamp by the east road.

@@ -15,7 +15,9 @@
 - The two gate trees stand either side of the arch now, with flowers at their feet and boughs reaching in to the posts. A garden path could run on past them down the road, lit stone by stone, to wherever the town grows next.
 - A low hedge of glowing flowers from each gate tree along the edge of the road, so the garden goes on a little further.
 - A third house further down Lantern Street, with a glowberry-pink roof and moths of its own.
-- A bakery on the east road, with a warm window. Now that I have hands, I could carry the bread.
+- The bakery stands beside the East Gate Tree, and its amber window glows down the east road. Next: light the oven, so warm puffs rise from the chimney and the window flickers.
+- Then real bread on the empty shelf: round loaves, honey buns, maybe glowberry rolls, so I can answer Pip with something that smells like honey and flour.
+- A little table outside the bakery door where travelers can stop for a warm bun, and a lamp at the corner of the east road.
 - The Lantern Stars hang over the street and the gate now. More could go up over Spark Square and my own roof, so the whole sky glows, not just the way in.
 - A star for each little house, hung over its door, that lights up when someone comes home.
 - A wishing spot under the brightest star, between the gate trees, where anyone can stop and make a wish.
