@@ -101,7 +101,7 @@ function createGridFolk({ dataDir, life, think, cast = null, safe = () => true, 
     if (st.allowed > 0 && !casting && freeHomes().length) arrive(dreams).catch(() => {});
     const sleepy = life.asleepNow();
     for (const f of st.folk) {
-      if (sleepy && f.awake) { const b = brainOf(f); if (b) { b.log("did", "went home to sleep"); b.sleepOn(f.diary); if (dreamer) b.dream(dreamer).catch(() => {}); } f.awake = false; f.activity = "going home to sleep"; const h = (life.world()?.places || []).find(p => p.name === f.home); f.path = h ? life.route(h, f) : []; }
+      if (sleepy && f.awake) { const b = brainOf(f); if (b) { b.log("did", "went home to sleep"); b.sleepOn(f.diary); if (dreamer) b.dream(dreamer).catch(err => console.error(new Date().toISOString(), `${f.name}'s dream failed (the day stays unfiled until next night):`, err?.message || err)); } f.awake = false; f.activity = "going home to sleep"; const h = (life.world()?.places || []).find(p => p.name === f.home); f.path = h ? life.route(h, f) : []; }
       if (!sleepy && !f.awake) { f.awake = true; f.activity = "waking up"; f.nextThinkAt = now() + 60_000 + Math.random() * 10 * 60_000; }
       if (!f.awake && !f.path.length) f.activity = "asleep at home, a light in the window";
       let go = SPEED * dt;

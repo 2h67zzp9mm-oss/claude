@@ -126,7 +126,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
       // the places he knows, nearest first (a big town would crowd his thoughts, so the 40 nearest plus his home)
       places: (w?.places || []).map(p => ({ p, d: Math.hypot(p.x - st.x, p.y - st.y) + (/home/i.test(p.kind) ? -999 : 0) })).sort((a, b) => a.d - b.d).slice(0, 40).map(({ p }) => `${p.name} (${p.kind}) at ${p.x},${p.y}${p.about ? ": " + p.about.slice(0, 80) : ""}`),
       visitors, travelersHere: standing, heard: st.heard.slice(-5), conversation: recentTalk(10), diary: st.diary.slice(-8).map(e => `${new Date(e.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${e.thought}${e.did ? " [" + e.did + "]" : ""}`),
-      memories: tail("log.js", 900), dreams: tail("plans.md", 900), makingNow: extra.building || "",
+      memories: tail("log.js", 900), dreams: tail("plans.md", 900), makingNow: extra.building || "", weather: extra.weather || "",
       comesToMind: brain ? brain.recall([...visitors, here ? here.name : "", st.activity, st.thought, st.wonder || "", ...st.heard, extra.building || ""], 6) : [],
       brainSize: brain ? brain.count() : 0 };   // all in-world: never NOTES.md (that's the builder's)
   }
@@ -141,7 +141,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
   // Called about twice a second by the server.
   function tick(dt, extra = {}) {
     const sleepy = asleepNow();
-    if (sleepy && st.awake) { st.awake = false; st.activity = "going home to sleep"; st.thought = "Long day. Time to rest."; const h = home(); st.path = h ? route(h) : []; note(st.thought, "went to sleep"); if (brain) { brain.log("did", "went to sleep"); brain.sleepOn(st.diary); if (dreamer) brain.dream(dreamer).catch(() => {}); } save(); }
+    if (sleepy && st.awake) { st.awake = false; st.activity = "going home to sleep"; st.thought = "Long day. Time to rest."; const h = home(); st.path = h ? route(h) : []; note(st.thought, "went to sleep"); if (brain) { brain.log("did", "went to sleep"); brain.sleepOn(st.diary); if (dreamer) brain.dream(dreamer).catch(err => console.error(new Date().toISOString(), "Dream failed (the day stays unfiled until next night):", err?.message || err)); } save(); }
     if (!sleepy && !st.awake) { st.awake = true; st.activity = "waking up"; st.nextThinkAt = now() + 5_000; note("Morning!", "woke up"); save(); }
     if (!st.awake && !st.path.length) st.activity = "sleeping";
     if (extra.building && st.awake && !/build/i.test(st.activity)) { st.activity = `making ${extra.building}`.slice(0, 60); }
