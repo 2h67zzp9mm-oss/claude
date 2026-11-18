@@ -313,6 +313,9 @@
     c.fillStyle = w === "pirate" ? p.wood : light(p.trim, 0.2); c.fillRect(WX + WW / 2 - 1.5, WY, 3, WH); c.fillRect(WX, WY + WH / 2 - 1.5, WW, 3);
     // curtains
     [[WX - T * 0.22, 1], [WX + WW + T * 0.22, -1]].forEach(([x, k]) => { c.beginPath(); c.moveTo(x, WY - T * 0.15); c.lineTo(x + k * T * 0.42, WY - T * 0.15); c.quadraticCurveTo(x + k * T * 0.12, WY + WH * 0.5, x + k * T * 0.3, WY + WH + T * 0.2); c.lineTo(x, WY + WH + T * 0.2); c.closePath(); fill(g, p.fabric, WY, WY + WH); });
+    // the open doorway between the two rooms (no door in it), and its mat
+    if (R.way) drawDoorway(g, R.way, R.wayMat);
+    if (R.back) { drawDoorway(g, R.door, R.mat); return; }
     // the door (out to the garden)
     const [dx, dw] = R.door, DX = sx(g, dx) + T * 0.3, DW = dw * T - T * 0.6, DH = T * 1.85, DY = g.fy - DH;
     c.beginPath(); if (w === "castle" || w === "night") { c.moveTo(DX - 3, g.fy); c.lineTo(DX - 3, DY + DW / 2); c.arc(DX + DW / 2, DY + DW / 2, DW / 2 + 3, Math.PI, 0); c.lineTo(DX + DW + 3, g.fy); c.closePath(); } else rr(c, DX - 3, DY - 3, DW + 6, DH + 3, radius(g, 0.08));
@@ -323,6 +326,19 @@
     c.fillStyle = p.accent; c.beginPath(); c.arc(DX + DW * 0.82, DY + DH * 0.55, T * 0.06, 0, 7); c.fill();
     // doormat
     const m = R.mat; rr(c, sx(g, m.x) + T * 0.2, sy(g, m.y) + T * 0.1, m.w * T - T * 0.4, m.h * T * g.K - T * 0.12, radius(g, 0.1)); fill(g, w === "scifi" ? "#5ef2d644" : "#8a6a4a", 0, 0);
+  }
+
+  // An open doorway into the room next door: a frame in the trim colour, a peek of the other room's wall and floor, and a mat.
+  function drawDoorway(g, [x0, w], mat) {
+    const c = g.c, p = g.pal, T = g.T, DX = sx(g, x0) + T * 0.3, DW = w * T - T * 0.6, DH = T * 1.85, DY = g.fy - DH, arch = g.world === "castle" || g.world === "night";
+    const shape = k => { c.beginPath(); if (arch) { c.moveTo(DX - k, g.fy); c.lineTo(DX - k, DY + DW / 2); c.arc(DX + DW / 2, DY + DW / 2, DW / 2 + k, Math.PI, 0); c.lineTo(DX + DW + k, g.fy); c.closePath(); } else rr(c, DX - k, DY - k, DW + 2 * k, DH + k, radius(g, 0.08)); };
+    shape(T * 0.1); fill(g, p.trim, DY, g.fy);
+    c.save(); shape(0); c.clip();
+    c.fillStyle = dark(p.wall, 0.22); c.fillRect(DX, DY, DW, DH);
+    c.fillStyle = dark(p.floor, 0.2); c.fillRect(DX, g.fy - DH * 0.28, DW, DH * 0.28);
+    c.fillStyle = "rgba(0,0,0,0.12)"; c.fillRect(DX, DY, DW * 0.18, DH);
+    c.restore();
+    rr(c, sx(g, mat.x) + T * 0.2, sy(g, mat.y) + T * 0.1, mat.w * T - T * 0.4, mat.h * T * g.K - T * 0.12, radius(g, 0.1)); fill(g, g.world === "scifi" ? "#5ef2d644" : light(p.fabric, 0.15), 0, 0);
   }
 
   // --- drawing a whole scene: shell, rugs, wall things, then furniture and people back to front ---
@@ -382,9 +398,14 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const V = () => host?.view()?.decor || { stock: [], storage: [], room: [] };
   const stars = () => host?.view()?.stars ?? 0;
+  // which room you're standing in: 1, or 2 once the family has the second room (through the doorway)
+  let which = 1;
+  const shapeOf = dc => DC.roomFor(dc?.big, dc?.second, which);
+  const itemsOf = dc => ((which === 2 ? dc?.room2 : dc?.room) || []).map(x => ({ ...x }));
+  const actHere = (action, msg) => host.act(action, { ...msg, ...(which === 2 ? { room: 2 } : {}) });
 
   function open(h) {
-    host = h; isOpen = true; mode = "look"; sel = null; drag = null; fx = []; R = DC.roomFor(V().big);
+    host = h; isOpen = true; mode = "look"; sel = null; drag = null; fx = []; which = 1; R = shapeOf(V());
     if (!canvas) {
       canvas = document.createElement("canvas"); canvas.className = "house-room";
       canvas.addEventListener("pointerdown", onDown); canvas.addEventListener("pointermove", onMove); canvas.addEventListener("pointerup", onUp); canvas.addEventListener("pointercancel", () => { drag = null; });
@@ -392,8 +413,16 @@
     }
     host.el.insertBefore(canvas, host.top); canvas.classList.remove("hidden");
     Object.assign(me, { x: 1, y: 0.8, dir: 0, path: [], moving: false });
-    items = V().room.map(x => ({ ...x }));
+    items = itemsOf(V());
     idle(); requestAnimationFrame(frame);
+  }
+  // walk through the doorway into the other room: you come out on its doormat
+  function goRoom(n) {
+    if (n === 2 && !V().second) return;
+    which = n; R = shapeOf(V()); items = itemsOf(V()); sel = null; drag = null; hideRing();
+    const mat = n === 2 ? R.mat : R.wayMat;
+    Object.assign(me, { x: mat.x + 1, y: 0.8, dir: 0, path: [], moving: false, then: null });
+    host.sfx?.pop(); refreshBar();
   }
   function close(silent) {
     if (!isOpen) return; isOpen = false; hideRing(); canvas?.classList.add("hidden");
@@ -401,9 +430,10 @@
   }
   function onState(view, result) {
     const pick = view?.decor?.art?.room; if (!URL_STYLE && Object.values(STYLES).includes(pick)) STYLE = pick;
-    R = DC.roomFor(view?.decor?.big);
+    if (which === 2 && !view?.decor?.second) which = 1;
+    R = shapeOf(view?.decor);
     if (!isOpen) return;
-    if (!drag) items = (view?.decor?.room || []).map(x => ({ ...x }));
+    if (!drag) items = itemsOf(view?.decor);
     if (sel && !items.some(i => i.uid === sel)) { sel = null; hideRing(); }
     if (result?.dreamBought) { host.sfx?.goal(); puff("🎉"); }
     else if (result?.dreamGoal) { host.sfx?.pop(); puff("🎯"); }
@@ -480,7 +510,7 @@
     const spot = DC.freeSpot(items, s.id, 0, R);
     if (!spot) return host.toast("No room! Put something away first.");
     if (barKind !== "decorate") decorate();
-    host.act("decorPlace", { uid, x: spot.x, y: spot.y, rot: spot.rot });
+    actHere("decorPlace", { uid, x: spot.x, y: spot.y, rot: spot.rot });
   }
 
   // --- the ring of buttons on the thing you picked ---
@@ -489,8 +519,8 @@
     const d = BY[it.id], b = boxOf(it), pop = host.pop;
     pop.className = "home-pop room-ring";
     pop.innerHTML = `<p class="home-title">${d.emoji} ${esc(d.name)}</p><div class="home-actions"><button data-k="turn" ${d.kind === "wall" ? "disabled" : ""}>↻ Turn</button><button data-k="store">📦 Store</button><button data-k="done">Done</button></div>`;
-    pop.querySelector('[data-k="turn"]').onclick = e => { e.stopPropagation(); host.act("decorRotate", { uid: it.uid }); host.sfx?.pop(); };
-    pop.querySelector('[data-k="store"]').onclick = e => { e.stopPropagation(); host.act("decorStore", { uid: it.uid }); sel = null; hideRing(); };
+    pop.querySelector('[data-k="turn"]').onclick = e => { e.stopPropagation(); actHere("decorRotate", { uid: it.uid }); host.sfx?.pop(); };
+    pop.querySelector('[data-k="store"]').onclick = e => { e.stopPropagation(); actHere("decorStore", { uid: it.uid }); sel = null; hideRing(); };
     pop.querySelector('[data-k="done"]').onclick = e => { e.stopPropagation(); sel = null; hideRing(); };
     const W = host.el.clientWidth, w = pop.offsetWidth, h = pop.offsetHeight, barTop = host.bar.offsetTop;
     const x = Math.max(8, Math.min(W - w - 8, (b.x0 + b.x1) / 2 - w / 2));
@@ -536,7 +566,7 @@
     if (dr.tap) return tap(dr);
     const it = items.find(i => i.uid === dr.uid); if (!it) return;
     if (!dr.moved) return showRing();
-    if (dr.ok && (it.x !== dr.from[0] || it.y !== dr.from[1])) { host.act("decorMove", { uid: it.uid, x: it.x, y: it.y }); host.sfx?.plant?.(); }
+    if (dr.ok && (it.x !== dr.from[0] || it.y !== dr.from[1])) { actHere("decorMove", { uid: it.uid, x: it.x, y: it.y }); host.sfx?.plant?.(); }
     else if (!dr.ok) { [it.x, it.y] = dr.from; host.toast("It doesn't fit there."); }
     showRing();
     void e;
@@ -544,8 +574,10 @@
   function tap(dr) {
     const [tx, ty] = tileAt(dr.px, dr.py);
     if (mode === "decorate") { sel = null; hideRing(); return; }
-    // the door: walk out to the garden
-    if (dr.py < G.fy && dr.py > G.fy - G.T * 1.9 && tx >= R.door[0] && tx < R.door[0] + R.door[1]) { walkTo(1, 0, () => close()); return; }
+    // the door: walk out to the garden (or, in the second room, back through to the first); the doorway: into the second room
+    const onWall = ([x0, w]) => dr.py < G.fy && dr.py > G.fy - G.T * 1.9 && tx >= x0 && tx < x0 + w;
+    if (onWall(R.door)) { if (!walkTo(R.mat.x + 1, 0, () => (R.back ? goRoom(1) : close()))) host.toast("Something is in the way!"); return; }
+    if (R.way && onWall(R.way)) { if (!walkTo(R.wayMat.x, 0, () => goRoom(2))) host.toast("Something is in the way!"); return; }
     if (dr.it) { const d = BY[dr.it.id]; float(`${d.emoji} ${d.name}`); host.sfx?.pop(); return; }
     if (tx >= 0 && tx < R.w && ty >= 0 && ty < R.d) walkTo(Math.floor(tx), Math.floor(ty));
   }
@@ -553,13 +585,14 @@
   function walkTo(gx, gy, then) {
     const block = new Set(); for (const it of items) { const d = BY[it.id]; if (d.kind !== "floor") continue; const f = DC.footprint(d, it.rot || 0); for (let x = it.x; x < it.x + f.w; x++) for (let y = it.y; y < it.y + f.h; y++) block.add(x + "," + y); }
     const start = [Math.max(0, Math.min(R.w - 1, Math.floor(me.x))), Math.max(0, Math.min(R.d - 1, Math.floor(me.y)))], key = (x, y) => x + "," + y;
-    if (block.has(key(gx, gy))) return;
+    if (block.has(key(gx, gy))) return false;
     const prev = new Map([[key(...start), null]]), q = [start];
     while (q.length) { const [x, y] = q.shift(); if (x === gx && y === gy) break; for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + ax, ny = y + ay, k = key(nx, ny); if (nx < 0 || ny < 0 || nx >= R.w || ny >= R.d || block.has(k) || prev.has(k)) continue; prev.set(k, [x, y]); q.push([nx, ny]); } }
-    if (!prev.has(key(gx, gy))) return;
+    if (!prev.has(key(gx, gy))) return false;
     const path = []; for (let c = [gx, gy]; c && key(...c) !== key(...start); c = prev.get(key(...c))) path.unshift({ x: c[0] + 0.5, y: c[1] + 0.55 });
     if (!path.length) path.push({ x: gx + 0.5, y: gy + 0.55 });
     me.path = path; me.then = then || null;
+    return true;
   }
   function step(dt) {
     let budget = 3.4 * dt; me.moving = false;
@@ -604,7 +637,7 @@
       }
       fx = fx.filter(f => t - f.at < 1400);
       for (const f of fx) { const k = (t - f.at) / 1400; ctx.globalAlpha = Math.min(1, (1 - k) * 2); ctx.textAlign = "center"; ctx.font = f.big ? `${40 + 20 * k}px system-ui` : "800 16px system-ui"; if (!f.big) { ctx.lineWidth = 4; ctx.strokeStyle = "#000a"; ctx.strokeText(f.text, f.x, f.y - k * 40); ctx.fillStyle = "#fff"; } ctx.fillText(f.text, f.x, f.y - k * 60); ctx.globalAlpha = 1; }
-      const topHtml = `<b>🏠 Inside</b><span class="home-right"><span class="home-stars">⭐ ${stars()}</span></span>`;
+      const topHtml = `<b>${which === 2 ? "🚪 Room 2" : "🏠 Inside"}</b><span class="home-right"><span class="home-stars">⭐ ${stars()}</span></span>`;
       if (host.top.dataset.html !== topHtml) { host.top.innerHTML = topHtml; host.top.dataset.html = topHtml; }
     } catch (err) { console.error(err); }
   }
@@ -619,6 +652,6 @@
   window.LivingTownRoom = {
     open, close, onState, paint, STYLES,
     get isOpen() { return isOpen; },
-    _test: { room: () => R, items: () => items, sel: () => sel, mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
+    _test: { room: () => R, which: () => which, goRoom, items: () => items, sel: () => sel, mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
   };
 })();

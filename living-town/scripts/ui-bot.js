@@ -31,7 +31,7 @@ const SCREENS = [
   ["idle", []], ["goals", ["Goals"]], ["story", ["Goals", "Story"]], ["build", ["Goals", "Build"]], ["book", ["Goals", "Book"]], ["level", ["Goals", "Level"]],
   ["pets", ["Pets"]], ["bag", ["Bag"]], ["look", ["Look"]], ["world", ["World"]], ["house", ["World", "Pick house"]],
   ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]], ["shop", ["pop:crate", "Seed shop"]],
-  ["pop-door", ["pop:door"]], ["room-up", ["pop:door", "Big room"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]],
+  ["pop-door", ["pop:door"]], ["room-up", ["pop:door", "Big room"]], ["room-new", ["pop:door", "New room"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]],
   // a saving goal: tap a dream thing in the house shop, then the Goals panel has a have/need row for it
   ["room-shop-goal", ["pop:door", "Go inside", "Shop", "Sparkle Fountain"]], ["goals-saving", ["Goals"]]
 ];
@@ -186,7 +186,7 @@ async function main() {
     } else problem("goal-cheer", "could not open Goals");
     // The bigger room (bought at the house door): pretend the family has it, go inside, and measure that the whole
     // room still sits between the top and the bottom panel with tiles big enough to tap, under every room menu.
-    await run(`(() => { const D = window.LivingTownDecor; D.roomFor = () => D.BIG_ROOM; })()`);
+    await run(`(() => { const D = window.LivingTownDecor; D._roomFor ||= D.roomFor; D.roomFor = () => D.BIG_ROOM; })()`);
     for (const [name, steps] of [["room-big", ["pop:door", "Go inside"]], ["room-big-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-big-shop", ["pop:door", "Go inside", "Shop"]]]) {
       const miss = await run(`window.__ui.open(${JSON.stringify(steps)})`);
       if (miss) { problem(name, miss === "missing" ? "could not get into the room" : miss); continue; }
@@ -201,6 +201,39 @@ async function main() {
       if (m.left < -0.5 || m.right > W + 0.5) problem(name, "the room runs off the side of the screen");
       if (m.T < 24) problem(name, `the floor tiles are only ${Math.round(m.T)}px wide (too small to tap)`);
       report.screens.push({ screen: name, bad: a.bad, text: `${Math.round(m.T)}px tiles, floor ends ${Math.round(m.barTop - m.floorBottom)}px above the panel` });
+    }
+    // The second room (bought at the house door): pretend the family has it, go inside, tap the doorway at the right of
+    // the back wall, and check you walk into Room 2, that it fits the phone under its menus, and that its door leads back.
+    await run(`(() => { const D = window.LivingTownDecor; if (D._roomFor) D.roomFor = D._roomFor; })()`);
+    {
+      const fake = `(() => { const H = window.LivingTownHome, v = H._test.view(); H.onState({ home: { ...v, decor: { ...v.decor, second: true, room2: v.decor.room2 || [] } } }); })()`;
+      const tapWall = x => `(() => { const R = window.LivingTownRoom._test, c = document.querySelector("canvas.house-room"), q = c.getBoundingClientRect(), [sx, sy] = R.screenOf(${x}, 0), [x1] = R.screenOf(${x + 1}, 0), T = x1 - sx;
+        const at = { clientX: q.left + sx, clientY: q.top + sy - T, pointerId: 1, bubbles: true }; c.dispatchEvent(new PointerEvent("pointerdown", at)); c.dispatchEvent(new PointerEvent("pointerup", at)); })()`;
+      const where = `(() => { const R = window.LivingTownRoom._test; return { which: R.which(), top: document.querySelector(".home-top").innerText, open: window.LivingTownRoom.isOpen }; })()`;
+      let miss = await run(`window.__ui.open(["pop:door", "Go inside"])`);
+      if (!miss) { await run(fake); await sleep(300); if (!await run(`!!window.LivingTownRoom._test.room().way`)) miss = "the first room has no doorway once the family has the second room"; }
+      if (!miss) { await run(tapWall(7.5)); let at = null; for (let i = 0; i < 30 && at?.which !== 2; i++) { await sleep(250); at = await run(where); } if (at?.which !== 2) miss = "tapping the doorway did not walk you into Room 2"; else if (!at.top.includes("Room 2")) miss = "the top does not say Room 2"; }
+      if (miss) problem("room-2", miss);
+      else {
+        for (const [name, steps] of [["room-2", []], ["room-2-decorate", ["Decorate"]], ["room-2-shop", ["Shop"]]]) {
+          for (const s of steps) await run(`[...document.querySelectorAll(".home-bar button")].find(b => b.innerText.includes(${JSON.stringify(s)}))?.click()`);
+          await sleep(500);
+          const a = await run("window.__ui.audit()"); for (const b of a.bad) problem(name, b);
+          const m = await run(`(() => { const R = window.LivingTownRoom._test, r = R.room(), c = document.querySelector("canvas.house-room").getBoundingClientRect(), [x0, y0] = R.screenOf(0, 0), [x1, y1] = R.screenOf(r.w, r.d), T = (x1 - x0) / r.w;
+            return { back: r.back === true, T, left: c.left + x0, right: c.left + x1, wallTop: c.top + y0 - 2.5 * T, floorBottom: c.top + y1, barTop: document.querySelector(".home-bar").getBoundingClientRect().top, topBottom: document.querySelector(".home-top").getBoundingClientRect().bottom }; })()`);
+          await shot(name);
+          if (!m.back) problem(name, "this is not the second room");
+          if (m.floorBottom > m.barTop + 0.5) problem(name, `the floor runs ${Math.round(m.floorBottom - m.barTop)}px under the bottom panel`);
+          if (m.wallTop < m.topBottom - 0.5) problem(name, "the back wall runs under the top display");
+          if (m.left < -0.5 || m.right > W + 0.5) problem(name, "the room runs off the side of the screen");
+          report.screens.push({ screen: name, bad: a.bad, text: a.text });
+          if (steps.length) await run(`[...document.querySelectorAll(".home-bar button")].find(b => b.innerText.trim() === "Back")?.click()`);
+        }
+        await sleep(300); await run(tapWall(0.5)); let at = null;
+        for (let i = 0; i < 30 && at?.which !== 1; i++) { await sleep(250); at = await run(where); }
+        if (at?.which !== 1 || !at.open) problem("room-2", "Room 2's door does not lead back into the first room");
+      }
+      await run("window.__ui.home()");
     }
     for (const e of [...new Set(errors)]) problem("page", "script error: " + e);
   } catch (err) { problem("ui-bot", String(err.message || err)); }

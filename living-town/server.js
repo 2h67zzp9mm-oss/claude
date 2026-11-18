@@ -1144,7 +1144,7 @@ function validateClientMessage(raw) {
   }
   if (msg.type === "home") {
     // The home plot (lib/homestead.js): only known actions and plain fields get through.
-    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "give", "giveStars", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName", "till", "dig", "decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick", "dreamGoal", "roomUpgrade"];
+    const HOME = ["view", "enter", "pos", "leave", "plant", "water", "harvest", "fish", "sell", "buy", "mail", "upgrade", "world", "house", "give", "giveStars", "petStart", "treat", "petFeed", "petBuy", "petActive", "petName", "till", "dig", "decorBuy", "decorPlace", "decorMove", "decorRotate", "decorStore", "artPick", "dreamGoal", "roomUpgrade", "roomAdd"];
 
     if (!HOME.includes(msg.action)) return null;
     const word = v => typeof v === "string" && v.length <= 32 ? v : undefined;
@@ -1153,7 +1153,7 @@ function validateClientMessage(raw) {
       x: num(msg.x), y: num(msg.y), dir: num(msg.dir), moving: msg.moving === true,
       species: word(msg.species), color: word(msg.color), spot: Number.isInteger(msg.spot) ? msg.spot : undefined,
       id: msg.id === null ? null : Number.isInteger(msg.id) ? msg.id : undefined, name: typeof msg.name === "string" ? msg.name.slice(0, 40) : undefined,
-      item: word(msg.item), n: Number.isInteger(msg.n) && msg.n > 0 && msg.n <= 20 ? msg.n : undefined, uid: Number.isInteger(msg.uid) ? msg.uid : undefined, rot: Number.isInteger(msg.rot) ? msg.rot : undefined, key: word(msg.key) };
+      item: word(msg.item), n: Number.isInteger(msg.n) && msg.n > 0 && msg.n <= 20 ? msg.n : undefined, uid: Number.isInteger(msg.uid) ? msg.uid : undefined, rot: Number.isInteger(msg.rot) ? msg.rot : undefined, key: word(msg.key), room: msg.room === 2 ? 2 : undefined };
   }
   return null;
 }
@@ -1455,7 +1455,7 @@ function handleHome(ws, msg) {
   if (!r) return send(ws, { type: "home-state", error: "Your resident is unavailable." });
   const now = Date.now(), id = householdOf(r);
   const result = msg.action === "view" || msg.action === "enter" ? { ok: true, quiet: msg.action === "view" } : homestead.act(state, id, r, msg, now);
-  if (msg.action === "sell" || msg.action === "buy" || msg.action === "decorBuy" || msg.action === "roomUpgrade") r.lifeRevision = (r.lifeRevision || 0) + 1;
+  if (msg.action === "sell" || msg.action === "buy" || msg.action === "decorBuy" || msg.action === "roomUpgrade" || msg.action === "roomAdd") r.lifeRevision = (r.lifeRevision || 0) + 1;
   if (msg.action === "enter") { r.activity = "out in the garden at home"; r.lifeRevision = (r.lifeRevision || 0) + 1; }
   if (result.quiet && !["pos", "view"].includes(msg.action)) return;
   const { quiet, ...rest } = result;

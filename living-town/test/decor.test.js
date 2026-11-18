@@ -140,6 +140,7 @@ test("decor: the server lets every house action through", () => {
   const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "server.js"), "utf8");
   const list = src.match(/const HOME = \[[^\]]*\]/)?.[0] || "";
   for (const a of Decor.ACTIONS) assert.ok(list.includes(`"${a}"`), `${a} is allowed by the server`);
+  assert.match(src, /room: msg\.room === 2 \? 2 : undefined/, "the server passes on which room a thing is in");
 });
 
 test("decor: a saving goal: pick a dream thing, watch have/need fill up, and it clears when the family gets it", () => {
@@ -256,4 +257,59 @@ test("decor: the bigger room costs 1,000⭐ once, adds floor for the whole famil
   assert.equal(D.freeSpot(full, "chair"), null, "a full small room has no spot");
   assert.deepEqual(D.freeSpot(full, "chair", 0, D.BIG_ROOM), { x: 0, y: 7, rot: 0 }, "the bigger room has the new rows");
   assert.equal(D.roomFor(true), D.BIG_ROOM); for (const v of [false, undefined, null, 1, "true"]) assert.equal(D.roomFor(v), D.ROOM);
+});
+
+test("decor: the second room costs 2,500⭐ once, has a doorway from the first room, and keeps its own things", () => {
+  const hs = createHomestead();
+  const me = { id: "dad", name: "Sean", stars: 2000 }, kid = { id: "olive", name: "Olive", stars: 0 }, state = { residents: [me, kid] };
+  const now = Date.parse("2026-11-18T10:00:00"), act = (who, m) => hs.act(state, "home-1", who, m, now), decor = who => hs.view(state, "home-1", who, now).decor;
+  assert.deepEqual([decor(me).second, decor(me).secondPrice, decor(me).room2], [false, 2500, undefined], "an old save has one room");
+  // things standing where the doorway will go
+  for (const item of ["chair", "chair", "pic_flower", "plant"]) act(me, { action: "decorBuy", item });
+  const [c1, c2, pic, plant] = decor(me).storage.map(s => s.uid);
+  assert.equal(act(me, { action: "decorPlace", uid: c1, x: 7, y: 0 }).ok, true);
+  assert.equal(act(me, { action: "decorPlace", uid: c2, x: 8, y: 3 }).ok, true);
+  assert.equal(act(me, { action: "decorPlace", uid: pic, x: 8, y: 0 }).ok, true);
+  // asking for room 2 before having it is just the first room
+  assert.equal(act(me, { action: "decorPlace", uid: plant, x: 4, y: 4, room: 2 }).ok, true);
+  assert.ok(decor(me).room.some(t => t.uid === plant)); act(me, { action: "decorStore", uid: plant });
+  // not enough stars: nothing changes
+  const no = act(me, { action: "roomAdd" });
+  assert.equal(no.ok, false); assert.match(no.toast, /2500⭐/); assert.equal(me.stars, 2000 - 12 * 2 - 16 - 14); assert.equal(decor(me).second, false);
+  me.stars = 3000;
+  const yes = act(me, { action: "roomAdd" });
+  assert.deepEqual([yes.ok, yes.roomAdded, yes.moved, me.stars], [true, true, 2, 500]);
+  assert.match(yes.toast, /Stored/);
+  assert.deepEqual(decor(me).room.map(t => t.uid), [c2], "only the things in the doorway were put away");
+  assert.ok([c1, pic].every(u => decor(me).storage.some(s => s.uid === u)), "they're in the box");
+  assert.deepEqual([decor(kid).second, decor(kid).room2], [true, []], "the whole family gets it, empty to start");
+  me.stars = 9000; assert.equal(act(me, { action: "roomAdd" }).ok, false, "only once"); assert.equal(me.stars, 9000);
+  // the doorway and its mat stay clear in the first room
+  assert.equal(act(me, { action: "decorPlace", uid: c1, x: 8, y: 0 }).ok, false, "nothing on the doorway's mat");
+  assert.equal(act(me, { action: "decorPlace", uid: pic, x: 7, y: 0 }).ok, false, "nothing hung in the doorway");
+  // the second room keeps its own things: place, move, store
+  assert.equal(act(kid, { action: "decorPlace", uid: c1, x: 8, y: 0, room: 2 }).ok, true, "the second room's corner is free");
+  assert.equal(act(kid, { action: "decorPlace", uid: plant, x: 0, y: 0, room: 2 }).ok, false, "its doormat stays clear");
+  assert.equal(act(kid, { action: "decorPlace", uid: plant, x: 4, y: 6, room: 2 }).ok, true);
+  assert.equal(act(kid, { action: "decorPlace", uid: pic, x: 7, y: 0, room: 2 }).ok, true, "the second room's back wall has no doorway there");
+  assert.equal(act(kid, { action: "decorMove", uid: plant, x: 5, y: 6, room: 2 }).ok, true);
+  assert.equal(act(kid, { action: "decorMove", uid: plant, x: 5, y: 7, room: 2 }).ok, false, "the second room is the small room's size");
+  assert.equal(act(kid, { action: "decorMove", uid: plant, x: 5, y: 5 }).ok, false, "a thing in room 2 isn't found from room 1");
+  assert.deepEqual(decor(me).room2.map(t => t.uid).sort(), [c1, plant, pic].sort());
+  assert.deepEqual(decor(me).room.map(t => t.uid), [c2]);
+  assert.equal(act(kid, { action: "decorStore", uid: plant, room: 2 }).ok, true);
+  assert.ok(decor(me).storage.some(s => s.uid === plant));
+  // new things never reuse a number from the second room
+  act(me, { action: "decorBuy", item: "chair" });
+  const uids = [...decor(me).storage, ...decor(me).room, ...decor(me).room2].map(t => t.uid);
+  assert.equal(new Set(uids).size, uids.length);
+  // another family still has one room; an odd saved value is one room, never a crash
+  assert.equal(hs.view(state, "home-2", me, now).decor.second, false);
+  for (const bad of [null, 1, "yes", {}, []]) { state.homesteads["home-1"].secondRoom = bad; assert.equal(decor(me).second, false); assert.equal(decor(me).room2, undefined); }
+  state.homesteads["home-1"].secondRoom = true; state.homesteads["home-1"].rooms2 = "junk";
+  assert.deepEqual(decor(me).room2, []);
+  // the shared shapes: the first room gets the doorway (bigger or not), the second room's door leads back
+  const D = require("../shared/decor");
+  assert.equal(D.roomFor(false, true).way[0], 7); assert.equal(D.roomFor(true, true).d, 11); assert.equal(D.roomFor(true, true).way[0], 7);
+  assert.equal(D.roomFor(true, true, 2), D.ROOM2); assert.equal(D.ROOM2.back, true); assert.equal(D.ROOM2.d, 7); assert.equal(D.roomFor(true).way, undefined);
 });

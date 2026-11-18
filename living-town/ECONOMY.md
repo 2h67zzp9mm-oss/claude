@@ -52,6 +52,7 @@ About **4305⭐ spare a day**, 30132⭐ in the week.
 | Garden upgrade to 12 beds | 60⭐ | under a day | under a day |
 | Garden upgrade to 16 beds | 120⭐ | under a day | under a day |
 | Bigger room in the house, once | 1000⭐ | 5 days to save | under a day |
+| Second room in the house, once | 2500⭐ | 12 days to save | under a day |
 
 ## The check
 

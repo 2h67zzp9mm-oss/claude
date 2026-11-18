@@ -20,7 +20,15 @@
   // (Deeper, not wider, so the tiles stay the same size on a phone.) Every house the family has gets it.
   const BIG_ROOM = { ...ROOM, d: 11 };
   const BIG_ROOM_PRICE = 1000;
-  const roomFor = big => (big === true ? BIG_ROOM : ROOM);
+  // The second room a family can save up for: once they have it, the first room gets an open doorway at the right of
+  // its back wall (with its own mat, so it's never blocked), and walking through it leads into the second room.
+  // The second room is the small room's size; its door (on the left, like the first room's) leads back.
+  const WAY = { way: [7, 2], wayMat: { x: 7, y: 0, w: 2, h: 1 } };
+  const ROOM_WAY = { ...ROOM, ...WAY }, BIG_ROOM_WAY = { ...BIG_ROOM, ...WAY };
+  const ROOM2 = { ...ROOM, back: true };
+  const ROOM2_PRICE = 2500;
+  /** The room to use: big (the family bought the bigger room), second (they bought the second room), which (1 or 2). */
+  const roomFor = (big, second = false, which = 1) => (which === 2 ? ROOM2 : second === true ? (big === true ? BIG_ROOM_WAY : ROOM_WAY) : big === true ? BIG_ROOM : ROOM);
 
   const T = (id, name, emoji, price, w, h, kind = "floor", worlds = "all", extra = {}) => ({ id, name, emoji, price, w, h, kind, worlds, ...extra });
   const CATALOG = [
@@ -109,9 +117,9 @@
     if (box.x < 0 || box.y < 0 || box.x + f.w > ROOM.w) return false;
     if (d.kind === "wall") {
       if (y !== 0) return false;
-      for (const [x0, w] of [ROOM.door, ROOM.window]) if (hit(box, { x: x0, y: 0, w, h: 1 })) return false;
+      for (const [x0, w] of [ROOM.door, ROOM.window, ROOM.way].filter(Boolean)) if (hit(box, { x: x0, y: 0, w, h: 1 })) return false;
     } else {
-      if (box.y + f.h > ROOM.d || hit(box, ROOM.mat)) return false;
+      if (box.y + f.h > ROOM.d || hit(box, ROOM.mat) || (ROOM.wayMat && hit(box, ROOM.wayMat))) return false;
     }
     for (const it of items || []) {
       const o = BY_ID[it.id]; if (!o || it.uid === skip) continue;
@@ -128,5 +136,5 @@
     return null;
   }
 
-  return { ROOM, BIG_ROOM, BIG_ROOM_PRICE, roomFor, CATALOG, BY_ID, inWorld, shopToday, dreams, footprint, fits, freeSpot };
+  return { ROOM, BIG_ROOM, BIG_ROOM_PRICE, ROOM2, ROOM2_PRICE, roomFor, CATALOG, BY_ID, inWorld, shopToday, dreams, footprint, fits, freeSpot };
 });

@@ -435,6 +435,13 @@
     setBar(`<span class="home-goals home-roomup"><span class="home-head"><b>🏗️ Bigger room</b><small>You have ${view.stars}⭐</small></span>${row("🏠", can ? "You can build it!" : "More floor for your things", `${meter(view.stars, need)}<small>${Math.min(view.stars, need)}/${need}⭐</small>`, can)}</span>`,
       [{ label: `🏗️ Build it ${need}⭐`, big: can, off: !can, go: () => act("roomUpgrade") }, { label: "Back", go: idleBar }]);
   }
+  // A second room to save up for (from the house door), with a doorway to walk between the two. Same panel as the bigger room.
+  function roomTwoBar() {
+    const dc = view?.decor; if (!dc || dc.second) return idleBar();
+    const need = dc.secondPrice || 2500, can = view.stars >= need;
+    setBar(`<span class="home-goals home-roomtwo"><span class="home-head"><b>🚪 New room</b><small>You have ${view.stars}⭐</small></span>${row("🚪", can ? "You can build it!" : "A room next door", `${meter(view.stars, need)}<small>${Math.min(view.stars, need)}/${need}⭐</small>`, can)}</span>`,
+      [{ label: `🚪 Build it ${need}⭐`, big: can, off: !can, go: () => act("roomAdd") }, { label: "Back", go: idleBar }]);
+  }
   // What a seed costs, what its crop pays back and how long it takes: "12⭐ → 55⭐ · 8h".
   const growTime = m => m < 60 ? `${m}m` : `${Math.round(m / 6) / 10}h`.replace(".0h", "h");
   const payback = k => { const c = view.crops[k]; return `${c.seed}⭐ → ${c.sell * (c.yield || 1)}⭐ · ${growTime(c.minutes)}`; };
@@ -494,7 +501,7 @@
         { label: "🧺 Sell some", off: !n, go: sellBar }, { label: "🛒 Seed shop", go: shopBar }, { label: "Done", go: idleBar }]);
     }
     if (t.kind === "mailbox") return setBar(view.mail ? "✉️ You've got mail!" : "No new mail today.", [{ label: "✉️ Open", big: view.mail, go: () => act("mail") }, { label: "Done", go: idleBar }]);
-    if (t.kind === "door") return setBar("Your house", [{ label: "🏠 Go inside", big: true, go: goInside }, ...(view?.decor && !view.decor.big ? [{ label: "🏗️ Big room", go: roomUpBar }] : []), { label: "🏘️ Town home", go: () => opts.openHouse() }, { label: "Done", go: idleBar }]);
+    if (t.kind === "door") return setBar("Your house", [{ label: "🏠 Go inside", big: true, go: goInside }, ...(view?.decor && !view.decor.big ? [{ label: "🏗️ Big room", go: roomUpBar }] : []), ...(view?.decor && !view.decor.second ? [{ label: "🚪 New room", go: roomTwoBar }] : []), { label: "🏘️ Town home", go: () => opts.openHouse() }, { label: "Done", go: idleBar }]);
     if (t.kind === "exit") return setBar("The path to town", [{ label: "🏘️ Walk to town", big: true, go: close }, { label: "Stay", go: idleBar }]);
     idleBar();
   }
@@ -603,7 +610,9 @@
     if (view.house) houseId = view.house;
     window.LivingTownRoom?.onState(view, msg.result);
     if (msg.result?.roomUpgraded) { banner("🎉 Your room is bigger!<br>🏠 Go inside and look", "big"); SFX.goal(); idleBar(); }
+    else if (msg.result?.roomAdded) { banner("🎉 You have a new room!<br>🚪 Go inside and walk through the doorway", "big"); SFX.goal(); idleBar(); }
     else if (bar.querySelector(".home-roomup")) roomUpBar();   // keep the stars on the Bigger room panel fresh
+    else if (bar.querySelector(".home-roomtwo")) roomTwoBar();
     const sg = view.decor?.goal;   // cheer once when you've saved enough for your dream thing
     if (sg?.ready && cheered !== sg.id) { banner(`🎉 You saved enough!<br>${sg.emoji} <b>${esc(sg.name)}</b> is in your house 🛒 Shop`, "big"); SFX.goal(); if (bar.querySelector(".home-today")) goalsBar(); }
     cheered = sg?.ready ? sg.id : null;

@@ -41,6 +41,9 @@ like a finished game, not a web page.
 - The bigger room (`🏗️ Big room` on the house door, until the family has it) is one panel: a `have/need⭐` row with a
   meter, and `🏗️ Build it 1000⭐`, which is the green button only once you have enough. The bigger room is deeper, never
   wider, so floor tiles stay the same size on a phone.
+- The second room (`🚪 New room` on the house door, until the family has it) is the same kind of panel, with
+  `🚪 Build it 2500⭐`. Inside, an open doorway at the right of the back wall leads to it (tap it to walk through);
+  the top says `🚪 Room 2` there, and its door on the left leads back. Same bottom bar in both rooms.
 - A new menu reuses these. If it truly needs a new piece, add it once in `public/map.css` and list it here.
 - Progress is always shown the same way: `have/need` in small text, plus a meter when there's room.
 - Rewards are always written `+N⭐` (and `🍪` for treats). Prices and what you have are `N⭐`, no space.

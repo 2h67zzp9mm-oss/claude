@@ -8,16 +8,13 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **Big things to save up for, part 3b: a second room** (M): a second room at 2,500⭐, bought from the house door
-   like the bigger room (`🏗️ Big room`), with a doorway to walk between the two. Saves stay safe (old houses have one
-   room until upgraded). Split off from part 3 on 2026-11-17: the bigger room is done.
-2. **The room fills the screen** (M): the inside of the house uses the whole space between the top and the bottom panel
+1. **The room fills the screen** (M): the inside of the house uses the whole space between the top and the bottom panel
    on a phone, in all three styles (clay, storybook, pixel). Room bot still passes.
-3. **Family inside the house** (M): other family members who are at home show up walking around the room.
-4. **Glint's chosen name in the menu** (S): when Glint has picked his own name, World → "◈ Glint's Grid" uses it.
-5. **Grid "🎯 Centre" button wraps** (S): it fits on one line at 390 px.
-6. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
-7. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
+2. **Family inside the house** (M): other family members who are at home show up walking around the room.
+3. **Glint's chosen name in the menu** (S): when Glint has picked his own name, World → "◈ Glint's Grid" uses it.
+4. **Grid "🎯 Centre" button wraps** (S): it fits on one line at 390 px.
+5. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
+6. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
 
 ## Ideas (need Sean's OK before they move up)
 - Kids can talk to Glint in the Grid (owner only right now).
@@ -35,8 +32,16 @@ Up next: split it first.
 - The UI bot didn't notice a round pop-up button whose words were cut off with "…" ("Bigger ro…" on the door, fixed
   by a shorter name). Its check for cut-off ring words needs mending.
 - Hazel looks over the nine dream drawings (they were checked by a test, not by eye) and picks any to redo.
+- The second room is always the small room's size (the bigger room only makes the first room deeper). Maybe the
+  bigger room should make both rooms deeper, or the second room could get its own upgrade later.
+- Hazel could pick a look for the open doorway between rooms (it's a plain frame in the wall's trim colour for now).
 
 ## Done
+- 2026-11-18 A second room (part 3b of house upgrades): tap the house door, then `🚪 New room`, for a have/need meter
+  and `🚪 Build it 2500⭐`. Once built, every house the family has gets an open doorway at the right of the back wall;
+  tap it to walk into `🚪 Room 2` (its own things, same shop, box and decorate mode), and its door walks you back.
+  Anything standing in the new doorway is put in 📦 Stored. Old saves keep one room. A new test covers it, the UI bot
+  checks the panel in every world and walks through the doorway and back, and ECONOMY.md lists it (12 days to save).
 - 2026-11-17 A bigger room (part 3a of house upgrades): tap the house door, then `🏗️ Big room`, to see a have/need
   meter and `🏗️ Build it 1000⭐`. It adds four more rows of floor (9 by 11 instead of 9 by 7) to the family's house in
   every world, bought once; nothing already placed moves, and old saves keep the small room until it's bought. The UI
