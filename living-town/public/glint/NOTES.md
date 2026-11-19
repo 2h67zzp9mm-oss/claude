@@ -59,18 +59,25 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   (a stub that defers to another file is fine). The failed "hedge" build put a hedge on the map without a drawing.
 - things.js is ~60 KB: new kinds go in things-*.js files (script tag in index.html after things.js) with a stub in things.js.
 
-## Bakery (build 20, 2026-11-18)
+## Bakery (build 20)
 - `kind: "bakery"` at (16,21) r 1.3, drawn by things-bakery.js (stub `bakery() {}` in things.js, overwritten on load).
   Three-quarter view: front gable faces south, east wall visible with the amber window; light fan spills east on the ground.
   Brightens when tapped (3.5 s) or a walker is within ~1.8 tiles of (16.6,21.9). Name board in the gable, striped awning, split door.
-- `th.oven: true` lights the oven (chimney puffs + flickering oven mouth seen through the window) - not set yet; that's the next step.
-- Map: moss (15-17, 20-21); new east road "p" (12-20, 22) from the foot of Lantern Street past the bakery door.
-- Updater log 2026-11-18: build 19 tests passed locally; the updater refused origin because history was rewritten
-  ("isn't a fast-forward from 12f06c4"). That's outside this folder; nothing to fix in the Grid's files.
+- Map: moss (15-17, 20-21); east road "p" (12-20, 22) from the foot of Lantern Street past the bakery door.
+
+## Stone Oven (build 21, 2026-11-18)
+- Bakery has `oven: true`. things-bakery.js draws a domed stone oven (gold-rimmed arched mouth, keystone gem, flue, dancing
+  flame tongues, ember bed) inside the east window, clipped to the glass. Window enlarged to U 0.12-0.9, V 0.24s-0.84s;
+  a transom at V0+0.4s, mullion only above it so the oven shows whole. Fire kindles up over the first ~3 s after load.
+- `kind: "oven"` at (17,21), `flat`, r 0.5, name "Stone Oven": a tap spot only (stub `oven() {}` in things.js). Its `tapped`
+  makes the fire roar (4 s): brighter window/fan, spark shower from the chimney. `?pose=roar` holds that.
+- glint-look must run on its own: piping it (`| grep`) silently keeps the OLD .look/grid.png (check the "N built" count).
+- Updater log: still "isn't a fast-forward from 12f06c4" - the live checkout is on commit 12f06c4 (branch
+  kindle-warnings-and-weather: grid-weather.js etc.), which the main branch doesn't contain. Needs merging outside this folder.
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
 - Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, third house (pink roof), more stars over the square.
-- Bakery: light the oven (`oven: true`), bread on the shelf, a table and a lamp by the east road.
+- Bakery: bread on the shelf (left upper pane, line at V0+0.44s), a bread basket by the door, a table and a lamp by the east road.

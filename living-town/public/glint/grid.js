@@ -52,6 +52,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
       th.roomK = POSE === "inside" ? 1 : Math.max(0, Math.min(1, (th.roomK || 0) + (want ? dt : -dt) * 1.8));
     }
     if (POSE === "welcome") for (const th of W.things) if (th.kind === "mat" || th.kind === "arch") th.tapped = t - (th.kind === "arch" ? 2.2 : 0.8);   // holds the mat's ring of light
+    if (POSE === "roar") for (const th of W.things) if (th.kind === "oven") th.tapped = t - 1.6;   // holds the oven's fire at its brightest
     if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;
     if (POSE === "shine") for (const th of W.things) if (th.kind === "coatstand") th.tapped = t - 1;   // holds the coat at its brightest   // holds the glow-bees in their ring dance
     for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it

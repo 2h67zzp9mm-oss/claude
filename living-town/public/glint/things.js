@@ -220,6 +220,7 @@
   window.GLINT_THINGS = {
     stars() {},   // the hanging stars are drawn over everything, by GLINT_OVER.stars
     bakery() {},  // the bakery is drawn by things-bakery.js, which replaces this
+    oven() {},    // the stone oven is drawn inside the bakery's window by things-bakery.js; this is just its tap spot
     home(ctx, x, y, s, t, th = {}) {
       const b = y + s * 0.45, w = s * 1.15, h = s * 1.25;           // b = ground line
       shadow(ctx, x, b, w * 1.15, s * 0.28);
