@@ -42,10 +42,18 @@
   const radius = (g, k = 0.14) => g.style === "pixel" ? 0 : g.style === "story" ? g.T * 0.06 : g.T * k;
 
   // --- the room's screen layout: tiles across, a squashed floor, heights going up ---
+  // The room fills the space it's given: tiles are as wide as the screen allows, then any height left over first opens
+  // the floor up (less squashed, so tiles are taller to tap) and then makes the back wall taller (a high ceiling: the
+  // window, door and wall things stay at the same height above the floor).
   function layout(cw, top, bottom, scale = 1, cap = 48) {
-    const K = 0.64, wallH = 2.5, side = 0.42, slab = 0.3;
-    const T = Math.min(cap, (cw - 16) / (R.w + side * 2), (bottom - top) / (wallH + R.d * K + slab + 0.2)) * scale;
-    const roomH = (wallH + R.d * K + slab) * T, y0 = top * scale + Math.max(0, ((bottom - top) * scale - roomH) / 2);
+    const side = 0.42, slab = 0.3, H = bottom - top;
+    let K = 0.64, wallH = 2.5;
+    const t1 = Math.min(cap, (cw - 16) / (R.w + side * 2), H / (wallH + R.d * K + slab + 0.2));
+    let spare = Math.max(0, H / t1 - (wallH + R.d * K + slab + 0.2));
+    const dk = Math.min(0.9 - K, spare / R.d); K += dk; spare -= dk * R.d;
+    wallH += spare;
+    const T = t1 * scale;
+    const roomH = (wallH + R.d * K + slab) * T, y0 = top * scale + Math.max(0, (H * scale - roomH) / 2);
     return { T, K, Z: T * 0.85, wallH, side, slab, ox: (cw * scale - R.w * T) / 2, fy: y0 + wallH * T, y0 };
   }
   const sx = (g, x) => g.ox + x * g.T, sy = (g, y) => g.fy + y * g.T * g.K;
@@ -300,7 +308,7 @@
     const sh = c.createLinearGradient(0, g.fy, 0, g.fy + T * 0.6); sh.addColorStop(0, "rgba(0,0,0,0.18)"); sh.addColorStop(1, "rgba(0,0,0,0)"); c.fillStyle = sh; c.fillRect(X0, g.fy, X1 - X0, T * 0.6);
     c.restore();
     // the window
-    const [wx, ww] = R.window, WX = sx(g, wx) + T * 0.18, WW = ww * T - T * 0.36, WY = g.fy - g.wallH * T + T * 0.45, WH = T * 1.25;
+    const [wx, ww] = R.window, WX = sx(g, wx) + T * 0.18, WW = ww * T - T * 0.36, WY = g.fy - T * 2.05, WH = T * 1.25;
     rr(c, WX - 4, WY - 4, WW + 8, WH + 8, radius(g, 0.1)); fill(g, w === "pirate" ? p.wood : light(p.trim, 0.2), WY, WY + WH);
     c.save(); rr(c, WX, WY, WW, WH, w === "castle" || w === "night" ? WW / 2 : radius(g, 0.06)); c.clip();
     const sk = c.createLinearGradient(0, WY, 0, WY + WH); sk.addColorStop(0, p.sky[0]); sk.addColorStop(1, p.sky[1]); c.fillStyle = sk; c.fillRect(WX, WY, WW, WH);
@@ -344,7 +352,7 @@
   // --- drawing a whole scene: shell, rugs, wall things, then furniture and people back to front ---
   function drawItem(g, it) {
     const d = BY[it.id]; if (!d) return;
-    if (d.kind === "wall") { const fn = WALL[d.id]; if (fn) fn(g.c, g, sx(g, it.x), sx(g, it.x + d.w), g.fy - g.wallH * g.T * 0.42); return; }
+    if (d.kind === "wall") { const fn = WALL[d.id]; if (fn) fn(g.c, g, sx(g, it.x), sx(g, it.x + d.w), g.fy - g.T * 1.05); return; }
     const art = ART[d.id]; if (!art) return;
     const P = maker(g, it, d); art(P, g.pal);
     if (d.kind === "floor") {   // a soft shadow under it
@@ -533,7 +541,7 @@
   const TALL = { bed: 1, bunk: 1.9, canopy: 2.1, books: 1.8, piano: 1.3, lamp: 1.6, bigplant: 1.7, sunpot: 1.3, armour: 1.6, sofa: 1, chair: 1, armchair: 1 };
   function boxOf(it) {
     const d = BY[it.id];
-    if (d.kind === "wall") { const y = G.fy - G.wallH * G.T * 0.42; return { x0: sx(G, it.x), x1: sx(G, it.x + d.w), y0: y - G.T * 0.65, y1: y + G.T * 0.65 }; }
+    if (d.kind === "wall") { const y = G.fy - G.T * 1.05; return { x0: sx(G, it.x), x1: sx(G, it.x + d.w), y0: y - G.T * 0.65, y1: y + G.T * 0.65 }; }
     const f = DC.footprint(d, it.rot || 0), tall = d.kind === "rug" ? 0 : (TALL[d.id] || 0.9);
     return { x0: sx(G, it.x), x1: sx(G, it.x + f.w), y0: sy(G, it.y) - tall * G.Z, y1: sy(G, it.y + f.h) };
   }
@@ -619,7 +627,7 @@
       ctx.fillStyle = mix(pal.side, "#000000", 0.55); ctx.fillRect(0, 0, cw, ch);
       if (G) step(dt);
       const sheet = host.person?.();
-      G = render(ctx, cw, ch, { style: STYLE, world: host.world(), top: 64, bottom: host.bar.offsetTop - 8 }, { items, person: { ...me, sheet } }, t);
+      G = render(ctx, cw, ch, { style: STYLE, world: host.world(), top: (host.top.offsetTop + host.top.offsetHeight + 6) || 64, bottom: host.bar.offsetTop - 8 }, { items, person: { ...me, sheet } }, t);
       // decorate mode: the tiles, the picked thing glowing, and green or red where it's going
       if (mode === "decorate") {
         ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1;
@@ -652,6 +660,6 @@
   window.LivingTownRoom = {
     open, close, onState, paint, STYLES,
     get isOpen() { return isOpen; },
-    _test: { room: () => R, which: () => which, goRoom, items: () => items, sel: () => sel, mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
+    _test: { room: () => R, layout: () => G && { T: G.T, K: G.K, wallH: G.wallH }, which: () => which, goRoom, items: () => items, sel: () => sel, mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
   };
 })();

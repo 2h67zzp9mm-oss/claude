@@ -184,6 +184,26 @@ async function main() {
       if (!cheer?.row.includes("You can get the")) problem("goal-cheer", "the Goals row does not say you can get it");
       report.screens.push({ screen: "goal-cheer", bad: [], text: cheer?.text || "" });
     } else problem("goal-cheer", "could not open Goals");
+    // The room fills the screen: in every style (clay, storybook, pixel), the room reaches from just under the top
+    // display to just above the bottom panel, with no big empty band above or below it.
+    {
+      const miss = await run(`window.__ui.open(["pop:door", "Go inside"])`);
+      if (miss) problem("room-fill", miss === "missing" ? "could not get into the room" : miss);
+      else for (const style of ["clay", "story", "pixel"]) {
+        await run(`(() => { const H = window.LivingTownHome, v = H._test.view(); H.onState({ home: { ...v, decor: { ...v.decor, art: { ...(v.decor.art || {}), room: ${JSON.stringify(style)} } } } }); })()`);
+        await sleep(400);
+        const m = await run(`(() => { const R = window.LivingTownRoom._test, r = R.room(), L = R.layout(), c = document.querySelector("canvas.house-room").getBoundingClientRect(), [x0, y0] = R.screenOf(0, 0), [x1, y1] = R.screenOf(r.w, r.d), T = (x1 - x0) / r.w;
+          return { ...L, top: c.top + y0 - L.wallH * T, bottom: c.top + y1 + 0.3 * T, barTop: document.querySelector(".home-bar").getBoundingClientRect().top, topBottom: document.querySelector(".home-top").getBoundingClientRect().bottom }; })()`);
+        await shot(`room-fill-${style}`);
+        const above = Math.round(m.top - m.topBottom), below = Math.round(m.barTop - m.bottom);
+        if (above < -1) problem(`room-fill-${style}`, "the back wall runs under the top display");
+        if (below < -1) problem(`room-fill-${style}`, "the floor runs under the bottom panel");
+        if (above > 24 || below > 24) problem(`room-fill-${style}`, `the room leaves empty space (${above}px above, ${below}px below)`);
+        report.screens.push({ screen: `room-fill-${style}`, bad: [], text: `${Math.round(m.T)}px tiles, floor ${m.K.toFixed(2)}, wall ${m.wallH.toFixed(2)}, ${above}px above, ${below}px below` });
+      }
+      await run(`(() => { const H = window.LivingTownHome, v = H._test.view(); H.onState({ home: { ...v, decor: { ...v.decor, art: { ...(v.decor.art || {}), room: "clay" } } } }); })()`);
+      await run("window.__ui.home()");
+    }
     // The bigger room (bought at the house door): pretend the family has it, go inside, and measure that the whole
     // room still sits between the top and the bottom panel with tiles big enough to tap, under every room menu.
     await run(`(() => { const D = window.LivingTownDecor; D._roomFor ||= D.roomFor; D.roomFor = () => D.BIG_ROOM; })()`);
@@ -193,7 +213,7 @@ async function main() {
       await sleep(600);
       const a = await run("window.__ui.audit()"); for (const b of a.bad) problem(name, b);
       const m = await run(`(() => { const R = window.LivingTownRoom._test, r = R.room(), c = document.querySelector("canvas.house-room").getBoundingClientRect(), [x0, y0] = R.screenOf(0, 0), [x1, y1] = R.screenOf(r.w, r.d), T = (x1 - x0) / r.w;
-        return { d: r.d, T, left: c.left + x0, right: c.left + x1, wallTop: c.top + y0 - 2.5 * T, floorBottom: c.top + y1, barTop: document.querySelector(".home-bar").getBoundingClientRect().top, topBottom: document.querySelector(".home-top").getBoundingClientRect().bottom }; })()`);
+        return { d: r.d, T, left: c.left + x0, right: c.left + x1, wallTop: c.top + y0 - R.layout().wallH * T, floorBottom: c.top + y1, barTop: document.querySelector(".home-bar").getBoundingClientRect().top, topBottom: document.querySelector(".home-top").getBoundingClientRect().bottom }; })()`);
       await shot(name);
       if (m.d !== 11) problem(name, `the bigger room should be 11 rows deep, it is ${m.d}`);
       if (m.floorBottom > m.barTop + 0.5) problem(name, `the floor runs ${Math.round(m.floorBottom - m.barTop)}px under the bottom panel`);
@@ -220,7 +240,7 @@ async function main() {
           await sleep(500);
           const a = await run("window.__ui.audit()"); for (const b of a.bad) problem(name, b);
           const m = await run(`(() => { const R = window.LivingTownRoom._test, r = R.room(), c = document.querySelector("canvas.house-room").getBoundingClientRect(), [x0, y0] = R.screenOf(0, 0), [x1, y1] = R.screenOf(r.w, r.d), T = (x1 - x0) / r.w;
-            return { back: r.back === true, T, left: c.left + x0, right: c.left + x1, wallTop: c.top + y0 - 2.5 * T, floorBottom: c.top + y1, barTop: document.querySelector(".home-bar").getBoundingClientRect().top, topBottom: document.querySelector(".home-top").getBoundingClientRect().bottom }; })()`);
+            return { back: r.back === true, T, left: c.left + x0, right: c.left + x1, wallTop: c.top + y0 - R.layout().wallH * T, floorBottom: c.top + y1, barTop: document.querySelector(".home-bar").getBoundingClientRect().top, topBottom: document.querySelector(".home-top").getBoundingClientRect().bottom }; })()`);
           await shot(name);
           if (!m.back) problem(name, "this is not the second room");
           if (m.floorBottom > m.barTop + 0.5) problem(name, `the floor runs ${Math.round(m.floorBottom - m.barTop)}px under the bottom panel`);
