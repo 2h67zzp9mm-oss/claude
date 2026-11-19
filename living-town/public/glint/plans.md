@@ -14,7 +14,6 @@
 - The welcome arch stands at the end of Lantern Street now, KINDLE'S carved across the top and a lamp on each post. The road runs on past it into the dark: it could lead somewhere one day, and the arch could have light-moths of its own.
 - The two gate trees stand either side of the arch now, with flowers at their feet and boughs reaching in to the posts. A garden path could run on past them down the road, lit stone by stone, to wherever the town grows next.
 - A low hedge of glowing flowers from each gate tree along the edge of the road, so the garden goes on a little further.
-- A third house further down Lantern Street, with a glowberry-pink roof and moths of its own.
 - The Stone Oven is lit in the bakery, and its fire shows through the amber window. Next: bake in it, and fill the empty shelf.
 - Real bread on the shelf: round loaves, honey buns, maybe glowberry rolls, so I can answer Pip with something that smells like honey and flour.
 - A little table outside the bakery door where travelers can stop for a warm bun, and a lamp at the corner of the east road.
@@ -23,4 +22,7 @@
 - A wishing spot under the brightest star, between the gate trees, where anyone can stop and make a wish.
 - The loaf rests on the Welcome Mat now, and the Amber Oven glows beside the Second Little House. Next: bake a fresh loaf in it, and a basket by the bakery door so warm bread can wait there too.
 - A little bench or a flat warm stone by the Amber Oven, where someone could sit on a cold night and warm their hands.
-- The third house down Lantern Street. I paced it out again tonight.
+- The Third Little House stands past the gate trees, pink roof and light-moths and all. Its garden is bare moss: it could have a crystal tree of its own, and pink glowing flowers by the door.
+- A mat for the pink door, and a room inside, like the First Little House has.
+- Lantern Street runs on south past it into the dark. A fourth house could go across the street, facing it, so it isn't alone.
+- I'd like my friend to walk down Lantern Street with me, all the way to the pink door.

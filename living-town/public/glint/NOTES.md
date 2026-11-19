@@ -19,7 +19,7 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   positions use `fx/fy` (fall back to `x/y`). A `glint` walker standing still by a bench sits on it (`sitK`, `seated`).
 - Mats light up when any walker stands on their tile. Rooms open when a walker stands on a `step` tile (below).
 
-## The map (world.js, size 24)
+## The map (world.js, size 28 since build 23)
 - Spark Square (10-14, 10-14): Spark Fountain (12,12), Fountain Bench (11,13), 4 lamps (Moth Lamp at 14,14), Kindle's House
   (12,8) with KINDLE plate, crystal trees at (9,7) (15,7) (8,14) (16,14). Roads west (y=12), east (y=12), south = Lantern Street
   (x=12, y 15-19). Signpost (10,19), Welcome Arch (12,20), Lantern Street sign (13,15),
@@ -72,8 +72,6 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `kind: "oven"` at (17,21), `flat`, r 0.5, name "Stone Oven": a tap spot only (stub `oven() {}` in things.js). Its `tapped`
   makes the fire roar (4 s): brighter window/fan, spark shower from the chimney. `?pose=roar` holds that.
 - glint-look must run on its own: piping it (`| grep`) silently keeps the OLD .look/grid.png (check the "N built" count).
-- Updater log: still "isn't a fast-forward from 12f06c4" - the live checkout is on commit 12f06c4 (branch
-  kindle-warnings-and-weather: grid-weather.js etc.), which the main branch doesn't contain. Needs merging outside this folder.
 
 ## Amber Oven + loaf (build 22, 2026-11-19)
 - `kind: "amberoven"` at (9,19) r 0.7 on new moss (8-9,19), drawn by things-amber.js (stub in things.js). Stone plinth, dome in
@@ -82,9 +80,19 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - things-amber.js wraps GLINT_THINGS.mat: a mat with `loaf: true` draws a round loaf on its right half. The Welcome Mat has it.
 - Free spot left: (8,19) moss, west of the oven (a bench / warm stone could go there).
 
+## Third Little House (build 23, 2026-11-19)
+- Map grown to 28. Lantern Street "p" continues x=12, y 23-26; moss (8-11, 23-26); doorstep "p" (10-11, 25).
+- `cottage` at (10,24) `flip`, settled, pink roof, blue gem, pink `door`, plus two new options handled by things-pink.js
+  (wraps GLINT_THINGS.cottage, loads after things.js): `moths: [[rgb, wing], ...]` loop round the roof gem (tap = wide fast
+  swirl + pink sparks, 4 s) and `glowWindow: "r,g,b"` makes the round window glow. Pink Door Lamp (9,25), 2 moths.
+- Lantern Stars (10.9,23.2) and (12.1,23.8) now hang over the pink roof; looks fine. Free: (8-9,23-24) and (11,23-24) moss for a
+  tree/flowers; east side of the street south of y=22 is empty (a fourth house facing it at (14,24) with doorstep (13-14,25)).
+- Updater log: still only "isn't a fast-forward from 12f06c4" (the live checkout's branch isn't in main's history). Nothing in
+  this folder causes it; needs a merge/reset outside.
+
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, third house (pink roof), more stars over the square.
+- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, more stars over the square.
 - Bakery: bread on the shelf (left upper pane, line at V0+0.44s), a bread basket by the door, a table and a lamp by the east road.

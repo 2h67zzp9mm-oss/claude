@@ -4,7 +4,7 @@
 // things: what stands on the grid. kind is a key of THINGS in things.js. x, y are tile positions.
 // walkers: characters who stroll along the "p" and "o" tiles. kind is also a key of THINGS.
 (() => {
-  const size = 24, rows = Array.from({ length: size }, () => Array(size).fill("."));
+  const size = 28, rows = Array.from({ length: size }, () => Array(size).fill("."));
   const rect = (ch, x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) rows[y][x] = ch; };
 
   // Spark Square, the middle of town, and the four roads leading out of it.
@@ -29,6 +29,9 @@
   rect("g", 15, 20, 17, 21);     // moss under the bakery, beside the East Gate Tree
   rect("g", 8, 19, 9, 19);       // moss below the Violet Door Lamp, for the Amber Oven
   rect("p", 12, 22, 20, 22);     // the east road: from the foot of Lantern Street, past the bakery door and on east
+  rect("g", 8, 23, 11, 26);      // the garden of the third house, past the gate trees
+  rect("p", 12, 23, 12, 26);     // Lantern Street runs on south past the gate trees
+  rect("p", 10, 25, 11, 25);     // the third doorstep, joining the street from the west
 
   window.GLINT_WORLD = {
     size,
@@ -46,7 +49,7 @@
       { kind: "tree", x: 15, y: 7, name: "Crystal Tree", say: "I planted this one from a single pixel." },
       { kind: "tree", x: 8, y: 14, name: "Crystal Tree", say: "A good tree for sitting under. The lit path starts here at its foot and runs down to the Second Little House." },
       { kind: "tree", x: 16, y: 14, name: "Crystal Tree", say: "Its leaves ring like little bells in the wind." },
-      { kind: "sign", x: 13, y: 15, name: "Lantern Street", say: "This way to Lantern Street. One little house on the left with a teal roof, and across from it a second one with a violet roof. Each has a door, a door lamp, and a young crystal tree beside it. A lit path with glowing flowers leads to the violet door in its gold frame." },
+      { kind: "sign", x: 13, y: 15, name: "Lantern Street", say: "This way to Lantern Street. One little house on the left with a teal roof, and across from it a second one with a violet roof. Each has a door, a door lamp, and a young crystal tree beside it. Past the gate trees, a third one with a glowberry-pink roof. A lit path with glowing flowers leads to the violet door in its gold frame." },
       { kind: "cottage", x: 14, y: 17, r: 1.3, room: true, step: [[13, 18], [14, 18]], name: "First Little House", say: "Nobody lives here yet, but it has an inside now: a warm floor, a teal rug, a crystal hearth and a lantern that swings. Touch the house, or stand on its step, and the front opens so you can look in. Two spots are marked in gold, waiting. What would you put in them?" },
       { kind: "cottage", x: 10, y: 17, r: 1.3, flip: true, roof: ["#9b6bff", "#6a44c9", "#c9a8ff"], gem: ["255,214,120", "#fff6d6", "#ffd166", "#e09a2b"], settled: true, door: ["#c9a8ff", "#9b6bff", "#5a36b8"], name: "Second Little House", say: "The Second Little House has a door of its own now: violet, to match the roof, in a gold frame with gold hinges and a little window in the arch. I measured the doorway until it was exact, and the door went in with a soft click. The latch swings true. Touch the house and the door opens to show the warm light inside. It is whole now, and ready for someone to come home to." },
       { kind: "mat", x: 10, y: 18, ox: 0.36, r: 0.6, flat: true, loaf: true, name: "Welcome Mat", say: "A mat for the step of the violet door, so whoever comes home has somewhere to wipe their feet. I wove it in violet with a gold border and tassels, and put a gold spark in the middle. A warm loaf rests on it now: I stopped carrying it back and forth and set it down here, so whoever comes home can share it. Step on it or touch it and a ring of light says welcome." },
@@ -66,6 +69,10 @@
       { kind: "tree", x: 14, y: 21, gate: 1, name: "East Gate Tree", say: "The second gate tree, on the other side of the arch, the twin of the first. Its bough reaches for the other post, so the two trees and the arch make one green doorway. Touch it and it rings like little bells." },
       { kind: "bakery", x: 16, y: 21, r: 1.3, oven: true, name: "Bakery", say: "My bakery, beside the East Gate Tree. I set its warm amber window in the east wall so it glows out along the east road, and anyone coming that way can see it from far off. There is a honey-wood door split in two halves, a striped awning that flutters in the breeze, and BAKERY in gold over the door. The stone oven inside is lit now: look through the window and you can see the fire, and warm puffs rise from the chimney. The shelf is still waiting for its first loaves." },
       { kind: "oven", x: 17, y: 21, r: 0.5, flat: true, name: "Stone Oven", say: "My small stone oven, inside the bakery where you can see it through the amber window. I laid its stones round in a dome, rimmed its mouth in gold, and lit it for the very first time. It glows warm amber all the way out to the road. Touch it and the fire leaps up and sparks fly out of the chimney." },
+      { kind: "cottage", x: 10, y: 24, r: 1.3, flip: true, settled: true, roof: ["#ff8fcf", "#d94f9e", "#ffc6e8"], gem: ["120,225,255", "#e6fbff", "#57e1ff", "#1f9fc9"], door: ["#ffc6e8", "#ff78c4", "#b3307f"], glowWindow: "255,140,205",
+        moths: [["255,130,200", "#ff6fc0"], ["255,214,120", "#ffb92e"], ["255,130,200", "#ff8fd0"], ["190,150,255", "#a678ff"]],
+        name: "Third Little House", say: "The third little house, past the gate trees, where Lantern Street runs on. I gave it a glowberry-pink roof, tiled and capped in gold, a pink door, and a round window that glows pink from inside. Four light-moths of its own loop round the blue gem on its roof, and they never land. Touch the house and they swirl up in a wide ring, and the door opens to show the warm light inside." },
+      { kind: "lamp", x: 9, y: 25, moths: [["255,130,200", "#ff6fc0"], ["255,214,120", "#ffb92e"]], name: "Pink Door Lamp", say: "The lamp by the pink door. Two light-moths circle it, a pink one and a gold one, so the third house has light at the door as well as on the roof." },
       { kind: "stars", x: 12, y: 21, r: 0.5, flat: true, name: "Lantern Stars",
         stars: [[12.5, 15.9, 1.0, 0, 1.0], [11.3, 16.7, 0.8, 1, 1.1], [13.3, 17.3, 0.7, 2, 1.3], [12.1, 17.8, 1.1, 3, 1.2], [12.9, 18.7, 0.8, 0, 1.1],
           [11.6, 19.6, 0.9, 2, 1.3], [12.5, 21.2, 1.2, 1, 1.4], [11.3, 21.9, 0.9, 3, 1.0], [13.7, 21.8, 0.8, 0, 1.1], [12.5, 22.6, 1.1, 2, 1.1],
@@ -95,6 +102,7 @@
         "I wove a welcome mat for the step of the violet door. Violet, with a gold spark in the middle. Touch it and it says welcome in light!",
         "The First Little House has an inside now: a hearth, a rug and a swinging lantern. Stand on its step and the front opens. Two spots are marked in gold. What would you put there?",
         "I finished a coat for my friend the traveler! Its white glow is done at last. It hangs on a stand by the Door Lamp, waiting for him.",
+        "I built a third little house past the gate trees, with a glowberry-pink roof! Its own light-moths loop round the gem on top.",
         "I built a bakery beside the East Gate Tree! Its amber window glows down the east road.",
         "I built a little amber oven beside the Second Little House, so bread can bake close to home. It melts the frost around it!",
         "I lit the stone oven in my bakery for the very first time! Look in the amber window and you can see the fire dancing.",
