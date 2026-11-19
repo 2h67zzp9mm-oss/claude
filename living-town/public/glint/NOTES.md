@@ -38,15 +38,10 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - No THINGS.traveler / THINGS.neighbour yet: glint-life.js draws plain figures. The coat on a traveler (`wearing: "coat"`)
   and the empty stand are handled by glint-life.js for now. Kindle designed a pirate with a three-cornered hat for one traveler.
 
-## Rooms (build 16)
-- `room: true, step: [[x,y],...]` on a cottage: grid.js eases `th.roomK` 0..1 while tapped (6 s) or a walker is on a step tile;
-  things.js `room()` draws the cutaway (hearth, rug, lantern, back window, two dashed gold "empty spots"). Mirrors for `flip`.
-- Next: replace a gold spot with furniture once decided (maybe a `furniture: [...]` list). Second House could get `room` too.
-
-## Arch + gate trees (builds 17-18)
-- `kind: "arch"` (12,20) `flat`, reacts like a mat (walker on tile sets `tapped`, 4 s), letters light one by one; `?pose=welcome`.
-- Gate trees: `kind: "tree"` + `gate: -1|1` -> `gateTree()`; chime when the arch or tree is tapped. A tree canopy covers
-  ~1.6 tiles above its tile: check what's north of any new tree.
+## Rooms, arch, gate trees (builds 16-18)
+- Cottage `room: true, step: [[x,y],...]`: grid.js eases `th.roomK` while tapped (6 s) or a walker is on a step; things.js `room()`
+  draws the cutaway with two dashed gold "empty spots" (furniture next). Arch (12,20) `flat`, lights letters like a mat.
+  Gate trees: `tree` + `gate: -1|1`; a canopy covers ~1.6 tiles above its tile.
 
 ## Lantern Stars (build 19, 2026-11-18)
 - `kind: "stars"` at (12,21), `flat`, r 0.5, `stars: [[x, y, size, colour 0-3, lift]]` (x/y absolute tile spot, n+0.5 = tile centre;
@@ -87,12 +82,20 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   swirl + pink sparks, 4 s) and `glowWindow: "r,g,b"` makes the round window glow. Pink Door Lamp (9,25), 2 moths.
 - Lantern Stars (10.9,23.2) and (12.1,23.8) now hang over the pink roof; looks fine. Free: (8-9,23-24) and (11,23-24) moss for a
   tree/flowers; east side of the street south of y=22 is empty (a fourth house facing it at (14,24) with doorstep (13-14,25)).
-- Updater log: still only "isn't a fast-forward from 12f06c4" (the live checkout's branch isn't in main's history). Nothing in
-  this folder causes it; needs a merge/reset outside.
+
+## Crystal Bench (build 24, 2026-11-19)
+- `kind: "bench"` + `crystal: true` at (13,21) on new moss, under the East Gate Tree's bough. Still a bench, so grid.js sitting works
+  (Kindle sits if he stops within 1.1 tiles, e.g. on (13,22) or (12,21)). things-crystal.js wraps GLINT_THINGS.bench (loads after
+  things-pink.js): mint-teal crystal planks with a sliding sheen, crystal-point back rail, amber gem, gold feet, gold wisps of bakery
+  smell drifting in from the east. A tap (4 s) or someone seated (`w.seated && w.bench === th`) warms it and runs a chime of light
+  along the planks. `?pose=chime` holds the tap.
+- Updater log (checked builds 23 and 24): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking
+  rewritten history". That's git history on the live checkout, not tests; nothing in this folder can fix it (needs a merge/reset
+  outside). Grid tests pass locally (`node --test test/glint-grid.test.js` from living-town/).
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, more stars over the square.
+- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, more stars over the square.
 - Bakery: bread on the shelf (left upper pane, line at V0+0.44s), a bread basket by the door, a table and a lamp by the east road.

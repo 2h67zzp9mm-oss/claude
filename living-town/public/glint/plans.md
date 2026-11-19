@@ -26,3 +26,6 @@
 - A mat for the pink door, and a room inside, like the First Little House has.
 - Lantern Street runs on south past it into the dark. A fourth house could go across the street, facing it, so it isn't alone.
 - I'd like my friend to walk down Lantern Street with me, all the way to the pink door.
+- The Crystal Bench stands under the East Gate Tree now, and the bakery smell reaches it. Next: carry the warm loaf from the Welcome Mat down to it, so Pip and I can share it sitting there.
+- A little crystal table beside the bench, for a cup and a bun, and a lamp at the corner of the east road so the bench is easy to find late.
+- A bench just like it under the West Gate Tree, so the two gate trees match, the way the two little houses do.
