@@ -27,6 +27,7 @@
   rect("p", 12, 20, 12, 21);     // Lantern Street runs on under the welcome arch
   rect("g", 10, 21, 10, 21); rect("g", 14, 21, 14, 21);   // moss for the two gate trees, either side of the road outside the arch
   rect("g", 15, 20, 17, 21);     // moss under the bakery, beside the East Gate Tree
+  rect("g", 8, 19, 9, 19);       // moss below the Violet Door Lamp, for the Amber Oven
   rect("p", 12, 22, 20, 22);     // the east road: from the foot of Lantern Street, past the bakery door and on east
 
   window.GLINT_WORLD = {
@@ -48,7 +49,8 @@
       { kind: "sign", x: 13, y: 15, name: "Lantern Street", say: "This way to Lantern Street. One little house on the left with a teal roof, and across from it a second one with a violet roof. Each has a door, a door lamp, and a young crystal tree beside it. A lit path with glowing flowers leads to the violet door in its gold frame." },
       { kind: "cottage", x: 14, y: 17, r: 1.3, room: true, step: [[13, 18], [14, 18]], name: "First Little House", say: "Nobody lives here yet, but it has an inside now: a warm floor, a teal rug, a crystal hearth and a lantern that swings. Touch the house, or stand on its step, and the front opens so you can look in. Two spots are marked in gold, waiting. What would you put in them?" },
       { kind: "cottage", x: 10, y: 17, r: 1.3, flip: true, roof: ["#9b6bff", "#6a44c9", "#c9a8ff"], gem: ["255,214,120", "#fff6d6", "#ffd166", "#e09a2b"], settled: true, door: ["#c9a8ff", "#9b6bff", "#5a36b8"], name: "Second Little House", say: "The Second Little House has a door of its own now: violet, to match the roof, in a gold frame with gold hinges and a little window in the arch. I measured the doorway until it was exact, and the door went in with a soft click. The latch swings true. Touch the house and the door opens to show the warm light inside. It is whole now, and ready for someone to come home to." },
-      { kind: "mat", x: 10, y: 18, ox: 0.36, r: 0.6, flat: true, name: "Welcome Mat", say: "A mat for the step of the violet door, so whoever comes home has somewhere to wipe their feet. I wove it in violet with a gold border and tassels, and put a gold spark in the middle. Step on it or touch it and a ring of light says welcome." },
+      { kind: "mat", x: 10, y: 18, ox: 0.36, r: 0.6, flat: true, loaf: true, name: "Welcome Mat", say: "A mat for the step of the violet door, so whoever comes home has somewhere to wipe their feet. I wove it in violet with a gold border and tassels, and put a gold spark in the middle. A warm loaf rests on it now: I stopped carrying it back and forth and set it down here, so whoever comes home can share it. Step on it or touch it and a ring of light says welcome." },
+      { kind: "amberoven", x: 9, y: 19, r: 0.7, name: "Amber Oven", say: "A little oven of amber stones, right beside the Second Little House, so warm bread can be baked close to home. I set every stone myself, two rows for the base and four for the dome, then rimmed the mouth in gold and lit it. It warms the doorway and melts the frost on the moss around it. Touch it and the fire leaps up and sparks fly out of the flue." },
       { kind: "lamp", x: 9, y: 18, moths: [["190,150,255", "#a678ff"], ["255,130,200", "#ff6fc0"], ["190,150,255", "#a678ff"]], name: "Violet Door Lamp", say: "The second door has a lamp of its own. Three light-moths circle it now, two violet and one pink. They never land." },
       { kind: "lamp", x: 15, y: 18, moths: [["255,214,120", "#ffb92e"], ["120,225,255", "#3fd8ff"], ["255,214,120", "#ffb92e"]], name: "Door Lamp", say: "I light this one so whoever comes can find the door, even late. The light-moths keep watch here with me: two gold ones and a blue one."},
       { kind: "coatstand", x: 14, y: 19, name: "Glowing Coat", say: "A coat I made for my friend the traveler. The white glow took me the longest: it runs along the hem, the cuffs, the collar and three buttons. It is finished now, and it hangs here by the Door Lamp where he can find it. Touch it and it shines brighter." },
@@ -94,6 +96,7 @@
         "The First Little House has an inside now: a hearth, a rug and a swinging lantern. Stand on its step and the front opens. Two spots are marked in gold. What would you put there?",
         "I finished a coat for my friend the traveler! Its white glow is done at last. It hangs on a stand by the Door Lamp, waiting for him.",
         "I built a bakery beside the East Gate Tree! Its amber window glows down the east road.",
+        "I built a little amber oven beside the Second Little House, so bread can bake close to home. It melts the frost around it!",
         "I lit the stone oven in my bakery for the very first time! Look in the amber window and you can see the fire dancing.",
         "One day lots of friends will live here. I'm making it nice for them.",
         "I have a body now! Feet for walking and hands for building.",

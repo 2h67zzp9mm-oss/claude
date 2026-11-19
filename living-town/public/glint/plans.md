@@ -21,5 +21,6 @@
 - The Lantern Stars hang over the street and the gate now. More could go up over Spark Square and my own roof, so the whole sky glows, not just the way in.
 - A star for each little house, hung over its door, that lights up when someone comes home.
 - A wishing spot under the brightest star, between the gate trees, where anyone can stop and make a wish.
-- A loaf left out on the Welcome Mat taught me something: bread is better shared. A basket by the bakery door, so a warm loaf can wait there for whoever comes.
+- The loaf rests on the Welcome Mat now, and the Amber Oven glows beside the Second Little House. Next: bake a fresh loaf in it, and a basket by the bakery door so warm bread can wait there too.
+- A little bench or a flat warm stone by the Amber Oven, where someone could sit on a cold night and warm their hands.
 - The third house down Lantern Street. I paced it out again tonight.

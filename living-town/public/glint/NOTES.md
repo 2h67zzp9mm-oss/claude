@@ -75,6 +75,13 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Updater log: still "isn't a fast-forward from 12f06c4" - the live checkout is on commit 12f06c4 (branch
   kindle-warnings-and-weather: grid-weather.js etc.), which the main branch doesn't contain. Needs merging outside this folder.
 
+## Amber Oven + loaf (build 22, 2026-11-19)
+- `kind: "amberoven"` at (9,19) r 0.7 on new moss (8-9,19), drawn by things-amber.js (stub in things.js). Stone plinth, dome in
+  courses, gold-rimmed mouth with flames, flue with puffs, frost glints on the moss that fade near it (weather was clear/cold).
+  Brightens on tap (4 s) / walker within 1.8 tiles; `?pose=roar` covers it too.
+- things-amber.js wraps GLINT_THINGS.mat: a mat with `loaf: true` draws a round loaf on its right half. The Welcome Mat has it.
+- Free spot left: (8,19) moss, west of the oven (a bench / warm stone could go there).
+
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
