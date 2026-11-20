@@ -116,7 +116,16 @@ const PAGE = `(() => {
   }
   async function worlds() { if (!await home()) return []; btn("World").click(); await w(400); const names = [...bar().querySelectorAll("button")].map(x => x.innerText.trim()).filter(t => !/Back|Pick house|Glint/.test(t)); await home(); return names; }
   async function goWorld(label) { if (!await home()) return false; btn("World").click(); await w(400); const b = btn(label); if (!b) return false; b.click(); await w(400); await home(); return true; }
-  window.__ui = { open, audit, home, worlds, goWorld, ready: () => !!(window.LivingTownHome && canvas() && bar() && btn("Town") && T().view()) };
+  // Pretend the family has something (a second room, a bed, Olive inside): the server keeps sending the real view about
+  // once a second while you're in the house, so the pretend parts are mixed into every one until pretend(null).
+  function pretend(fake) {
+    const H = window.LivingTownHome;
+    if (!H.__real) { H.__real = H.onState; H.onState = m => H.__real(m.home && window.__fake ? { ...m, home: { ...m.home, ...window.__fake, decor: { ...m.home.decor, ...(window.__fake.decor || {}) } } } : m); }
+    window.__fake = fake;
+    if (!fake) { H.onState = H.__real; delete H.__real; }
+    H.onState({ home: T().view() });
+  }
+  window.__ui = { open, audit, home, worlds, goWorld, pretend, ready: () => !!(window.LivingTownHome && canvas() && bar() && btn("Town") && T().view()) };
   return true;
 })()`;
 
@@ -226,7 +235,7 @@ async function main() {
     // the back wall, and check you walk into Room 2, that it fits the phone under its menus, and that its door leads back.
     await run(`(() => { const D = window.LivingTownDecor; if (D._roomFor) D.roomFor = D._roomFor; })()`);
     {
-      const fake = `(() => { const H = window.LivingTownHome, v = H._test.view(); H.onState({ home: { ...v, decor: { ...v.decor, second: true, room2: v.decor.room2 || [] } } }); })()`;
+      const fake = `window.__ui.pretend({ decor: { second: true, room2: window.LivingTownHome._test.view().decor.room2 || [] } })`;
       const tapWall = x => `(() => { const R = window.LivingTownRoom._test, c = document.querySelector("canvas.house-room"), q = c.getBoundingClientRect(), [sx, sy] = R.screenOf(${x}, 0), [x1] = R.screenOf(${x + 1}, 0), T = x1 - sx;
         const at = { clientX: q.left + sx, clientY: q.top + sy - T, pointerId: 1, bubbles: true }; c.dispatchEvent(new PointerEvent("pointerdown", at)); c.dispatchEvent(new PointerEvent("pointerup", at)); })()`;
       const where = `(() => { const R = window.LivingTownRoom._test; return { which: R.which(), top: document.querySelector(".home-top").innerText, open: window.LivingTownRoom.isOpen }; })()`;
@@ -253,6 +262,36 @@ async function main() {
         for (let i = 0; i < 30 && at?.which !== 1; i++) { await sleep(250); at = await run(where); }
         if (at?.which !== 1 || !at.open) problem("room-2", "Room 2's door does not lead back into the first room");
       }
+      await run("window.__ui.pretend(null)");
+      await run("window.__ui.home()");
+    }
+    // Family inside the house: pretend Olive is in the first room and Hazel in the second, with a bed between Olive and
+    // where she's going. Olive shows up and walks round the bed (never over it), Hazel doesn't (she's in the other room),
+    // and nobody at home ever stands on furniture.
+    {
+      let miss = await run(`window.__ui.open(["pop:door", "Go inside"])`);
+      // the server keeps sending the real view (no bed, nobody else): mix the pretend bed and family into every one
+      const fake = (ox, oy) => `window.__ui.pretend({ decor: { room: [{ uid: 990001, id: "bed", x: 4, y: 1, rot: 0 }] },
+        others: [{ id: "olive", name: "Olive", x: ${ox}, y: ${oy}, dir: 0, inside: true, room: 1 }, { id: "hazel", name: "Hazel", x: 2.5, y: 4.55, dir: 0, inside: true, room: 2 }] })`;
+      if (!miss) { await run(fake(2.5, 2.55)); await sleep(1500); }
+      const look = `(() => { const R = window.LivingTownRoom._test, b = new Set(R.blocked()); return R.folk().map(p => ({ ...p, on: b.has(Math.floor(p.x) + "," + Math.floor(p.y)) })); })()`;
+      let seen = miss ? [] : await run(look);
+      if (!miss && !seen.some(p => p.id === "olive")) miss = "Olive is inside the house but doesn't show up in the room";
+      if (!miss && seen.some(p => p.id === "hazel")) miss = "Hazel is in the second room but shows up in the first";
+      if (miss) problem("room-family", miss);
+      else {
+        await run(fake(7.5, 2.55)); let over = null, there = false;
+        for (let i = 0; i < 40 && !there; i++) {
+          await sleep(150); seen = await run(look);
+          for (const p of seen) if (p.on) over ||= `${p.name || p.id} stood on furniture at ${p.x.toFixed(1)}, ${p.y.toFixed(1)}`;
+          const o = seen.find(p => p.id === "olive"); there = o && Math.hypot(o.x - 7.5, o.y - 2.55) < 0.05;
+          if (i === 6) await shot("room-family");
+        }
+        if (over) problem("room-family", over);
+        if (!there) problem("room-family", "Olive did not walk round the bed to where she is");
+        report.screens.push({ screen: "room-family", bad: [], text: seen.map(p => `${p.name || p.id} ${p.wander ? "(at home)" : "(inside)"}`).join(", ") });
+      }
+      await run("window.__ui.pretend(null)");
       await run("window.__ui.home()");
     }
     for (const e of [...new Set(errors)]) problem("page", "script error: " + e);

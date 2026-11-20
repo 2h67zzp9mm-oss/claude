@@ -1150,7 +1150,7 @@ function validateClientMessage(raw) {
     const word = v => typeof v === "string" && v.length <= 32 ? v : undefined;
     const num = v => Number.isFinite(v) ? v : undefined;
     return { type: "home", action: msg.action, plot: Number.isInteger(msg.plot) ? msg.plot : undefined, crop: word(msg.crop), world: word(msg.world), house: word(msg.house),
-      x: num(msg.x), y: num(msg.y), dir: num(msg.dir), moving: msg.moving === true,
+      x: num(msg.x), y: num(msg.y), dir: num(msg.dir), moving: msg.moving === true, inside: msg.inside === true,
       species: word(msg.species), color: word(msg.color), spot: Number.isInteger(msg.spot) ? msg.spot : undefined,
       id: msg.id === null ? null : Number.isInteger(msg.id) ? msg.id : undefined, name: typeof msg.name === "string" ? msg.name.slice(0, 40) : undefined,
       item: word(msg.item), n: Number.isInteger(msg.n) && msg.n > 0 && msg.n <= 20 ? msg.n : undefined, uid: Number.isInteger(msg.uid) ? msg.uid : undefined, rot: Number.isInteger(msg.rot) ? msg.rot : undefined, key: word(msg.key), room: msg.room === 2 ? 2 : undefined };

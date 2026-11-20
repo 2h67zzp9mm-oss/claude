@@ -368,6 +368,7 @@
     for (const it of items) if (BY[it.id]?.kind === "wall") drawItem(g, it);
     const stand = items.filter(it => BY[it.id]?.kind === "floor").map(it => ({ y: it.y + DC.footprint(BY[it.id], it.rot || 0).h, x: it.x, draw: () => drawItem(g, it) }));
     if (scene.person) stand.push({ y: scene.person.y + 0.3, x: scene.person.x, draw: () => drawPerson(g, scene.person) });
+    for (const p of scene.folk || []) stand.push({ y: p.y + 0.3, x: p.x, draw: () => drawPerson(g, p) });
     stand.sort((a, b) => a.y - b.y || a.x - b.x).forEach(s => s.draw());
     // night worlds: the room is dim, and lamps, mushrooms and the moon glow
     if (g.pal.dark) {
@@ -401,7 +402,10 @@
   }
 
   // ===================== the live room =====================
-  let host = null, isOpen = false, canvas = null, ctx = null, G = null, mode = "look", sel = null, drag = null, items = [], barKind = "idle", fx = [], lastT = 0;
+  let host = null, isOpen = false, canvas = null, ctx = null, G = null, mode = "look", sel = null, drag = null, items = [], barKind = "idle", fx = [], lastT = 0, lastPos = 0, viewKey = "";
+  // the rest of the family who are at home, walking about the room: players inside the house where they really are,
+  // and family at home in town wandering from spot to spot (each never in two places: see homestead.js family())
+  const folk = new Map();
   const me = { x: 1, y: 0.8, dir: 0, step: 0, moving: false, path: [] };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const V = () => host?.view()?.decor || { stock: [], storage: [], room: [] };
@@ -421,7 +425,7 @@
     }
     host.el.insertBefore(canvas, host.top); canvas.classList.remove("hidden");
     Object.assign(me, { x: 1, y: 0.8, dir: 0, path: [], moving: false });
-    items = itemsOf(V());
+    items = itemsOf(V()); folk.clear(); lastPos = 0;
     idle(); requestAnimationFrame(frame);
   }
   // walk through the doorway into the other room: you come out on its doormat
@@ -430,6 +434,7 @@
     which = n; R = shapeOf(V()); items = itemsOf(V()); sel = null; drag = null; hideRing();
     const mat = n === 2 ? R.mat : R.wayMat;
     Object.assign(me, { x: mat.x + 1, y: 0.8, dir: 0, path: [], moving: false, then: null });
+    folk.clear(); lastPos = 0;
     host.sfx?.pop(); refreshBar();
   }
   function close(silent) {
@@ -448,7 +453,11 @@
     else if (result?.decorBought) { host.sfx?.coin(); puff(BY[result.decorBought.id]?.emoji || "✨"); }
     if (result?.decorPlaced) { host.sfx?.pop(); sel = result.decorPlaced; showRing(); }
     if (result && result.ok === false && sel) showRing();
-    refreshBar();
+    // your spot goes to the server every second and each reply is a fresh view: only redraw the panel when something
+    // in it really changed, so lists don't jump under your finger
+    const key = JSON.stringify([view?.decor, view?.stars]);
+    if (result || key !== viewKey) refreshBar();
+    viewKey = key;
   }
   function refreshBar() { ({ idle, shop, stored, decorate, style })[barKind]?.(); }
 
@@ -586,31 +595,103 @@
     const onWall = ([x0, w]) => dr.py < G.fy && dr.py > G.fy - G.T * 1.9 && tx >= x0 && tx < x0 + w;
     if (onWall(R.door)) { if (!walkTo(R.mat.x + 1, 0, () => (R.back ? goRoom(1) : close()))) host.toast("Something is in the way!"); return; }
     if (R.way && onWall(R.way)) { if (!walkTo(R.wayMat.x, 0, () => goRoom(2))) host.toast("Something is in the way!"); return; }
+    const pal = folkAt(dr.px, dr.py);
+    if (pal) { host.toast(`👋 You waved at ${pal.name || "them"}!`); host.sfx?.pop(); return; }
     if (dr.it) { const d = BY[dr.it.id]; float(`${d.emoji} ${d.name}`); host.sfx?.pop(); return; }
     if (tx >= 0 && tx < R.w && ty >= 0 && ty < R.d) walkTo(Math.floor(tx), Math.floor(ty));
   }
   // walk tile to tile around the furniture
-  function walkTo(gx, gy, then) {
-    const block = new Set(); for (const it of items) { const d = BY[it.id]; if (d.kind !== "floor") continue; const f = DC.footprint(d, it.rot || 0); for (let x = it.x; x < it.x + f.w; x++) for (let y = it.y; y < it.y + f.h; y++) block.add(x + "," + y); }
-    const start = [Math.max(0, Math.min(R.w - 1, Math.floor(me.x))), Math.max(0, Math.min(R.d - 1, Math.floor(me.y)))], key = (x, y) => x + "," + y;
-    if (block.has(key(gx, gy))) return false;
-    const prev = new Map([[key(...start), null]]), q = [start];
-    while (q.length) { const [x, y] = q.shift(); if (x === gx && y === gy) break; for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + ax, ny = y + ay, k = key(nx, ny); if (nx < 0 || ny < 0 || nx >= R.w || ny >= R.d || block.has(k) || prev.has(k)) continue; prev.set(k, [x, y]); q.push([nx, ny]); } }
-    if (!prev.has(key(gx, gy))) return false;
-    const path = []; for (let c = [gx, gy]; c && key(...c) !== key(...start); c = prev.get(key(...c))) path.unshift({ x: c[0] + 0.5, y: c[1] + 0.55 });
+  const tkey = (x, y) => x + "," + y;
+  function blocked() { const block = new Set(); for (const it of items) { const d = BY[it.id]; if (d?.kind !== "floor") continue; const f = DC.footprint(d, it.rot || 0); for (let x = it.x; x < it.x + f.w; x++) for (let y = it.y; y < it.y + f.h; y++) block.add(tkey(x, y)); } return block; }
+  const tileOf = p => [Math.max(0, Math.min(R.w - 1, Math.floor(p.x))), Math.max(0, Math.min(R.d - 1, Math.floor(p.y)))];
+  // the tile-to-tile way from someone to (gx, gy) around the furniture, or null if there's none
+  function pathFor(who, gx, gy, block = blocked()) {
+    const start = tileOf(who);
+    if (block.has(tkey(gx, gy))) return null;
+    const prev = new Map([[tkey(...start), null]]), q = [start];
+    while (q.length) { const [x, y] = q.shift(); if (x === gx && y === gy) break; for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + ax, ny = y + ay, k = tkey(nx, ny); if (nx < 0 || ny < 0 || nx >= R.w || ny >= R.d || block.has(k) || prev.has(k)) continue; prev.set(k, [x, y]); q.push([nx, ny]); } }
+    if (!prev.has(tkey(gx, gy))) return null;
+    const path = []; for (let c = [gx, gy]; c && tkey(...c) !== tkey(...start); c = prev.get(tkey(...c))) path.unshift({ x: c[0] + 0.5, y: c[1] + 0.55 });
     if (!path.length) path.push({ x: gx + 0.5, y: gy + 0.55 });
+    return path;
+  }
+  function walkTo(gx, gy, then) {
+    const path = pathFor(me, gx, gy); if (!path) return false;
     me.path = path; me.then = then || null;
     return true;
   }
-  function step(dt) {
-    let budget = 3.4 * dt; me.moving = false;
-    while (budget > 0 && me.path.length) {
-      const n = me.path[0], gap = Math.hypot(n.x - me.x, n.y - me.y);
-      if (gap > 0.01) { const dx = n.x - me.x, dy = (n.y - me.y) * G.K, k = ((Math.round(Math.atan2(dx, dy) / (Math.PI / 4)) % 8) + 8) % 8; me.dir = [0, 7, 6, 5, 4, 3, 2, 1][k]; me.moving = true; }
-      if (gap <= budget) { me.x = n.x; me.y = n.y; budget -= gap; me.path.shift(); } else { me.x += (n.x - me.x) / gap * budget; me.y += (n.y - me.y) / gap * budget; budget = 0; }
+  // move someone along their path; returns true while they're walking
+  function stepAlong(p, dt, speed) {
+    let budget = speed * dt; p.moving = false;
+    while (budget > 0 && p.path.length) {
+      const n = p.path[0], gap = Math.hypot(n.x - p.x, n.y - p.y);
+      if (gap > 0.01) { const dx = n.x - p.x, dy = (n.y - p.y) * G.K, k = ((Math.round(Math.atan2(dx, dy) / (Math.PI / 4)) % 8) + 8) % 8; p.dir = [0, 7, 6, 5, 4, 3, 2, 1][k]; p.moving = true; }
+      if (gap <= budget) { p.x = n.x; p.y = n.y; budget -= gap; p.path.shift(); } else { p.x += (n.x - p.x) / gap * budget; p.y += (n.y - p.y) / gap * budget; budget = 0; }
     }
-    if (me.moving) me.step += dt * 4;
-    else if (me.then) { const go = me.then; me.then = null; go(); }
+    if (p.moving) p.step += dt * 4;
+    return p.moving;
+  }
+  function step(dt) {
+    if (!stepAlong(me, dt, 3.4) && me.then) { const go = me.then; me.then = null; go(); }
+    stepFolk(dt);
+  }
+
+  // --- the family walking about ---
+  // a free floor tile for someone to stand on: not under furniture, and not where anyone else is or is going
+  function freeTile(block, skip, near) {
+    const taken = new Set([tkey(...tileOf(me)), ...[...folk.values()].filter(p => p !== skip).flatMap(p => [tkey(...tileOf(p)), p.wander ? p.goal || "" : tkey(...tileOf({ x: p.tx, y: p.ty }))])]);
+    const open = [];
+    for (let x = 0; x < R.w; x++) for (let y = 0; y < R.d; y++) if (!block.has(tkey(x, y)) && !taken.has(tkey(x, y))) open.push([x, y]);
+    if (!open.length) return null;
+    if (near) return open.sort((a, b) => Math.hypot(a[0] - near[0], a[1] - near[1]) - Math.hypot(b[0] - near[0], b[1] - near[1]))[0];
+    return open[Math.floor(Math.random() * open.length)];
+  }
+  // keep the family list in step with who's at home (host.family(), from homestead.js)
+  function syncFolk() {
+    const list = (host.family?.() || []).filter(p => p.wander ? which === 1 : (p.room || 1) === which), seen = new Set(), now = performance.now(), block = blocked();
+    for (const f of list) {
+      seen.add(f.id);
+      let p = folk.get(f.id);
+      if (!p) {
+        const spot = f.wander ? freeTile(block, null) : [f.x, f.y];
+        if (!spot) continue;
+        p = { id: f.id, x: f.wander ? spot[0] + 0.5 : f.x, y: f.wander ? spot[1] + 0.55 : f.y, dir: f.dir | 0, step: 0, moving: false, path: [], next: now + 800 + Math.random() * 2500 };
+        folk.set(f.id, p);
+      }
+      Object.assign(p, { name: f.name, wander: Boolean(f.wander) });
+      if (!f.wander) { p.tx = f.x; p.ty = f.y; p.tdir = f.dir | 0; }
+    }
+    for (const id of [...folk.keys()]) if (!seen.has(id)) folk.delete(id);
+  }
+  function stepFolk(dt) {
+    const now = performance.now(), block = blocked();
+    for (const p of folk.values()) {
+      if (!p.wander) {   // a player inside: walk (around the furniture) to where their phone says they are
+        const to = tileOf({ x: p.tx, y: p.ty }), goal = tkey(...to) + "|" + p.tx + "," + p.ty;
+        if (goal !== p.goal) {
+          p.goal = goal;
+          const path = tkey(...to) === tkey(...tileOf(p)) ? [] : pathFor(p, to[0], to[1], block);
+          if (path) p.path = [...path.slice(0, -1), { x: p.tx, y: p.ty }];
+          else { p.path = []; p.x = p.tx; p.y = p.ty; }   // no way round (their room is laid out differently for a moment): just be there
+          if (!p.path.length) p.path = [{ x: p.tx, y: p.ty }];
+        }
+        if (!stepAlong(p, dt, 3.8)) p.dir = p.tdir ?? p.dir;
+        continue;
+      }
+      // something was put down where they stand: step to the nearest free spot
+      if (!p.path.length && block.has(tkey(...tileOf(p)))) { const s = freeTile(block, p, tileOf(p)); if (s) { p.x = s[0] + 0.5; p.y = s[1] + 0.55; } }
+      if (p.path.some(n => block.has(tkey(Math.floor(n.x), Math.floor(n.y))))) { p.path = []; p.goal = null; }   // furniture moved into the way
+      if (stepAlong(p, dt, 1.8)) continue;
+      p.goal = null;
+      if (now < p.next) continue;
+      p.next = now + 2500 + Math.random() * 5000;
+      const to = freeTile(block, p); if (!to) continue;
+      const path = pathFor(p, to[0], to[1], block); if (path) { p.path = path; p.goal = tkey(...to); }
+    }
+  }
+  function folkAt(px, py) {
+    if (!G) return null;
+    return [...folk.values()].find(p => { const X = sx(G, p.x), Y = sy(G, p.y); return Math.abs(px - X) < G.T * 0.5 && py < Y + G.T * 0.2 && py > Y - G.T * 1.8; }) || null;
   }
   function float(text) { fx.push({ text, at: performance.now(), x: sx(G, me.x), y: sy(G, me.y) - G.T * 2.6 }); }
   function puff(emoji) { fx.push({ text: emoji, big: true, at: performance.now(), x: host.el.clientWidth / 2, y: G ? G.fy - G.T : 200 }); }
@@ -625,9 +706,14 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const pal = PAL[host.world()] || PAL.clay;
       ctx.fillStyle = mix(pal.side, "#000000", 0.55); ctx.fillRect(0, 0, cw, ch);
-      if (G) step(dt);
-      const sheet = host.person?.();
-      G = render(ctx, cw, ch, { style: STYLE, world: host.world(), top: (host.top.offsetTop + host.top.offsetHeight + 6) || 64, bottom: host.bar.offsetTop - 8 }, { items, person: { ...me, sheet } }, t);
+      if (G) { syncFolk(); step(dt); }
+      // tell the family where you are in the house (they see you walking about in their room too)
+      if (t - lastPos > 900) { lastPos = t; actHere("pos", { x: Math.round(me.x * 100) / 100, y: Math.round(me.y * 100) / 100, dir: me.dir, moving: me.moving, inside: true }); }
+      const sheet = host.person?.(), fam = [...folk.values()].map(p => ({ ...p, sheet: host.sheetOf?.(p.id) }));
+      G = render(ctx, cw, ch, { style: STYLE, world: host.world(), top: (host.top.offsetTop + host.top.offsetHeight + 6) || 64, bottom: host.bar.offsetTop - 8 }, { items, person: { ...me, sheet }, folk: fam }, t);
+      // their names, small, over their heads (drawn crisp on top, in every style)
+      ctx.font = "700 11px system-ui"; ctx.textAlign = "center"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.fillStyle = "#fff";
+      for (const p of fam) if (p.name) { const X = sx(G, p.x), Y = sy(G, p.y) - G.T * 1.75; ctx.strokeText(p.name, X, Y); ctx.fillText(p.name, X, Y); }
       // decorate mode: the tiles, the picked thing glowing, and green or red where it's going
       if (mode === "decorate") {
         ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1;
@@ -660,6 +746,6 @@
   window.LivingTownRoom = {
     open, close, onState, paint, STYLES,
     get isOpen() { return isOpen; },
-    _test: { room: () => R, layout: () => G && { T: G.T, K: G.K, wallH: G.wallH }, which: () => which, goRoom, items: () => items, sel: () => sel, mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
+    _test: { room: () => R, layout: () => G && { T: G.T, K: G.K, wallH: G.wallH }, which: () => which, goRoom, items: () => items, sel: () => sel, folk: () => [...folk.values()].map(p => ({ id: p.id, name: p.name, x: p.x, y: p.y, wander: p.wander })), blocked: () => [...blocked()], mode: () => mode, me, screenOf: (x, y) => G ? [sx(G, x), sy(G, y)] : null, boxOf: uid => { const it = items.find(i => i.uid === uid); return it && G ? boxOf(it) : null } }
   };
 })();

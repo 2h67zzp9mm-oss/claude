@@ -274,7 +274,7 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     grow(h, now);
     const hour = new Date(now).getHours();
     const others = [...positions.entries()].filter(([rid, p]) => p.household === id && rid !== me?.id && now - p.at < 15_000)
-      .map(([rid, p]) => ({ id: rid, name: state.residents.find(r => r.id === rid)?.name || "", x: p.x, y: p.y, dir: p.dir, moving: p.moving }));
+      .map(([rid, p]) => ({ id: rid, name: state.residents.find(r => r.id === rid)?.name || "", x: p.x, y: p.y, dir: p.dir, moving: p.moving, ...(p.inside ? { inside: true, room: p.room } : {}) }));
     return {
       plots: h.plots.map(p => p.crop ? { crop: p.crop, growth: Math.round(p.growth * 100) / 100, wet: now < Number(p.wateredAt || 0) + (Number(p.wetH) || WATER_HOURS) * 3600_000, tilled: Boolean(p.tilled) } : { crop: null, tilled: Boolean(p.tilled) }),
       beds: bedsOf(h), level: levelOf(h) + 1, shop: cropsOf(h),
@@ -333,7 +333,8 @@ function createHomestead({ random = Math.random, isPlayer = () => false } = {}) 
     switch (msg.action) {
       case "pos": {
         const x = Number(msg.x), y = Number(msg.y);
-        if (Number.isFinite(x) && Number.isFinite(y)) positions.set(r.id, { x, y, dir: Number(msg.dir) | 0, moving: Boolean(msg.moving), at: now, household: id });
+        // inside: they're in the house (x, y are room tiles then, and room 2 is the second room), not on the plot
+        if (Number.isFinite(x) && Number.isFinite(y)) positions.set(r.id, { x, y, dir: Number(msg.dir) | 0, moving: Boolean(msg.moving), at: now, household: id, inside: msg.inside === true, room: msg.inside === true && msg.room === 2 ? 2 : 1 });
         return { ok: true, quiet: true };
       }
       case "leave": positions.delete(r.id); return { ok: true, quiet: true };

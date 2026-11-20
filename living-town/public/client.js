@@ -1737,6 +1737,8 @@
   window.LivingTownHome?.init({
     send, toast: showToast, me: () => me?.residentId || null, resident: id => residents.get(id),
     look: id => { const r = residents.get(id); return r ? lookFor(r) : null; },
+    // the rest of your family who are at home in town right now (inside your house, by the one shared rule)
+    homeFolk: () => { const mine = me && window.LivingTownWorld.homeOf(me.residentId); return mine ? [...residents.values()].filter(r => r.id !== me.residentId && window.LivingTownWorld.homeOf(r.id)?.id === mine.id && buildingOf(r)?.id === mine.id) : []; },
     editLook: () => { const r = me && residents.get(me.residentId); if (r) showCharacterEditor(r, () => $("#playerGate")?.remove()); },
     openHouse: () => { window.LivingTownHome.close(); visitPlace("homes"); }
   });

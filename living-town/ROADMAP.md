@@ -8,11 +8,10 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **Family inside the house** (M): other family members who are at home show up walking around the room.
-2. **Glint's chosen name in the menu** (S): when Glint has picked his own name, World → "◈ Glint's Grid" uses it.
-3. **Grid "🎯 Centre" button wraps** (S): it fits on one line at 390 px.
-4. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
-5. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
+1. **Glint's chosen name in the menu** (S): when Glint has picked his own name, World → "◈ Glint's Grid" uses it.
+2. **Grid "🎯 Centre" button wraps** (S): it fits on one line at 390 px.
+3. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
+4. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
 
 ## Ideas (need Sean's OK before they move up)
 - Kids can talk to Glint in the Grid (owner only right now).
@@ -35,7 +34,16 @@ Up next: split it first.
 - Hazel could pick a look for the open doorway between rooms (it's a plain frame in the wall's trim colour for now).
 - With only the main buttons showing, the room's back wall is very tall and bare (about half the screen). Hazel could
   pick something for up there (a hanging lamp, high shelves, or wall things you can place higher), as a 🎨 Style option.
+- Family who are at home in town only wander in the first room. They could sometimes go through to Room 2, or sit
+  on a sofa or bed now and then instead of only walking.
+- The UI bot checks a family member who is inside the house, but not the ones wandering because they're at home in
+  town (the bot can't pretend someone is home in town yet).
 ## Done
+- 2026-11-20 Family inside the house: when someone else in the family is in the house, you see them walking about the
+  room where they really are (with their name over their head), in the same room as you (Room 2 too). Family who are
+  at home in town but not playing wander from spot to spot. Everyone walks round furniture, never over it, and nobody
+  is ever in two places (someone inside isn't shown in the garden). Tap one to wave. A new test covers the server
+  side; the UI bot checks Olive shows up, walks round a bed, and that Hazel in Room 2 doesn't appear in Room 1.
 - 2026-11-19 The room fills the screen: inside the house, the room now reaches from just under the top to just above
   the bottom panel in every style and world, whatever menu is open. Spare height first makes the floor a little less
   squashed (taller tiles to tap), then makes the back wall taller; the window, door and wall pictures stay at the same

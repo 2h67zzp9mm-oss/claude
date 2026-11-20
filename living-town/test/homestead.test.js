@@ -75,6 +75,24 @@ test("home plot: plant, water, grow, pick, sell, buy seeds, fish and mail", () =
   roll = 0.99; assert.ok(hs.act(state, "home-1", me, { action: "fish" }, t0 + 4000).fish);
 });
 
+test("family inside the house: the others see where you are in the room, and which room", () => {
+  const hs = createHomestead({ random: () => 0.5 });
+  const state = { residents: [{ id: "dad", name: "Sean", stars: 0 }, { id: "hazel", name: "Hazel" }, { id: "olive", name: "Olive" }] };
+  const [dad, hazel, olive] = state.residents, t0 = Date.parse("2026-11-20T10:00:00");
+  hs.act(state, "home-1", hazel, { action: "pos", x: 9, y: 12, dir: 1 }, t0);
+  let seen = hs.view(state, "home-1", dad, t0).others.find(o => o.id === "hazel");
+  assert.equal(seen.inside, undefined, "out in the garden: not inside");
+  hs.act(state, "home-1", hazel, { action: "pos", x: 3.5, y: 2.55, dir: 2, moving: true, inside: true }, t0 + 1000);
+  seen = hs.view(state, "home-1", dad, t0 + 1000).others.find(o => o.id === "hazel");
+  assert.deepEqual([seen.inside, seen.room, seen.x, seen.y, seen.name], [true, 1, 3.5, 2.55, "Hazel"], "inside the house, in the first room, on her tile");
+  hs.act(state, "home-1", olive, { action: "pos", x: 1.5, y: 0.8, dir: 0, inside: true, room: 2 }, t0 + 1000);
+  assert.equal(hs.view(state, "home-1", dad, t0 + 1000).others.find(o => o.id === "olive").room, 2, "through the doorway in the second room");
+  assert.equal(hs.view(state, "home-1", hazel, t0 + 1000).others.some(o => o.id === "hazel"), false, "you never see yourself twice");
+  hs.act(state, "home-1", hazel, { action: "pos", x: 9, y: 12, dir: 0, inside: "yes" }, t0 + 2000);
+  assert.equal(hs.view(state, "home-1", dad, t0 + 2000).others.find(o => o.id === "hazel").inside, undefined, "only a real yes counts as inside");
+  assert.equal(hs.view(state, "home-1", dad, t0 + 20_000).others.length, 0, "gone after a while without news");
+});
+
 test("home plot: daily goals pay stars, all three pay a bonus, and days in a row make a streak", () => {
   const hs = createHomestead(); const state = { residents: [] }; const me = { id: "dad", stars: 0 };
   const day1 = Date.parse("2026-11-11T10:00:00");

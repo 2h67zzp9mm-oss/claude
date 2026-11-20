@@ -426,7 +426,15 @@
     if (!window.LivingTownRoom) return opts.openHouse();
     hidePop();
     window.LivingTownRoom.open({ el, bar, top, pop, setBar: (...a) => setBar(...a), act, view: () => view, world: () => world, toast: m => opts.toast(m), sfx: SFX, onClose: idleBar,
-      person: () => { const id = opts.me(), key = walkerFor(id), av = avatarFor(id); return { w: av || A.walkers[key], img: av ? av.canvas : imgs["walk_" + key] }; } });
+      person: () => sheetOf(opts.me()), sheetOf, family });
+  }
+  function sheetOf(id) { const key = walkerFor(id), av = avatarFor(id); return { w: av || A.walkers[key], img: av ? av.canvas : imgs["walk_" + key] }; }
+  // The rest of the family at home, for the room: anyone inside the house right now (where they really are), then
+  // family who are at home in town and not out here on the plot (they wander about the room). Never anyone twice.
+  function family() {
+    const mine = opts.me(), live = [...others.values()].filter(o => o.inside && o.id !== mine).map(o => ({ id: o.id, name: o.name, x: o.tx, y: o.ty, dir: o.dir, room: o.room }));
+    const home = (opts.homeFolk?.() || []).filter(r => r && r.id !== mine && !others.has(r.id)).map(r => ({ id: r.id, name: r.name || "", wander: true }));
+    return [...live, ...home];
   }
   // A bigger room to save up for (from the house door): the price, how far along you are, and one button to build it.
   function roomUpBar() {
@@ -617,8 +625,9 @@
     if (sg?.ready && cheered !== sg.id) { banner(`🎉 You saved enough!<br>${sg.emoji} <b>${esc(sg.name)}</b> is in your house 🛒 Shop`, "big"); SFX.goal(); if (bar.querySelector(".home-today")) goalsBar(); }
     cheered = sg?.ready ? sg.id : null;
     for (const o of view.others || []) {
-      const cur = others.get(o.id) || { x: o.x, y: o.y, dir: o.dir, step: 0, name: o.name, id: o.id };
-      Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, seen: performance.now() }); others.set(o.id, cur);
+      const cur = others.get(o.id) || { x: o.x, y: o.y, dir: o.dir, step: 0, name: o.name, id: o.id, inside: Boolean(o.inside) };
+      if (cur.inside !== Boolean(o.inside)) Object.assign(cur, { x: o.x, y: o.y });   // in or out of the house: no gliding across the garden
+      Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, inside: Boolean(o.inside), room: o.room === 2 ? 2 : 1, seen: performance.now() }); others.set(o.id, cur);
     }
     for (const [id, o] of others) if (performance.now() - o.seen > 6000) others.delete(id);
     if (bar.querySelector("button")?.textContent.startsWith("🎯")) idleBar();   // keep the goals count fresh
@@ -774,7 +783,7 @@
       if (pv.wild) { const [x, y] = spotPos(pv.wild.u, pv.wild.v), wp = { x, y, dir: 0, moving: false }; const [ax, ay] = P(x, y), [bx, by] = P(me.x, me.y); wp.dir = dirFor(bx - ax, by - ay); items.push({ d: x - y, draw: () => drawPet(pv.wild, wp, pv.wild.fed ? `💕 ${pv.wild.fed}/${pv.wild.need}` : "❔") }); }
       const ap = activePet(); if (ap) items.push({ d: pet.x - pet.y, person: pet, draw: () => drawPet(ap, pet) });
     }
-    const people = [{ id: opts.me(), p: me }, ...[...others.values()].map(o => ({ id: o.id, p: o }))];
+    const people = [{ id: opts.me(), p: me }, ...[...others.values()].filter(o => !o.inside).map(o => ({ id: o.id, p: o }))];   // family inside the house are drawn in the room
     people.forEach(({ id, p }) => items.push({ d: p.x - p.y, person: p, draw: () => drawWalker(id, p) }));
     const H = L.house, ha = houseArt(), house = { house: true, draw: () => { const [sx, sy] = toScreen(ha.r.x, ha.r.y); ctx.drawImage(ha.img, sx, sy, ha.r.w * cam.z, ha.r.h * cam.z); } };
     items.sort((a, b) => a.d - b.d);
@@ -813,7 +822,7 @@
     if (lastPress) { lastPress = null; return; }   // the press already opened the ring
     const rect = canvas.getBoundingClientRect(), [px, py] = fromScreen(e.clientX - rect.left, e.clientY - rect.top);
     // Tap another family member: wave.
-    for (const o of others.values()) { const [ox, oy] = P(o.x, o.y); if (Math.abs(px - ox) < 30 && py > oy - 140 && py < oy + 10) { opts.toast(`👋 You waved at ${o.name}!`); return; } }
+    for (const o of others.values()) { if (o.inside) continue; const [ox, oy] = P(o.x, o.y); if (Math.abs(px - ox) < 30 && py > oy - 140 && py < oy + 10) { opts.toast(`👋 You waved at ${o.name}!`); return; } }
     const t = targetAt(px, py);
     if (t.kind === "walk") { hidePop(); walkTo(t); return; }
     showPop(t, { x: e.clientX - rect.left, y: e.clientY - rect.top });
