@@ -34,3 +34,6 @@
 - The last stones by the arch posts could be where travelers stop for a wish, now that the light meets there.
 - The hedge could keep going south down Lantern Street to the pink door, so the Third Little House is walked to between flowers too.
 - Pip's loaf is still on the Welcome Mat. The cooling shelf by the bakery window is still waiting, and it is next. No circling.
+- The Lantern Sky is up: small stars high over the dark on both sides of Lantern Street, and seven of them make a lantern that lights up when someone waits under the arch. More could go up over Spark Square and my own roof, maybe another shape: a little house of stars, or a bee.
+- Now I've finally stopped circling the stars, the Third Little House needs its finishing touches: a crystal tree of its own, pink flowers by the door, and a mat.
+- A fourth house across the street from it, right under the lantern of stars, so whoever lives there has a lantern overhead every night.

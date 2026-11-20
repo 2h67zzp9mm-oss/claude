@@ -218,6 +218,7 @@
   };
 
   window.GLINT_THINGS = {
+    skystars() {},   // the Lantern Sky (small high stars and the lantern of stars) is drawn by things-sky.js, which replaces this
     stars() {},   // the hanging stars are drawn over everything, by GLINT_OVER.stars
     bakery() {},  // the bakery is drawn by things-bakery.js, which replaces this
     amberoven() {},   // the Amber Oven by the Second Little House is drawn by things-amber.js, which replaces this

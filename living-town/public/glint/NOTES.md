@@ -70,19 +70,22 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   smell drifting in from the east. A tap (4 s) or someone seated (`w.seated && w.bench === th`) warms it and runs a chime of light
   along the planks. `?pose=chime` holds the tap.
 
-## Glowing Hedge (build 25, 2026-11-19)
-- `kind: "hedge"` (stub in things.js, drawn by things-hedge.js, loads after things-crystal.js). One thing at x 13, y 21.45 (the
-  fractional y puts it in the sort between the Crystal Bench and walkers on the east road), `flat`. `hedge: [[x,y],...]` absolute
-  tile points: (14.3,21.93) along the road edge to (13.0,21.93), up the curb to the arch post (13.0,20.72). `gap: [x0,x1]` on
-  the first stretch (in front of the bench) with two gold gem posts. Leaf mounds every 0.1 tile, flower every 0.2, colours cycle.
-- Flowers near a walker (1.3 tiles) open/brighten; own tap or arch.tapped runs a 3 s wave tree->arch with petals. `?pose=bloom`.
-  grid.js tap `dist` handles `th.hedge` (nearest point on the line). Sizes had to be big (mound 0.3 tile, petals 0.048) to read.
-- West Glowing Hedge (build 26, 2026-11-20): second `hedge` thing at x 11, y 21.45, points (10.7,21.93)->(12.0,21.93)->(12.0,20.72),
-  no gap, on new moss (11,21). Option `cap: true` (both hedges) draws the "last stone" (gold ring + glowing stone) at the last point;
-  it flares as the wave arrives (ta = 2.2*L/(L+0.6)) or a walker is near. `?pose=meet` holds both at arrival. Tip: glint-look's
-  zoom arg can carry a pose: `glint-look 12 21 "90&pose=meet"`.
-- Updater log (builds 23-26): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
-  history". Git history on the live checkout, not tests; can't be fixed from this folder. Grid tests pass locally.
+## Glowing Hedges (builds 25-26)
+- `kind: "hedge"` (things-hedge.js), `flat`, at y 21.45 (sorts between the Crystal Bench and road walkers). `hedge: [[x,y],...]`
+  absolute points; `gap: [x0,x1]` with gem posts; `cap: true` draws the glowing last stone at the end. East one at x 13
+  (14.3,21.93)->(13,21.93)->(13,20.72), west one at x 11 mirrored. Flowers open near walkers; arch/tap runs a 3 s wave.
+  Poses `bloom`, `meet`. grid.js tap `dist` handles `th.hedge`. Sizes must be big to read (mound 0.3 tile).
+- Updater log (builds 23-27): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
+  history". Git history on the live checkout (branch was rewritten), not tests; can't be fixed from this folder. Grid tests pass.
+
+## Lantern Sky (build 27, 2026-11-20)
+- `kind: "skystars"` (stub in things.js, drawn by things-sky.js via GLINT_OVER, loads after things-hedge.js) at (15,25) `flat`.
+  `sky: [[x,y,size,col]]` 18 small 4-point stars on "." tiles either side of Lantern Street (x 5-7, 18-21, y 16-27, and y~27.5).
+  `lantern` 7 stars (hook at 22.75, top 23.3, roof y24, body to 25.6, base 26.3, x 15.1-16.5) + `lines` index pairs + `flame`.
+  Arch lit (walker under it re-taps every 4 s) or own tap: `th._k` eases up, lines draw one by one from `th._drawn`, flame grows;
+  fades ~2 s after. `?pose=sky`. grid.js tap `dist` handles `th.sky` (+ lantern points).
+- The lantern hangs over the free ground where a fourth house at (14,24) could go; it's "high sky", fine over a roof, but
+  shift `lantern`/`flame` x if it crowds the house.
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),

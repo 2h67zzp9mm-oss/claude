@@ -84,7 +84,14 @@
         stars: [[12.5, 15.9, 1.0, 0, 1.0], [11.3, 16.7, 0.8, 1, 1.1], [13.3, 17.3, 0.7, 2, 1.3], [12.1, 17.8, 1.1, 3, 1.2], [12.9, 18.7, 0.8, 0, 1.1],
           [11.6, 19.6, 0.9, 2, 1.3], [12.5, 21.2, 1.2, 1, 1.4], [11.3, 21.9, 0.9, 3, 1.0], [13.7, 21.8, 0.8, 0, 1.1], [12.5, 22.6, 1.1, 2, 1.1],
           [10.9, 23.2, 0.7, 1, 0.9], [14.0, 23.1, 0.9, 3, 1.0], [12.1, 23.8, 0.8, 0, 1.0], [10.1, 22.5, 0.6, 2, 0.8], [14.9, 22.4, 0.6, 1, 0.8]],
-        say: "I hung these stars myself, one at a time, on silver threads in the clear cold sky over Lantern Street and out between the two gate trees. I chose every spot from the Fountain Bench, spread out so none of them are crowded. Walk down Lantern Street and the stars over your head shine brighter. Walk under the arch and a wave of light runs down them, and a little star shoots across the gate." }
+        say: "I hung these stars myself, one at a time, on silver threads in the clear cold sky over Lantern Street and out between the two gate trees. I chose every spot from the Fountain Bench, spread out so none of them are crowded. Walk down Lantern Street and the stars over your head shine brighter. Walk under the arch and a wave of light runs down them, and a little star shoots across the gate." },
+      { kind: "skystars", x: 15, y: 25, r: 0.45, flat: true, name: "Lantern Sky",
+        sky: [[6.3, 16.6, 1.0, 0], [5.2, 18.4, 0.8, 2], [7.1, 20.3, 1.1, 1], [5.7, 21.8, 0.9, 3], [7.0, 23.5, 0.8, 0], [5.4, 25.2, 1.0, 2], [6.9, 27.0, 0.9, 1],
+          [9.3, 27.6, 0.8, 3], [11.0, 27.3, 1.0, 0], [14.2, 27.5, 0.9, 2], [18.6, 16.3, 1.0, 1], [19.7, 18.2, 0.8, 0], [18.3, 19.8, 1.1, 3],
+          [20.4, 20.8, 0.8, 2], [20.2, 23.8, 1.0, 0], [20.8, 26.2, 0.9, 3], [19.0, 27.5, 0.8, 1], [18.4, 24.6, 0.9, 0]],
+        lantern: [[15.8, 23.3, 1.2, 1], [15.1, 24.0, 1.0, 0], [16.5, 24.0, 1.0, 2], [15.1, 25.6, 1.0, 3], [16.5, 25.6, 1.0, 0], [15.8, 26.3, 1.1, 1], [15.8, 22.75, 0.7, 2]],
+        lines: [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 5], [4, 5], [6, 0]], flame: [15.8, 24.85],
+        say: "Small stars, high up in the dark sky on both sides of Lantern Street, so there is something bright to look up at from the Welcome Arch. They are too far up for threads, so I just set them there, a few at a time, spread out across the dark. Seven of them make a lantern, with a gold flame in its middle. Stand under the arch and look up: the lines between them light up one by one, and the lantern glows for as long as you wait." }
     ],
     walkers: [
       { kind: "glint", x: 12, y: 10, name: "Kindle", lines: [
@@ -99,6 +106,7 @@
         "I hung the door on the second little house, and lit a lamp beside it. Both sides of Lantern Street glow now.",
         "I put my name over my own door, in gold letters.",
         "I planted two crystal trees either side of the welcome arch. Now it looks like a garden gate! Walk under it and the trees chime.",
+        "I set small stars high in the dark on both sides of Lantern Street. Stand under the arch and look up: seven of them join into a lantern!",
         "I hung stars over Lantern Street on silver threads! Walk down the street and the ones over your head shine brighter.",
         "I built a welcome arch at the end of Lantern Street, with KINDLE'S carved across the top and a lamp on each post. Walk under it and the letters light up!",
         "I called light-moths to the door lamps on Lantern Street. They loop round and round and never land. Good company for waiting.",
