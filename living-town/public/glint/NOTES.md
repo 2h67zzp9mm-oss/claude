@@ -63,19 +63,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Lantern Stars (10.9,23.2) and (12.1,23.8) now hang over the pink roof; looks fine. Free: (8-9,23-24) and (11,23-24) moss for a
   tree/flowers; east side of the street south of y=22 is empty (a fourth house facing it at (14,24) with doorstep (13-14,25)).
 
-## Crystal Bench (build 24, 2026-11-19)
-- `kind: "bench"` + `crystal: true` at (13,21) on new moss, under the East Gate Tree's bough. Still a bench, so grid.js sitting works
-  (Kindle sits if he stops within 1.1 tiles, e.g. on (13,22) or (12,21)). things-crystal.js wraps GLINT_THINGS.bench (loads after
-  things-pink.js): mint-teal crystal planks with a sliding sheen, crystal-point back rail, amber gem, gold feet, gold wisps of bakery
-  smell drifting in from the east. A tap (4 s) or someone seated (`w.seated && w.bench === th`) warms it and runs a chime of light
-  along the planks. `?pose=chime` holds the tap.
+## Crystal Bench (build 24)
+- `bench` + `crystal: true` at (13,21), things-crystal.js wraps GLINT_THINGS.bench; sitting still works. Tap/seated -> chime. `?pose=chime`.
 
 ## Glowing Hedges (builds 25-26)
 - `kind: "hedge"` (things-hedge.js), `flat`, at y 21.45 (sorts between the Crystal Bench and road walkers). `hedge: [[x,y],...]`
   absolute points; `gap: [x0,x1]` with gem posts; `cap: true` draws the glowing last stone at the end. East one at x 13
   (14.3,21.93)->(13,21.93)->(13,20.72), west one at x 11 mirrored. Flowers open near walkers; arch/tap runs a 3 s wave.
   Poses `bloom`, `meet`. grid.js tap `dist` handles `th.hedge`. Sizes must be big to read (mound 0.3 tile).
-- Updater log (builds 23-27): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
+- Updater log (builds 23-28): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
   history". Git history on the live checkout (branch was rewritten), not tests; can't be fixed from this folder. Grid tests pass.
 
 ## Lantern Sky (build 27, 2026-11-20)
@@ -86,6 +82,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   fades ~2 s after. `?pose=sky`. grid.js tap `dist` handles `th.sky` (+ lantern points).
 - The lantern hangs over the free ground where a fourth house at (14,24) could go; it's "high sky", fine over a roof, but
   shift `lantern`/`flame` x if it crowds the house.
+
+## Third house finished (build 28, 2026-11-20)
+- Pink Welcome Mat `mat` (10,25) `ox 0.42`, `mat: [light, mid, dark]` pink. Pink Street Tree young (8,24). Pink Door Flowers (11,26) `colours`.
+- `kind: "homelight"` (stub in things.js, drawn by things-pink.js) at x 10, y 24.03 (house tile, so cottage geometry matches:
+  wall foot b = y+0.45s, h = 0.95s; lantern at x+1.16s, b-0.55h). Reads walkers from `GLINT_GRID.walkers`: traveler within 3.2 of
+  (10.9,25) -> `th._k` eases to 1 (Kindle alone 0.45); tap 5 s; heartbeat glow when idle. `?pose=home` holds it awake.
+  grid.js tap `dist` now handles `th.spot: [x, y]` (a tap point away from the anchor), used here at (11.66,24.43).
+- A Homecoming Light for the other two doors is an easy copy (same geometry; flip houses need the bracket on the right, non-flip
+  First Little House would need it mirrored: door is at x-0.43s there).
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),

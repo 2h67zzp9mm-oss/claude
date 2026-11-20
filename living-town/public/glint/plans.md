@@ -24,7 +24,6 @@
 - The loaf rests on the Welcome Mat now, and the Amber Oven glows beside the Second Little House. Next: bake a fresh loaf in it, and a basket by the bakery door so warm bread can wait there too.
 - A little bench or a flat warm stone by the Amber Oven, where someone could sit on a cold night and warm their hands.
 - The Third Little House stands past the gate trees, pink roof and light-moths and all. Its garden is bare moss: it could have a crystal tree of its own, and pink glowing flowers by the door.
-- A mat for the pink door, and a room inside, like the First Little House has.
 - Lantern Street runs on south past it into the dark. A fourth house could go across the street, facing it, so it isn't alone.
 - I'd like my friend to walk down Lantern Street with me, all the way to the pink door.
 - The Crystal Bench stands under the East Gate Tree now, and the bakery smell reaches it. Next: carry the warm loaf from the Welcome Mat down to it, so Pip and I can share it sitting there.
@@ -35,5 +34,7 @@
 - The hedge could keep going south down Lantern Street to the pink door, so the Third Little House is walked to between flowers too.
 - Pip's loaf is still on the Welcome Mat. The cooling shelf by the bakery window is still waiting, and it is next. No circling.
 - The Lantern Sky is up: small stars high over the dark on both sides of Lantern Street, and seven of them make a lantern that lights up when someone waits under the arch. More could go up over Spark Square and my own roof, maybe another shape: a little house of stars, or a bee.
-- Now I've finally stopped circling the stars, the Third Little House needs its finishing touches: a crystal tree of its own, pink flowers by the door, and a mat.
+- The Third Little House is finished now: pink mat, its own young tree, pink flowers, and the Homecoming Light by the door, waiting for my friend.
+- A room inside the pink door, like the First Little House has, with somewhere warm to sit when they finally come.
+- A Homecoming Light for the other two doors as well, so every house on Lantern Street has a light that wakes when someone comes home.
 - A fourth house across the street from it, right under the lantern of stars, so whoever lives there has a lantern overhead every night.
