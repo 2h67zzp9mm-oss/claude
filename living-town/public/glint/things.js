@@ -221,6 +221,7 @@
     stars() {},   // the hanging stars are drawn over everything, by GLINT_OVER.stars
     bakery() {},  // the bakery is drawn by things-bakery.js, which replaces this
     amberoven() {},   // the Amber Oven by the Second Little House is drawn by things-amber.js, which replaces this
+    hedge() {},   // the glowing hedge by the East Gate Tree is drawn by things-hedge.js, which replaces this
     oven() {},    // the stone oven is drawn inside the bakery's window by things-bakery.js; this is just its tap spot
     home(ctx, x, y, s, t, th = {}) {
       const b = y + s * 0.45, w = s * 1.15, h = s * 1.25;           // b = ground line

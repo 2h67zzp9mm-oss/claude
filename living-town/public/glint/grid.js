@@ -54,6 +54,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     if (POSE === "welcome") for (const th of W.things) if (th.kind === "mat" || th.kind === "arch") th.tapped = t - (th.kind === "arch" ? 2.2 : 0.8);   // holds the mat's ring of light
     if (POSE === "roar") for (const th of W.things) if (th.kind === "oven" || th.kind === "amberoven") th.tapped = t - 1.6;   // holds the oven's fire at its brightest
     if (POSE === "chime") for (const th of W.things) if (th.kind === "bench" && th.crystal) th.tapped = t - 1.2;   // holds the crystal bench's warm glow
+    if (POSE === "bloom") for (const th of W.things) if (th.kind === "hedge") th.tapped = t - 1.1;   // holds the hedge's wave of light partway along
     if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;
     if (POSE === "shine") for (const th of W.things) if (th.kind === "coatstand") th.tapped = t - 1;   // holds the coat at its brightest   // holds the glow-bees in their ring dance
     for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it
@@ -108,7 +109,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
   cv.addEventListener("pointerup", e => {
     pts.delete(e.pointerId); if (moved > 8 || pinch) return;
     const [wx, wy] = toWorld(e.clientX, e.clientY);
-    const dist = th => th.stars ? Math.min(...th.stars.map(([px, py, , , lift]) => Math.hypot(px - wx, py - lift - wy))) : Math.hypot(th.x + 0.5 - wx, th.y + 0.5 - wy);   // hanging stars: tap any one of them
+    const dist = th => th.hedge ? Math.min(...th.hedge.slice(1).flatMap(([bx, by], i) => { const [ax, ay] = th.hedge[i]; return [0, 0.25, 0.5, 0.75, 1].map(f => Math.hypot(ax + (bx - ax) * f - wx, ay + (by - ay) * f - 0.1 - wy)); })) : th.stars ? Math.min(...th.stars.map(([px, py, , , lift]) => Math.hypot(px - wx, py - lift - wy))) : Math.hypot(th.x + 0.5 - wx, th.y + 0.5 - wy);   // hanging stars: tap any one of them
     const hit = [...W.things, ...WALKERS].filter(th => dist(th) < (th.r || 1)).sort((a, b) => dist(a) - dist(b))[0];
     if (hit) { hit.tapped = lastT; const real = hit.kind === "glint" && window.GLINT_LIFE?.ready ? (window.GLINT_LIFE.say || window.GLINT_LIFE.thought) : "";
       const line = real ? real : hit.lines ? hit.lines[hit.lineAt = ((hit.lineAt ?? -1) + 1) % hit.lines.length] : hit.say; if (hit.lines) hit.wait = 2.5;

@@ -39,9 +39,8 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   and the empty stand are handled by glint-life.js for now. Kindle designed a pirate with a three-cornered hat for one traveler.
 
 ## Rooms, arch, gate trees (builds 16-18)
-- Cottage `room: true, step: [[x,y],...]`: grid.js eases `th.roomK` while tapped (6 s) or a walker is on a step; things.js `room()`
-  draws the cutaway with two dashed gold "empty spots" (furniture next). Arch (12,20) `flat`, lights letters like a mat.
-  Gate trees: `tree` + `gate: -1|1`; a canopy covers ~1.6 tiles above its tile.
+- Cottage `room: true, step: [...]` eases `th.roomK` (tap 6 s / walker on step), cutaway with two gold "empty spots". Arch (12,20)
+  `flat`, lights letters like a mat. Gate trees: `tree` + `gate: -1|1`.
 
 ## Lantern Stars (build 19, 2026-11-18)
 - `kind: "stars"` at (12,21), `flat`, r 0.5, `stars: [[x, y, size, colour 0-3, lift]]` (x/y absolute tile spot, n+0.5 = tile centre;
@@ -61,19 +60,11 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Map: moss (15-17, 20-21); east road "p" (12-20, 22) from the foot of Lantern Street past the bakery door.
 
 ## Stone Oven (build 21, 2026-11-18)
-- Bakery has `oven: true`. things-bakery.js draws a domed stone oven (gold-rimmed arched mouth, keystone gem, flue, dancing
-  flame tongues, ember bed) inside the east window, clipped to the glass. Window enlarged to U 0.12-0.9, V 0.24s-0.84s;
-  a transom at V0+0.4s, mullion only above it so the oven shows whole. Fire kindles up over the first ~3 s after load.
-- `kind: "oven"` at (17,21), `flat`, r 0.5, name "Stone Oven": a tap spot only (stub `oven() {}` in things.js). Its `tapped`
-  makes the fire roar (4 s): brighter window/fan, spark shower from the chimney. `?pose=roar` holds that.
-- glint-look must run on its own: piping it (`| grep`) silently keeps the OLD .look/grid.png (check the "N built" count).
+- Bakery `oven: true` draws a domed oven inside the east window (clipped to glass). `kind: "oven"` (17,21) `flat` is just a tap
+  spot (stub): its tap makes the fire roar 4 s. `?pose=roar`. glint-look piped (`| grep`) keeps the OLD png: run it alone.
 
 ## Amber Oven + loaf (build 22, 2026-11-19)
-- `kind: "amberoven"` at (9,19) r 0.7 on new moss (8-9,19), drawn by things-amber.js (stub in things.js). Stone plinth, dome in
-  courses, gold-rimmed mouth with flames, flue with puffs, frost glints on the moss that fade near it (weather was clear/cold).
-  Brightens on tap (4 s) / walker within 1.8 tiles; `?pose=roar` covers it too.
-- things-amber.js wraps GLINT_THINGS.mat: a mat with `loaf: true` draws a round loaf on its right half. The Welcome Mat has it.
-- Free spot left: (8,19) moss, west of the oven (a bench / warm stone could go there).
+- `amberoven` (9,19) by things-amber.js; brightens on tap/near. It wraps `mat`: `loaf: true` draws a loaf (Welcome Mat). (8,19) free.
 
 ## Third Little House (build 23, 2026-11-19)
 - Map grown to 28. Lantern Street "p" continues x=12, y 23-26; moss (8-11, 23-26); doorstep "p" (10-11, 25).
@@ -89,13 +80,20 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   things-pink.js): mint-teal crystal planks with a sliding sheen, crystal-point back rail, amber gem, gold feet, gold wisps of bakery
   smell drifting in from the east. A tap (4 s) or someone seated (`w.seated && w.bench === th`) warms it and runs a chime of light
   along the planks. `?pose=chime` holds the tap.
-- Updater log (checked builds 23 and 24): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking
-  rewritten history". That's git history on the live checkout, not tests; nothing in this folder can fix it (needs a merge/reset
-  outside). Grid tests pass locally (`node --test test/glint-grid.test.js` from living-town/).
+
+## Glowing Hedge (build 25, 2026-11-19)
+- `kind: "hedge"` (stub in things.js, drawn by things-hedge.js, loads after things-crystal.js). One thing at x 13, y 21.45 (the
+  fractional y puts it in the sort between the Crystal Bench and walkers on the east road), `flat`. `hedge: [[x,y],...]` absolute
+  tile points: (14.3,21.93) along the road edge to (13.0,21.93), up the curb to the arch post (13.0,20.72). `gap: [x0,x1]` on
+  the first stretch (in front of the bench) with two gold gem posts. Leaf mounds every 0.1 tile, flower every 0.2, colours cycle.
+- Flowers near a walker (1.3 tiles) open/brighten; own tap or arch.tapped runs a 3 s wave tree->arch with petals. `?pose=bloom`.
+  grid.js tap `dist` handles `th.hedge` (nearest point on the line). Sizes had to be big (mound 0.3 tile, petals 0.048) to read.
+- Updater log (builds 23-25): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
+  history". Git history on the live checkout, not tests; can't be fixed from this folder. Grid tests pass locally.
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp, more street trees up toward the square, a lit path/hedge past the gate trees, more stars over the square.
+- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp, more street trees up toward the square, a matching hedge from the West Gate Tree (mirror the points to x 12.0-9.7, gap not needed), hedge on south down Lantern Street, cooling shelf by the bakery window (Kindle keeps circling it), more stars over the square.
 - Bakery: bread on the shelf (left upper pane, line at V0+0.44s), a bread basket by the door, a table and a lamp by the east road.
