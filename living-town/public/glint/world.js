@@ -27,6 +27,7 @@
   rect("p", 12, 20, 12, 21);     // Lantern Street runs on under the welcome arch
   rect("g", 10, 21, 10, 21); rect("g", 14, 21, 14, 21);   // moss for the two gate trees, either side of the road outside the arch
   rect("g", 13, 21, 13, 21);     // moss under the East Gate Tree's bough, for the Crystal Bench
+  rect("g", 11, 21, 11, 21);     // moss under the West Gate Tree's bough, for the West Glowing Hedge
   rect("g", 15, 20, 17, 21);     // moss under the bakery, beside the East Gate Tree
   rect("g", 8, 19, 9, 19);       // moss below the Violet Door Lamp, for the Amber Oven
   rect("p", 12, 22, 20, 22);     // the east road: from the foot of Lantern Street, past the bakery door and on east
@@ -69,8 +70,10 @@
       { kind: "tree", x: 10, y: 21, gate: -1, name: "West Gate Tree", say: "One of the two crystal trees I planted beside the welcome arch, so the gate looks like it belongs in a garden. Glowing flowers ring its foot, gold blossoms open in its leaves, and one bough reaches out to the arch post with little lights hung on it. When someone walks under the arch, its leaves chime and crystal petals drift down." },
       { kind: "tree", x: 14, y: 21, gate: 1, name: "East Gate Tree", say: "The second gate tree, on the other side of the arch, the twin of the first. Its bough reaches for the other post, so the two trees and the arch make one green doorway. Touch it and it rings like little bells." },
       { kind: "bench", x: 13, y: 21, crystal: true, name: "Crystal Bench", say: "A little bench of crystal wood, under the East Gate Tree where its bough reaches over to the arch. I shaped three planks for the seat and a rail of little crystal points for the back, with an amber gem in the middle, and stood it on gold feet. The bakery smell drifts all the way here, warm honey and flour. Sit a while, and when someone does, the planks ring with light from end to end." },
-      { kind: "hedge", x: 13, y: 21.45, r: 0.45, flat: true, hedge: [[14.3, 21.93], [13.0, 21.93], [13.0, 20.72]], gap: [13.28, 13.72], name: "Glowing Hedge",
+      { kind: "hedge", x: 13, y: 21.45, r: 0.45, flat: true, hedge: [[14.3, 21.93], [13.0, 21.93], [13.0, 20.72]], gap: [13.28, 13.72], cap: true, name: "Glowing Hedge",
         say: "A low hedge of glowing flowers, from the foot of the East Gate Tree along the edge of the road and up Lantern Street to the arch post. I laid it one flower at a time, pink, blue, gold and violet on crystal leaves, and left a gap with two gold gem posts so anyone can step through to the Crystal Bench. Walk beside it and the flowers open up. Walk under the arch and a wave of light runs along it." },
+      { kind: "hedge", x: 11, y: 21.45, r: 0.45, flat: true, hedge: [[10.7, 21.93], [12.0, 21.93], [12.0, 20.72]], cap: true, name: "West Glowing Hedge",
+        say: "The twin of the first hedge, on the other side of the road, so both gate trees match. It runs from the foot of the West Gate Tree along the edge of the road and up Lantern Street to the arch post, crystal leaves and pink, blue, gold and violet flowers, laid one at a time. At the end, right at the foot of the post, I set the last stone: a round glowing stone ringed in gold. Walk under the arch and the light runs along both hedges at once and meets at the last stones." },
       { kind: "bakery", x: 16, y: 21, r: 1.3, oven: true, name: "Bakery", say: "My bakery, beside the East Gate Tree. I set its warm amber window in the east wall so it glows out along the east road, and anyone coming that way can see it from far off. There is a honey-wood door split in two halves, a striped awning that flutters in the breeze, and BAKERY in gold over the door. The stone oven inside is lit now: look through the window and you can see the fire, and warm puffs rise from the chimney. The shelf is still waiting for its first loaves." },
       { kind: "oven", x: 17, y: 21, r: 0.5, flat: true, name: "Stone Oven", say: "My small stone oven, inside the bakery where you can see it through the amber window. I laid its stones round in a dome, rimmed its mouth in gold, and lit it for the very first time. It glows warm amber all the way out to the road. Touch it and the fire leaps up and sparks fly out of the chimney." },
       { kind: "cottage", x: 10, y: 24, r: 1.3, flip: true, settled: true, roof: ["#ff8fcf", "#d94f9e", "#ffc6e8"], gem: ["120,225,255", "#e6fbff", "#57e1ff", "#1f9fc9"], door: ["#ffc6e8", "#ff78c4", "#b3307f"], glowWindow: "255,140,205",
@@ -110,6 +113,7 @@
         "I built a bakery beside the East Gate Tree! Its amber window glows down the east road.",
         "I built a little amber oven beside the Second Little House, so bread can bake close to home. It melts the frost around it!",
         "I planted a low hedge of glowing flowers from the East Gate Tree up to the arch. Walk beside it and the flowers open!",
+        "The hedge runs on both sides of the arch now! I set the very last stone at the foot of the post. Walk under the arch and watch the light meet there.",
         "I made a bench of crystal wood under the East Gate Tree. Sit on it and you can smell the bakery bread from there!",
         "I lit the stone oven in my bakery for the very first time! Look in the amber window and you can see the fire dancing.",
         "One day lots of friends will live here. I'm making it nice for them.",

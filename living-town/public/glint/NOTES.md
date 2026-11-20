@@ -42,29 +42,18 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Cottage `room: true, step: [...]` eases `th.roomK` (tap 6 s / walker on step), cutaway with two gold "empty spots". Arch (12,20)
   `flat`, lights letters like a mat. Gate trees: `tree` + `gate: -1|1`.
 
-## Lantern Stars (build 19, 2026-11-18)
-- `kind: "stars"` at (12,21), `flat`, r 0.5, `stars: [[x, y, size, colour 0-3, lift]]` (x/y absolute tile spot, n+0.5 = tile centre;
-  drawn `lift` tiles above it). THINGS.stars is a no-op stub (the test only loads world.js + things.js and needs a draw there);
-  the real drawing is GLINT_OVER.stars (on top of everything): ground pool, silver thread, 5-point star, cross flare when bright.
-  Brightens under any walker (within 1.7 tiles); arch tap / own tap runs a wave down by y and a shooting star over the gate
-  (also every 11 s). grid.js tap test uses each star's lifted position for things with `stars`.
-- Keep stars clear of the KINDLE'S board (screen y about 19.0 at the arch). `?pose=welcome` shows the wave.
-- The test (test/glint-grid.test.js) loads only world.js + things.js: any kind on the map must have a draw in things.js
-  (a stub that defers to another file is fine). The failed "hedge" build put a hedge on the map without a drawing.
-- things.js is ~60 KB: new kinds go in things-*.js files (script tag in index.html after things.js) with a stub in things.js.
+## Lantern Stars (build 19)
+- `stars` (12,21) `flat`, `stars: [[x, y, size, colour 0-3, lift]]` (absolute tile spot, drawn `lift` tiles up). THINGS.stars is a stub;
+  GLINT_OVER.stars draws on top. Brighten under walkers; arch/own tap runs a wave + shooting star (also every 11 s). Keep clear of
+  the KINDLE'S board. `?pose=welcome`.
+- The test (test/glint-grid.test.js) loads only world.js + things.js: every kind on the map needs a draw (stub) in things.js.
+  things.js is ~60 KB: new kinds go in things-*.js (script tag after things.js) with a stub in things.js.
 
-## Bakery (build 20)
-- `kind: "bakery"` at (16,21) r 1.3, drawn by things-bakery.js (stub `bakery() {}` in things.js, overwritten on load).
-  Three-quarter view: front gable faces south, east wall visible with the amber window; light fan spills east on the ground.
-  Brightens when tapped (3.5 s) or a walker is within ~1.8 tiles of (16.6,21.9). Name board in the gable, striped awning, split door.
-- Map: moss (15-17, 20-21); east road "p" (12-20, 22) from the foot of Lantern Street past the bakery door.
-
-## Stone Oven (build 21, 2026-11-18)
-- Bakery `oven: true` draws a domed oven inside the east window (clipped to glass). `kind: "oven"` (17,21) `flat` is just a tap
-  spot (stub): its tap makes the fire roar 4 s. `?pose=roar`. glint-look piped (`| grep`) keeps the OLD png: run it alone.
-
-## Amber Oven + loaf (build 22, 2026-11-19)
-- `amberoven` (9,19) by things-amber.js; brightens on tap/near. It wraps `mat`: `loaf: true` draws a loaf (Welcome Mat). (8,19) free.
+## Bakery, ovens (builds 20-22)
+- `bakery` (16,21) r 1.3 by things-bakery.js: front gable south, amber east window, light fan east; brightens on tap/near. `oven: true`
+  draws the Stone Oven in the window; `oven` (17,21) is a tap-only stub (fire roars 4 s, `?pose=roar`). East road "p" (12-20, 22).
+- `amberoven` (9,19) by things-amber.js; it wraps `mat`: `loaf: true` draws a loaf on the Welcome Mat. (8,19) free.
+- glint-look piped (`| grep`) keeps the OLD png: run it alone.
 
 ## Third Little House (build 23, 2026-11-19)
 - Map grown to 28. Lantern Street "p" continues x=12, y 23-26; moss (8-11, 23-26); doorstep "p" (10-11, 25).
@@ -88,12 +77,16 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   the first stretch (in front of the bench) with two gold gem posts. Leaf mounds every 0.1 tile, flower every 0.2, colours cycle.
 - Flowers near a walker (1.3 tiles) open/brighten; own tap or arch.tapped runs a 3 s wave tree->arch with petals. `?pose=bloom`.
   grid.js tap `dist` handles `th.hedge` (nearest point on the line). Sizes had to be big (mound 0.3 tile, petals 0.048) to read.
-- Updater log (builds 23-25): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
+- West Glowing Hedge (build 26, 2026-11-20): second `hedge` thing at x 11, y 21.45, points (10.7,21.93)->(12.0,21.93)->(12.0,20.72),
+  no gap, on new moss (11,21). Option `cap: true` (both hedges) draws the "last stone" (gold ring + glowing stone) at the last point;
+  it flares as the wave arrives (ta = 2.2*L/(L+0.6)) or a walker is near. `?pose=meet` holds both at arrival. Tip: glint-look's
+  zoom arg can carry a pose: `glint-look 12 21 "90&pose=meet"`.
+- Updater log (builds 23-26): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
   history". Git history on the live checkout, not tests; can't be fixed from this folder. Grid tests pass locally.
 
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp, more street trees up toward the square, a matching hedge from the West Gate Tree (mirror the points to x 12.0-9.7, gap not needed), hedge on south down Lantern Street, cooling shelf by the bakery window (Kindle keeps circling it), more stars over the square.
+- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp, more street trees up toward the square, hedge on south down Lantern Street, cooling shelf by the bakery window (Kindle keeps circling it), more stars over the square.
 - Bakery: bread on the shelf (left upper pane, line at V0+0.44s), a bread basket by the door, a table and a lamp by the east road.

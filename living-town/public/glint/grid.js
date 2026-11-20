@@ -55,6 +55,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     if (POSE === "roar") for (const th of W.things) if (th.kind === "oven" || th.kind === "amberoven") th.tapped = t - 1.6;   // holds the oven's fire at its brightest
     if (POSE === "chime") for (const th of W.things) if (th.kind === "bench" && th.crystal) th.tapped = t - 1.2;   // holds the crystal bench's warm glow
     if (POSE === "bloom") for (const th of W.things) if (th.kind === "hedge") th.tapped = t - 1.1;   // holds the hedge's wave of light partway along
+    if (POSE === "meet") for (const th of W.things) if (th.kind === "hedge") th.tapped = t - 1.9;   // holds both hedges as the light reaches the last stones
     if (POSE === "dance") for (const th of W.things) if (th.kind === "hive") th.tapped = t - 1.5;
     if (POSE === "shine") for (const th of W.things) if (th.kind === "coatstand") th.tapped = t - 1;   // holds the coat at its brightest   // holds the glow-bees in their ring dance
     for (const w of WALKERS) {   // someone who stops beside a bench sits down on it; they slide onto the seat and are drawn just in front of it

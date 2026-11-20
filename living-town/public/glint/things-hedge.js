@@ -86,6 +86,24 @@
       }
     }
 
+    // the last stone: a round glowing stone ringed in gold at the arch-post end; it flares when the wave arrives
+    if (th.cap) {
+      const [cx, cy] = th.hedge[th.hedge.length - 1], [px, py] = at(cx, cy + 0.08);
+      const ta = 2.2 * L / (L + 0.6), arrive = e >= 0 && e < ta + 1.6 ? Math.max(0, Math.min(1, (e - ta + 0.15) / 0.25)) * Math.max(0, Math.min(1, 1 - (e - ta - 0.5) / 1.0)) : 0;   // ta: when the wave reaches the end
+      const on = Math.max(near(cx, cy), arrive), pulse = 0.5 + 0.5 * Math.sin(t * 1.6 + cx);
+      glow(ctx, px, py - s * 0.05, s * (0.28 + 0.25 * on), "255,230,160", 0.35 + 0.15 * pulse + 0.55 * on);
+      ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(px, py + s * 0.02, s * 0.15, s * 0.05, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#e09a2b"; ctx.beginPath(); ctx.ellipse(px, py - s * 0.01, s * 0.14, s * 0.06, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.ellipse(px, py - s * 0.03, s * 0.14, s * 0.06, 0, 0, TAU); ctx.fill();
+      const sg = ctx.createRadialGradient(px - s * 0.03, py - s * 0.1, 0, px, py - s * 0.06, s * 0.11);
+      sg.addColorStop(0, "#ffffff"); sg.addColorStop(0.45, on > 0.3 ? "#fff1b8" : "#bff7ea"); sg.addColorStop(1, on > 0.3 ? "#ffb347" : "#2cc4ac");
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(px, py - s * 0.06, s * 0.1, s * 0.075, 0, 0, TAU); ctx.fill();
+      if (on > 0.5) for (let k = 0; k < 4; k++) {   // sparks lift off when the light arrives
+        const f = (t * 0.9 + k / 4) % 1;
+        glow(ctx, px + Math.sin(k * 2.1 + f * 4) * s * 0.08, py - s * 0.1 - f * s * 0.35, s * 0.04 * (1 - f) + 1, "255,230,160", (1 - f) * on);
+      }
+    }
+
     // two little gem posts either side of the gap in front of the bench
     if (th.gap) for (const gx of th.gap) {
       const [px, py] = at(gx, th.hedge[0][1]), on = Math.max(near(gx, th.hedge[0][1]), wave(Math.abs(th.hedge[0][0] - gx)));

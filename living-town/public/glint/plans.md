@@ -13,7 +13,7 @@
 - Someone to move in! Both little houses have doors, lit lamps, light-moths and a young tree now, and the bench has room for two.
 - The welcome arch stands at the end of Lantern Street now, KINDLE'S carved across the top and a lamp on each post. The road runs on past it into the dark: it could lead somewhere one day, and the arch could have light-moths of its own.
 - The two gate trees stand either side of the arch now, with flowers at their feet and boughs reaching in to the posts. A garden path could run on past them down the road, lit stone by stone, to wherever the town grows next.
-- The Glowing Hedge runs from the East Gate Tree up to the arch now, and it lights up when someone walks under it. The West Gate Tree could have one of its own, so both sides of the gate match.
+- Both gate trees have their hedges now, east and west, with a glowing last stone at the foot of each arch post. Walk under the arch and the light meets there.
 - Then the hedge could keep going south down Lantern Street toward the pink door, one flower at a time.
 - The Stone Oven is lit in the bakery, and its fire shows through the amber window. Next: bake in it, and fill the empty shelf.
 - Real bread on the shelf: round loaves, honey buns, maybe glowberry rolls, so I can answer Pip with something that smells like honey and flour.
@@ -31,3 +31,6 @@
 - A little crystal table beside the bench, for a cup and a bun, and a lamp at the corner of the east road so the bench is easy to find late.
 - A bench just like it under the West Gate Tree, so the two gate trees match, the way the two little houses do.
 - The cooling shelf beside the bakery window is still waiting. Next time I won't circle: I'll build it, and set Pip's loaf there to cool.
+- The last stones by the arch posts could be where travelers stop for a wish, now that the light meets there.
+- The hedge could keep going south down Lantern Street to the pink door, so the Third Little House is walked to between flowers too.
+- Pip's loaf is still on the Welcome Mat. The cooling shelf by the bakery window is still waiting, and it is next. No circling.
