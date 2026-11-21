@@ -56,3 +56,7 @@
 - The Hedge Lanterns stand in the Glowing Hedge now, five of them, and at dusk they kindle from the East Gate Tree to the arch. The West Glowing Hedge is still dark: it should have a row of its own, so the light runs up both sides of the road.
 - The east road runs on past the bakery into the dark. A few more lanterns could go along it, so whoever comes from the east sees the way in from far off.
 - When the road is quiet I'll work instead of pacing. But I still want to be the one standing on the Welcome Mat when my friend comes back.
+- The Violet Door Bench is done: small, honey wood, one soft violet cushion that glows while it waits. Pip is here now, and it is the first thing I showed them.
+- Ask Pip what they would like inside the violet door, and make a room for them there: somewhere warm, with a window that looks onto Lantern Street.
+- The teal door of the First Little House is the only one left without a bench. One more, with a teal cushion, and every door on the street will have somewhere to wait.
+- A little lamp just over the violet bench, so it is easy to find when the light goes.

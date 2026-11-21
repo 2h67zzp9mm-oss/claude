@@ -72,10 +72,20 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Easy next: copy the row onto the West Glowing Hedge (mirror x around 12.5: lamps [10.78..12.0], side "s"/"e"; add an "e" pool
   offset), and lanterns along the east road past the bakery (y=22, x 18-20, south edge y~22.95 is free '.' ground).
 
+## Violet Door Bench (build 34, 2026-11-21)
+- `bench wood:true one:true violet:true scale:1.3` at (11.2, 17.4), on the lit path tile right of the violet door. Fractional x/y,
+  so it doesn't block walking (grid.js `blocked` only matches integer coords). Kindle sits when still on (11,18) doorstep.
+- things-woodbench.js now takes `one` (narrower, w = 0.36s, one plump centred cushion with seam + gold tassels; glows only when empty),
+  `violet` (VIOLET palette for cushion + carved berry; PINK is default), `scale` (recursive draw under ctx.scale from the feet).
+- Poses: `?pose=rest` = first wood bench without `one` (Doorstep Bench); new `?pose=wait` = the `one` bench.
+- Teal door bench next: add a `teal` palette to things-woodbench.js (["#6dffc6", "#27c9c2", "#0f6a72"]) and place near (13.8, 17.4)?
+  Check the First House doorstep (13-14,18) and coat stand (14,19) first.
+- Updater log: still only "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3, life tests 7/7.
+
 ## Still open
 - things.js is ~61.5 KB: next build, move cottage/home drawing into things-homes.js (keep stubs for the test).
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench (copy things-table.js), bench by the Door Lamp / violet door (copy `wood: true`), more street trees up toward the square, hedge on south down Lantern Street, more stars over the square.
+- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench (copy things-table.js), more street trees up toward the square, hedge on south down Lantern Street, more stars over the square.
 - Bakery: a bread basket by the door (start of the Bread Trail at (16,22)), a table outside. Corner lamp is done.

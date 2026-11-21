@@ -43,7 +43,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
   function frame(ms) {
     const t = ms / 1000, dt = Math.min(0.1, t - lastT); lastT = t;
     for (const w of WALKERS) stepWalker(w, dt);
-    if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } if (POSE === "sit" && BENCHES[0]) { w.fx = BENCHES[0].x; w.fy = BENCHES[0].y + 1; w.moving = false; w.still = 9; } const wb = BENCHES.find(bn => bn.wood); if (POSE === "rest" && wb) { w.fx = Math.round(wb.x); w.fy = Math.round(wb.y) + 1; w.moving = false; w.still = 9; w.sitK = 1; } }
+    if (POSE && WALKERS[0]) { const w = WALKERS[0]; w.asleep = POSE === "sleep"; if (POSE === "wave") w.tapped = t; if (POSE === "walk") { w.moving = true; w.dx = 1; } if (POSE === "sit" && BENCHES[0]) { w.fx = BENCHES[0].x; w.fy = BENCHES[0].y + 1; w.moving = false; w.still = 9; } const wb = BENCHES.find(bn => bn.wood && (POSE === "wait" ? bn.one : !bn.one)); if ((POSE === "rest" || POSE === "wait") && wb) { w.fx = Math.round(wb.x); w.fy = Math.round(wb.y) + 1; w.moving = false; w.still = 9; w.sitK = 1; } }
     if (POSE === "open") for (const th of W.things) if (th.door) th.tapped = t - 1;   // holds a coloured door open
     for (const th of W.things) if ((th.kind === "mat" || th.kind === "arch") && !(t - th.tapped < 4) && WALKERS.some(w => Math.round(w.fx) === th.x && Math.round(w.fy) === th.y)) th.tapped = t;   // a mat says welcome when someone steps on it
     for (const th of W.things) if (th.room) {   // a house with a room: someone on its doorstep (th.step) gets a look inside
