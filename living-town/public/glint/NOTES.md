@@ -61,6 +61,16 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   plus a wave bakery -> bench. `th._k` eases to 1 when a walker is on the trail / within 1.8 of the lamp, or 5 s after a tap.
   `?pose=trail` holds it bright. Any other `p` tile is untouched (wrapper calls the old draw, of which there is none yet).
 - Updater log: every skip since build 30 is "live checkout has uncommitted changes" (outside this folder), not tests. Grid tests 3/3.
+  Still true at build 33 (2026-11-21 14:41): nothing in this folder to fix; the live checkout needs cleaning by hand.
+
+## Hedge Lanterns (build 33, 2026-11-21)
+- `kind: "hedgelamps"` (13, 21.47) `flat`, stub in things.js, drawn by things-lanterns.js (loads after things-corner.js).
+  `lamps: [[x, y, side]]` tree -> arch on the east hedge line; side "s" pools light on the east road, "w" on Lantern St.
+  Gold crook stake + hanging amber lantern, geometry scaled by `S = s * 1.75` (at 1.0 they were invisible at phone zoom).
+- Brightness follows the device clock: dark 0..1 (16:30-18:30 up, 6-8 down). Dusk (16:30-19:30) kindles them one by one every 9 s;
+  tap or a walker arriving within 1.2 of any lamp runs the same kindle. `?pose=dusk` holds it. Tap spot `spot: [13.5, 21.7]`.
+- Easy next: copy the row onto the West Glowing Hedge (mirror x around 12.5: lamps [10.78..12.0], side "s"/"e"; add an "e" pool
+  offset), and lanterns along the east road past the bakery (y=22, x 18-20, south edge y~22.95 is free '.' ground).
 
 ## Still open
 - things.js is ~61.5 KB: next build, move cottage/home drawing into things-homes.js (keep stubs for the test).
