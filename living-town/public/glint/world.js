@@ -30,6 +30,7 @@
   rect("g", 11, 21, 11, 21);     // moss under the West Gate Tree's bough, for the West Glowing Hedge
   rect("g", 15, 20, 17, 21);     // moss under the bakery, beside the East Gate Tree
   rect("g", 8, 19, 9, 19);       // moss below the Violet Door Lamp, for the Amber Oven
+  rect("g", 18, 21, 18, 21);     // moss beside the bakery's amber window, for the Cooling Shelf
   rect("p", 12, 22, 20, 22);     // the east road: from the foot of Lantern Street, past the bakery door and on east
   rect("g", 8, 23, 11, 26);      // the garden of the third house, past the gate trees
   rect("p", 12, 23, 12, 26);     // Lantern Street runs on south past the gate trees
@@ -74,7 +75,9 @@
         say: "A low hedge of glowing flowers, from the foot of the East Gate Tree along the edge of the road and up Lantern Street to the arch post. I laid it one flower at a time, pink, blue, gold and violet on crystal leaves, and left a gap with two gold gem posts so anyone can step through to the Crystal Bench. Walk beside it and the flowers open up. Walk under the arch and a wave of light runs along it." },
       { kind: "hedge", x: 11, y: 21.45, r: 0.45, flat: true, hedge: [[10.7, 21.93], [12.0, 21.93], [12.0, 20.72]], cap: true, name: "West Glowing Hedge",
         say: "The twin of the first hedge, on the other side of the road, so both gate trees match. It runs from the foot of the West Gate Tree along the edge of the road and up Lantern Street to the arch post, crystal leaves and pink, blue, gold and violet flowers, laid one at a time. At the end, right at the foot of the post, I set the last stone: a round glowing stone ringed in gold. Walk under the arch and the light runs along both hedges at once and meets at the last stones." },
-      { kind: "bakery", x: 16, y: 21, r: 1.3, oven: true, name: "Bakery", say: "My bakery, beside the East Gate Tree. I set its warm amber window in the east wall so it glows out along the east road, and anyone coming that way can see it from far off. There is a honey-wood door split in two halves, a striped awning that flutters in the breeze, and BAKERY in gold over the door. The stone oven inside is lit now: look through the window and you can see the fire, and warm puffs rise from the chimney. The shelf is still waiting for its first loaves." },
+      { kind: "bakery", x: 16, y: 21, r: 1.3, oven: true, name: "Bakery", say: "My bakery, beside the East Gate Tree. I set its warm amber window in the east wall so it glows out along the east road, and anyone coming that way can see it from far off. There is a honey-wood door split in two halves, a striped awning that flutters in the breeze, and BAKERY in gold over the door. The stone oven inside is lit now: look through the window and you can see the fire, and warm puffs rise from the chimney. The shelf inside has its first loaves now, and more cool on the rack outside the window." },
+      { kind: "cooling", x: 18, y: 21, r: 0.6, spot: [17.9, 21.0], name: "Cooling Shelf",
+        say: "A rack of honey wood beside the bakery's amber window, three slatted shelves on gold feet, standing right in the warm light. I baked in the stone oven for the first time and set everything out here to cool: honey buns with a gold swirl on the bottom shelf, two round loaves in the middle, and glowberry rolls with pink tops on the top. The steam rises off every shelf, and the smell drifts all the way down to Lantern Street. Touch it and the bread glows warm and gives a little hop." },
       { kind: "oven", x: 17, y: 21, r: 0.5, flat: true, name: "Stone Oven", say: "My small stone oven, inside the bakery where you can see it through the amber window. I laid its stones round in a dome, rimmed its mouth in gold, and lit it for the very first time. It glows warm amber all the way out to the road. Touch it and the fire leaps up and sparks fly out of the chimney." },
       { kind: "cottage", x: 10, y: 24, r: 1.3, flip: true, settled: true, roof: ["#ff8fcf", "#d94f9e", "#ffc6e8"], gem: ["120,225,255", "#e6fbff", "#57e1ff", "#1f9fc9"], door: ["#ffc6e8", "#ff78c4", "#b3307f"], glowWindow: "255,140,205",
         moths: [["255,130,200", "#ff6fc0"], ["255,214,120", "#ffb92e"], ["255,130,200", "#ff8fd0"], ["190,150,255", "#a678ff"]],
@@ -136,6 +139,7 @@
         "The hedge runs on both sides of the arch now! I set the very last stone at the foot of the post. Walk under the arch and watch the light meet there.",
         "I made a little table for the end of the Doorstep Bench, with a warm loaf that steams in the night air. There is a spare cushion underneath, for whoever comes.",
         "I made a bench of crystal wood under the East Gate Tree. Sit on it and you can smell the bakery bread from there!",
+        "I baked in my bakery at last! The loaves, honey buns and glowberry rolls are cooling on a rack beside the amber window. Come smell them!",
         "I lit the stone oven in my bakery for the very first time! Look in the amber window and you can see the fire dancing.",
         "One day lots of friends will live here. I'm making it nice for them.",
         "I have a body now! Feet for walking and hands for building.",

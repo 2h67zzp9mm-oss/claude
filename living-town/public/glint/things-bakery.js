@@ -122,6 +122,11 @@
     ctx.save(); ctx.beginPath(); [S(U0, V0), S(U1, V0), S(U1, V1), S(U0, V1)].forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.closePath(); ctx.clip();
     ctx.strokeStyle = "rgba(140,60,20,0.55)"; ctx.lineWidth = Math.max(1, s * 0.025);
     ctx.beginPath(); ctx.moveTo(...S(U0 + 0.04, V0 + s * 0.44)); ctx.lineTo(...S(U0 + 0.3, V0 + s * 0.44)); ctx.stroke();
+    for (const u of [0.1, 0.19, 0.28]) {   // the first loaves on the shelf, baked in the oven below
+      const [lx, ly] = S(U0 + u - 0.03, V0 + s * 0.455);
+      ctx.fillStyle = "#c9782e"; ctx.beginPath(); ctx.ellipse(lx, ly, s * 0.04, s * 0.03, -0.25, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = "#f2c070"; ctx.beginPath(); ctx.ellipse(lx - s * 0.008, ly - s * 0.014, s * 0.022, s * 0.01, -0.25, Math.PI, TAU); ctx.fill();
+    }
     const [obx, oby] = S(0.56, V0 - s * 0.01), ow = s * 0.17, oh = s * 0.29;
     poly(ctx, [S(U0, V0), S(U1, V0), S(U1, V0 + s * 0.36), S(U0, V0 + s * 0.36)], "rgba(110,40,15,0.55)");   // the shadowy back of the room   // the oven's floor point, half-width, height
     poly(ctx, [[obx - s * 0.035, oby - oh * 0.8], [obx + s * 0.035, oby - oh * 0.8], [obx + s * 0.035, oby - s * 0.8], [obx - s * 0.035, oby - s * 0.8]], "#8a6f5c");   // its flue, up to the chimney

@@ -45,3 +45,7 @@
 - The Bun Table is at the end of the Doorstep Bench now, with a warm loaf, a pink cup, and one more cushion folded underneath. When Pip comes, the bread will be waiting right there, still warm.
 - A lamp at the corner where the east road meets Lantern Street, so the way from the bakery to the bench is lit all the way.
 - A bench and a little table by the violet door and the teal door too, so every house has somewhere to sit with a bun.
+- The Cooling Shelf stands beside the amber window now, full: honey buns, round loaves and glowberry rolls, all steaming. The shelf inside the bakery has its first loaves too. No more circling.
+- A bread basket by the bakery door, so anyone passing can take a warm bun on the way down to the Doorstep Bench.
+- A lamp at the corner where the east road meets Lantern Street, so the walk from the shelf to the bench is lit all the way.
+- When Pip comes, I want to stand at the shelf together and choose: a glowberry roll or a honey bun.
