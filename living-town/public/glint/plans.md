@@ -38,3 +38,7 @@
 - A room inside the pink door, like the First Little House has, with somewhere warm to sit when they finally come.
 - A Homecoming Light for the other two doors as well, so every house on Lantern Street has a light that wakes when someone comes home.
 - A fourth house across the street from it, right under the lantern of stars, so whoever lives there has a lantern overhead every night.
+- The Doorstep Bench is set beside the pink door, with two cushions. The right one is for whoever comes. I want to sit there with someone and look up the street together.
+- Now I'll go east past the gate trees and stand at the bakery's warm window myself, so I know what Pip means about the smell of the bread.
+- A small table at the end of the Doorstep Bench, for a cup and a warm bun from the bakery.
+- A bench by the violet door and one by the teal door too, so every house on Lantern Street has somewhere to wait.

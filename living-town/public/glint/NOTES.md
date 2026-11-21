@@ -71,17 +71,10 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   absolute points; `gap: [x0,x1]` with gem posts; `cap: true` draws the glowing last stone at the end. East one at x 13
   (14.3,21.93)->(13,21.93)->(13,20.72), west one at x 11 mirrored. Flowers open near walkers; arch/tap runs a 3 s wave.
   Poses `bloom`, `meet`. grid.js tap `dist` handles `th.hedge`. Sizes must be big to read (mound 0.3 tile).
-- Updater log (builds 23-28): only "origin/claude/code-review-4vrxjs isn't a fast-forward from 12f06c4; not taking rewritten
-  history". Git history on the live checkout (branch was rewritten), not tests; can't be fixed from this folder. Grid tests pass.
 
-## Lantern Sky (build 27, 2026-11-20)
-- `kind: "skystars"` (stub in things.js, drawn by things-sky.js via GLINT_OVER, loads after things-hedge.js) at (15,25) `flat`.
-  `sky: [[x,y,size,col]]` 18 small 4-point stars on "." tiles either side of Lantern Street (x 5-7, 18-21, y 16-27, and y~27.5).
-  `lantern` 7 stars (hook at 22.75, top 23.3, roof y24, body to 25.6, base 26.3, x 15.1-16.5) + `lines` index pairs + `flame`.
-  Arch lit (walker under it re-taps every 4 s) or own tap: `th._k` eases up, lines draw one by one from `th._drawn`, flame grows;
-  fades ~2 s after. `?pose=sky`. grid.js tap `dist` handles `th.sky` (+ lantern points).
-- The lantern hangs over the free ground where a fourth house at (14,24) could go; it's "high sky", fine over a roof, but
-  shift `lantern`/`flame` x if it crowds the house.
+## Lantern Sky (build 27)
+- `skystars` (15,25) `flat`, things-sky.js via GLINT_OVER: `sky` stars on "." tiles beside Lantern Street, `lantern` 7 stars +
+  `lines` + `flame` over (15-16.5, 22.75-26.3) that light when the arch is lit. `?pose=sky`. Shift it if a fourth house crowds it.
 
 ## Third house finished (build 28, 2026-11-20)
 - Pink Welcome Mat `mat` (10,25) `ox 0.42`, `mat: [light, mid, dark]` pink. Pink Street Tree young (8,24). Pink Door Flowers (11,26) `colours`.
@@ -92,9 +85,17 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - A Homecoming Light for the other two doors is an easy copy (same geometry; flip houses need the bracket on the right, non-flip
   First Little House would need it mirrored: door is at x-0.43s there).
 
+## Doorstep Bench (build 29, 2026-11-20)
+- `bench` + `wood: true` at (11.15, 24.32) beside the pink door, under the Homecoming Light; drawn by things-woodbench.js (wraps
+  GLINT_THINGS.bench, loads last). Fractional x/y = not in `blocked`, so the doorstep (11,25) stays walkable, and Kindle standing
+  still on (11,25) sits (manhattan < 1.1). New `seatX` (grid.js) slides the sitter sideways: -0.24 = left cushion, right one free.
+  `spot: [11.65, 24.7]` for taps (wins over the Homecoming Light spot near the seat). Tap/seated -> warm run + pink sparks.
+  `?pose=rest` puts Kindle seated on it (sets `sitK = 1`: headless shots catch only a few frames, so the slide looked half-done).
+- Updater log again only "isn't a fast-forward ... rewritten history" (live checkout git, not tests). Grid tests pass (3/3).
+
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp, more street trees up toward the square, hedge on south down Lantern Street, cooling shelf by the bakery window (Kindle keeps circling it), more stars over the square.
+- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp / violet door (copy `wood: true`), more street trees up toward the square, hedge on south down Lantern Street, cooling shelf by the bakery window (Kindle keeps circling it), more stars over the square.
 - Bakery: bread on the shelf (left upper pane, line at V0+0.44s), a bread basket by the door, a table and a lamp by the east road.
