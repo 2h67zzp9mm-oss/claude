@@ -181,6 +181,24 @@ async function main() {
         if (!pictured.has(name) || PICTURED_EVERYWHERE.includes(name)) { await shot(screen); pictured.add(name); }
         report.screens.push({ screen, bad: a.bad, text: a.text });
       }
+      // The garden beds show in this world: stand in the middle of the garden with something growing in every dug bed,
+      // check the world's pictures have a bed, wet soil and every crop at every stage, and that the beds are on screen.
+      {
+        const screen = `${tag}_garden`;
+        await run("window.__ui.home()");
+        await run(`(() => { const T = window.LivingTownHome._test, v = T.view(), me = T.me; window.__was = [me.x, me.y]; me.path.length = 0; me.target = null; me.x = 5.75; me.y = 7.15; T.art().cam.ready = false;
+          window.__ui.pretend({ plots: v.plots.map((p, k) => k < v.beds ? { ...p, crop: v.shop[k % v.shop.length], growth: [0.1, 0.5, 1][k % 3], wet: k % 2 === 0 } : p) }); })()`);
+        await sleep(1200);
+        const g = await run(`(() => { const T = window.LivingTownHome._test, { A, imgs } = T.art(), v = T.view(), bad = [], c = document.querySelector("#homestead canvas").getBoundingClientRect(), barTop = document.querySelector(".home-bar").getBoundingClientRect().top, topBottom = document.querySelector(".home-top").getBoundingClientRect().bottom;
+          const opaque = s => { const k = document.createElement("canvas"); k.width = s.w; k.height = s.h; const x = k.getContext("2d"); x.drawImage(imgs.sprites, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h); const d = x.getImageData(0, 0, s.w, s.h).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 40) n++; return n / (s.w * s.h); };
+          for (const name of ["bed", "wet", ...Object.keys(v.crops).flatMap(k => [0, 1, 2].map(i => k + "_" + i))]) { const s = A.sprites[name]; if (!s || !(s.w > 0 && s.h > 0)) bad.push("the world has no " + name + " picture"); else if (opaque(s) < 0.05) bad.push("the " + name + " picture is see-through"); }
+          for (let k = 0; k < v.beds; k++) { const r = T.plotRect(k), [sx, sy] = T.screenOf(r.cx, r.cy), y = c.top + sy, x = c.left + sx; if (x < 0 || x > innerWidth || y < topBottom || y > barTop) bad.push("bed " + (k + 1) + " is off the screen when you stand in the garden"); }
+          return { bad, beds: v.beds }; })()`);
+        await shot(screen);
+        for (const b of g.bad) problem(screen, b);
+        report.screens.push({ screen, bad: g.bad, text: `${g.beds} beds, all growing` });
+        await run(`(() => { window.__ui.pretend(null); const T = window.LivingTownHome._test; [T.me.x, T.me.y] = window.__was; T.art().cam.ready = false; })()`);
+      }
       await run("window.__ui.home()");
     }
     // The saving-goal cheer: pretend the stars arrived (the same message the server sends). One banner, clear of the buttons, and the Goals row turns green.

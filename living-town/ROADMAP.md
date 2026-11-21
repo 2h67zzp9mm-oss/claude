@@ -8,8 +8,7 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
-2. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
+1. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
 
 (Kindle and his Grid moved to their own app on 2026-11-17 and aren't part of the game any more.)
 
@@ -38,7 +37,13 @@ Up next: split it first.
   on a sofa or bed now and then instead of only walking.
 - The UI bot checks a family member who is inside the house, but not the ones wandering because they're at home in
   town (the bot can't pretend someone is home in town yet).
+- The first row of garden beds sits right on the front fence in every world (the fence shows through the beds' back
+  edge). Moving that row a little further in, or the fence out, would look tidier.
 ## Done
+- 2026-11-21 Garden beds in Pirate Cove: checked, and they show (wooden planter beds inside the fence, with crops,
+  wet soil and every growing stage), so nothing needed fixing. The UI bot now stands in the garden of every world with
+  something growing in each bed, takes a picture (`<world>_garden`), and fails if a world is missing the bed, wet soil
+  or any crop picture, or if a bed is off the screen. 144 screens, 0 problems.
 - 2026-11-20 Family inside the house: when someone else in the family is in the house, you see them walking about the
   room where they really are (with their name over their head), in the same room as you (Room 2 too). Family who are
   at home in town but not playing wander from spot to spot. Everyone walks round furniture, never over it, and nobody

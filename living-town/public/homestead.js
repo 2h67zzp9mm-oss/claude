@@ -849,6 +849,6 @@
       canvas.style.touchAction = "none";
     },
     open, close, onState, get isOpen() { return isOpen; },
-    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me, view: () => view, L: () => L, petTargets: () => petTargets(), pet }
+    _test: { route: (x, y) => route(x, y), blockedAt: (x, y) => blockedAt(x, y), plotTarget: k => { const r = plotRect(k); return { x: r.cx + 0.2, y: r.y0 - 0.25 }; }, screenOf: (x, y) => toScreen(...P(x, y)), plotRect: k => plotRect(k), me, view: () => view, L: () => L, art: () => ({ A, imgs, cam }), petTargets: () => petTargets(), pet }
   };
 })();
