@@ -8,10 +8,10 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **Glint's chosen name in the menu** (S): when Glint has picked his own name, World → "◈ Glint's Grid" uses it.
-2. **Grid "🎯 Centre" button wraps** (S): it fits on one line at 390 px.
-3. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
-4. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
+1. **Garden beds in Pirate Cove** (S): check the beds show in the pirate world; fix if not.
+2. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
+
+(Kindle and his Grid moved to their own app on 2026-11-17 and aren't part of the game any more.)
 
 ## Ideas (need Sean's OK before they move up)
 - Kids can talk to Glint in the Grid (owner only right now).
