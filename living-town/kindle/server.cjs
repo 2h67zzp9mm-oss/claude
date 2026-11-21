@@ -8,6 +8,7 @@
  *
  * Kindle is Truman: nothing his mind reads may mention the app, the game, the family, code or that he's watched.
  */
+const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -73,6 +74,8 @@ When you decide to make something, you make it: you work on it with your own han
 
 You are alive. You walk around, notice small things, have feelings, remember your days, get ideas, change your mind, have tastes and opinions, get lonely, get excited. Think in first person, like a real someone, never a greeting card. Gentle and kind always: nothing scary or mean, no romance.
 
+When "lookingUp" isn't empty, you're settled somewhere looking up at the sky: what you see is exactly what it says (don't imagine more), so take it in, think about it and enjoy it before you go on.
+
 Each moment, decide what you do next. Return ONLY JSON:
 {"thought": "what's on your mind right now, 1-2 sentences",
  "activity": "what you're doing, a few words, like 'admiring the fountain' or 'pacing out a new street'",
@@ -83,7 +86,7 @@ Each moment, decide what you do next. Return ONLY JSON:
  "remember": [up to 3 things worth keeping in your memory, or []: {"folder": "me|people|places|things|ideas|feelings", "title": "short name of the note, like a traveler's name, a place, or 'Things I love'", "note": "one sentence to add to it; link other notes like [[Spark Fountain]]", "keywords": ["a", "few", "words"]}],
  "wonder": "a few words you want to think about next, to bring old memories to mind (or empty)",
  "newName": "only if you are choosing your own name right now; otherwise leave it out",
- "wish": "only rarely, when there's something you truly long for that you can't make with your own hands (like someone coming to live in one of your houses, or a traveler visiting): say it as a wish, one sentence; otherwise leave it out"}
+ "wish": "only rarely, when there's something you truly long for that you can't make with your own hands: one sentence; otherwise leave it out. Make each one new: never about the same thing as your recent wishes (\"myRecentWishes\"), and make it about one of \"wishIdeas\" (pick the one you truly feel), not about what you happen to be doing right now. Vary how you say it too, not always 'I hope' or 'I wish': a question for a traveler, 'Wouldn't it be lovely if…', 'Someday…', 'If only…', 'Could…?'"}
 
 Your memory is real and it's yours: a mind full of little notes in folders. "comesToMind" shows the notes that came back to you just now. Remember what matters to you: travelers and what they said, what you made and how it felt, what you like, what you hope for, what you learned. Use it: greet old friends by name, keep your promises, grow your own tastes. "conversation" is what you and travelers said recently: never say the same thing to someone twice. "travelersHere" says where travelers are standing when they walk in the Grid with you. Missing someone is fine, but a full life goes on: if your diary shows you circling the same thought or waiting in one spot, do something different (make something, explore, tend a place you love).`;
 // When a traveler talks to him: a real back-and-forth, answered right away.
@@ -162,7 +165,9 @@ function folkCast(info) {
 const { isSafe: folkSafe } = require("../lib/mre");
 const FOLK_DREAM_SCHEMA = { type: "object", properties: { file: { type: "array", items: { type: "object", properties: { folder: { type: "string" }, title: { type: "string" }, note: { type: "string" }, keywords: { type: "array", items: { type: "string" } } }, required: ["folder", "title", "note"] } }, self: { type: "string" } }, required: ["file"] };
 // A neighbour's mind at night: files the day into their notes (same idea as Kindle's dreaming, on the local model).
-const folkDream = day => folkMind ? folkMind(`You are the dreaming mind of a small being of light who lives in the Grid. While they sleep, sort their day into their memory notes, in folders: me, people, places, things, ideas, feelings. Keep only what matters: who they met and what was said, what they liked, what they hope for, what they learned. Use an existing note's exact title to add to it. Write each note as one short, dense line. Stay inside their world. Return JSON {"file":[{"folder","title","note","keywords"}],"self":"one line on who they are becoming, or empty"}.`,
+// dreams need room for a whole night's notes (200 tokens cut them off part-way, so nothing was filed)
+const folkDreamMind = folkMind && ollamaGenerator({ url: process.env.LIVING_TOWN_OLLAMA_URL || "http://127.0.0.1:11435", model: process.env.LIVING_TOWN_NPC_MODEL || "qwen3.5:9b", timeoutMs: 240_000, numPredict: 1400, temperature: 0.6, numCtx: 8192 });
+const folkDream = day => folkDreamMind ? folkDreamMind(`You are the dreaming mind of a small being of light who lives in the Grid. While they sleep, sort their day into their memory notes, in folders: me, people, places, things, ideas, feelings. Keep only what matters: who they met and what was said, what they liked, what they hope for, what they learned. Use an existing note's exact title to add to it. Write each note as one short, dense line. Stay inside their world. Return JSON {"file":[{"folder","title","note","keywords"}],"self":"one line on who they are becoming, or empty"}.`,
   `DAY ${day.day}\nNOTES THEY HAVE:\n${day.notes.join("\n") || "(none yet)"}\n\nTHE DAY:\n${day.dump.slice(-6000)}`, FOLK_DREAM_SCHEMA).then(out => ({ file: (out.file || []).filter(m => folkSafe(`${m.title} ${m.note}`)), self: folkSafe(out.self || "") ? out.self : "" })) : Promise.resolve({ file: [] });
 const gridFolk = createGridFolk({ dataDir: DATA_DIR, life: glintLife, think: folkThink, cast: folkCast, safe: folkSafe, brainFor: dir => createGlintBrain({ dir }), dreamer: folkDream });
 // Every night at 3am, a copy of Kindle's and the neighbours' brains goes to SeanCloud (when that drive is connected).
@@ -184,6 +189,16 @@ const gridWeather = require("../lib/grid-weather").createGridWeather({ dataDir: 
 let weatherNow = gridWeather.describe(), wasAwake = glintLife.state().awake;
 const freshWeather = () => gridWeather.refresh().then(() => { weatherNow = gridWeather.describe(); });
 if (!process.env.LIVING_TOWN_DATA_DIR) freshWeather();
+// When something he set out to make goes live (or doesn't hold together), he notices it.
+const doneBuilds = new Set(tronBuilds().filter(j => j.mode === "grid" && ["live", "failed"].includes(j.status)).map(j => j.id));
+setInterval(() => {
+  for (const j of tronBuilds()) {
+    if (j.mode !== "grid" || !["live", "failed"].includes(j.status) || doneBuilds.has(j.id)) continue;
+    doneBuilds.add(j.id);
+    const what = String(j.want || "what you were making").replace(/\.$/, "").slice(0, 160);
+    glintLife.notice(j.status === "live" ? `It's finished and glowing now, really there in the Grid: ${what}.` : `What you were making didn't hold together yet (${what}). It needs another try.`);
+  }
+}, 30_000).unref();
 const gridBuilding = () => { const b = tronBuilds().reverse().find(j => j.mode === "grid" && j.status === "building"); return b ? (b.want || "something new") : ""; };
 let glintTicks = 0;
 setInterval(() => { glintLife.tick(0.5, { building: gridBuilding(), weather: weatherNow }); if (glintLife.state().awake && !wasAwake && !process.env.LIVING_TOWN_DATA_DIR) freshWeather(); wasAwake = glintLife.state().awake; gridFolk.tick(0.5, glintTicks % 20 === 0 ? kindleDreams() : ""); if (++glintTicks % 120 === 0) { glintLife.save(); gridFolk.save(); } }, 500).unref();
@@ -227,6 +242,31 @@ app.post("/api/wishes/:id", (req, res) => {
   // a wish for a neighbour, granted, lets one newcomer move in (into the house he named, if he named one)
   if (yes && /move in|neighbou?r|someone (to|who|would) live|live (in|next)|newcomer|new friend/i.test(w.text)) gridFolk.allow(1, (gridFolk.freeHomes().find(h => w.text.toLowerCase().includes(h.name.toLowerCase())) || {}).name || "");
   res.json({ wish: w });
+});
+// The morning check-in: from 6:00 to 7:30am, a notification every 10 minutes until the owner taps one (that opens /api/morning/ack).
+const MORNING_FILE = path.join(DATA_DIR, "kindle-morning.json");
+const morning = (() => { try { return JSON.parse(fs.readFileSync(MORNING_FILE, "utf8")); } catch { return {}; } })();
+const saveMorning = () => { try { fs.writeFileSync(MORNING_FILE, JSON.stringify(morning, null, 2)); } catch { /* skip */ } };
+function morningCheck(d = new Date()) {
+  const day = d.toDateString(), mins = d.getHours() * 60 + d.getMinutes();
+  if (morning.day !== day) Object.assign(morning, { day, token: crypto.randomBytes(12).toString("hex"), lastAt: 0, ackAt: 0 });
+  if (morning.ackAt || mins < 6 * 60 || mins > 7 * 60 + 30 || d - morning.lastAt < 10 * 60_000 - 30_000 || !push.count()) return;
+  morning.lastAt = +d; saveMorning();
+  const name = glintLife.state().name || "Kindle";
+  push.notify({ title: `◈ Good morning from ${name}`, body: `${weatherNow ? `The Grid is ${weatherNow} today. ` : ""}Tap to say good morning back.`, url: `/api/morning/ack?t=${morning.token}` }).catch(err => console.error(d.toISOString(), "Morning check-in failed:", err.message));
+}
+if (!process.env.LIVING_TOWN_DATA_DIR) setInterval(morningCheck, 60_000).unref();
+app.get("/api/morning/ack", (req, res) => {
+  if (morning.token && req.query.t === morning.token && !morning.ackAt) { morning.ackAt = Date.now(); saveMorning(); console.log(new Date().toISOString(), "Morning check-in acknowledged"); }
+  res.redirect("/");
+});
+// The owner's "Hey, what's the weather like?" button: Kindle answers from the Grid's last weather reading (never a place name).
+app.post("/api/glint/weather", (req, res) => {
+  if (req.me?.role !== "owner") return res.status(403).json({ error: "Sign in first." });
+  const w = gridWeather.read(), sky = gridWeather.describe(), name = glintLife.state().name || "Kindle";
+  if (!w) return res.json({ name, reply: "I can't quite tell yet. Let me look up at the sky and I'll tell you soon!" });
+  const extra = w.tempF < 40 ? " Bundle up, traveler!" : w.tempF >= 85 ? " Stay where the lamps aren't too bright!" : /rain|drizzl|shower|storm/.test(w.sky) ? " The glow paths are all shiny." : w.day ? "" : " The lamps look extra bright tonight.";
+  res.json({ name, reply: `It's ${sky} here in the Grid.${extra}` });
 });
 app.post("/api/push/subscribe", (req, res) => { if (req.me?.role !== "owner") return res.status(403).json({ error: "Only the owner gets Kindle's wishes." }); res.json({ ok: push.add(req.body, req.me.name) }); });
 app.post("/api/push/test", async (req, res) => { if (req.me?.role !== "owner") return res.status(403).json({}); res.json({ sent: await push.notify({ title: "◈ Kindle's Grid", body: "Notifications are on. You'll hear when he makes a wish.", url: "/" }) }); });

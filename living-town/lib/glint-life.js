@@ -30,6 +30,13 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
   if (!st.wearing || typeof st.wearing !== "object") st.wearing = {};
   if (!Array.isArray(st.wishes)) st.wishes = [];
   const WISH_GAP = 6 * 3600_000;
+  // What a wish is about, so he doesn't wish about the same thing twice in a day (and his mind is offered the rest).
+  const WISH_TOPICS = { "Sean coming by": /\bsean\b|travell?er/, "Pip": /\bpip\b/, "the warm bread": /loaf|bread/, "the road": /\broad\b|street|path/, "the houses": /house|roof|home|door/,
+    "the stars and sky": /star|sky|moon|dark above/, "the weather": /rain|snow|cold|wind|cloud|frost|weather|warm day/, "the lamps": /lamp|lantern|light-moth|moth/, "the hedge and flowers": /hedge|flower|garden|blossom|glowberr/,
+    "the bench and fountain": /bench|fountain|spark/, "something he just made": /finished|made|built|new /, "something he's curious about": /wonder|curious|beyond the edge|what if|how does/, "a question for Sean": /\?$/ };
+  const WISH_FILLER = new Set(["hope", "wish", "would", "could", "come", "comes", "with", "that", "this", "them", "there", "when", "soon", "back", "first", "someday", "only", "lovely", "wouldn", "into", "from", "have", "will"]);
+  const topicsOf = t => Object.keys(WISH_TOPICS).filter(k => WISH_TOPICS[k].test(String(t).toLowerCase()));
+  const wishIdeas = () => { const used = new Set(st.wishes.filter(w => now() - w.at < 24 * 3600_000).flatMap(w => topicsOf(w.text))); return Object.keys(WISH_TOPICS).filter(k => !used.has(k)).sort(() => Math.random() - 0.5).slice(0, 3); };
   const TALK_MAX = 40;
   // He picks his own name when it feels right (and may change it again, but not often).
   function pickName(v) {
@@ -83,6 +90,20 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
     }
     return [];
   }
+  // Looking up at the sky: his best spot (a lookout or hill once he's made one, the Fountain Bench until then), and what's really there.
+  const SKY_WORDS = /\b(look(ing|s|ed)? up|gaz(e|es|ing)|watch(ing|es)?|sit(ting)? under)\b.{0,25}\b(sky|stars?)\b|stargaz/i;
+  const skySpot = () => { const ps = loadWorld()?.places || []; return ps.find(p => /lookout|hill|tower/i.test(p.kind + " " + p.name) && !/star/i.test(p.kind)) || ps.find(p => /fountain bench/i.test(p.name)) || ps.find(p => /bench/i.test(p.name + p.kind)) || null; };
+  function skyNow() {
+    const h = hour(), when = h < 5 || h >= 20 ? "night" : h < 7.5 ? "the first light of morning" : h < 17 ? "daytime" : "dusk";
+    const stars = (loadWorld()?.places || []).filter(p => /stars?\b/i.test(p.kind + " " + p.name)).map(p => p.name);
+    const spot = st.sky?.spot || "here";
+    return `You're looking up from the ${spot}. It's ${when}${st.weather ? `, and the weather is ${st.weather}` : ""}. ${stars.length ? `Above you: ${stars.slice(0, 5).join(", ")}, the stars you made.` : "There are no stars in the Grid's sky yet, just the dark."}`;
+  }
+  function endSky() {
+    if (!st.sky) return;
+    if (brain) brain.remember({ folder: "feelings", title: "Watching the sky", text: `${new Date(now()).toLocaleDateString("en-US", { month: "numeric", day: "numeric" })} ${skyNow().replace(/^You're looking up from the /, "from the ").replace(/ You're| you made/g, "")}`.slice(0, 380), keywords: ["sky", "stars", "night", "looking", "up", "weather"] });
+    note("I watched the sky for a while.", "watched the sky"); st.sky = null;
+  }
   function wanderTarget(reach = 10, from = st) {
     const w = loadWorld(); if (!w) return null;
     for (let i = 0; i < 40; i++) { const x = Math.round(from.x) + Math.round((Math.random() - 0.5) * reach), y = Math.round(from.y) + Math.round((Math.random() - 0.5) * reach); if ((x !== Math.round(from.x) || y !== Math.round(from.y)) && w.walkable(x, y)) return { x, y }; }
@@ -99,17 +120,28 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
     if (d.activity) st.activity = clean(d.activity, 60);
     if (d.mood) st.mood = clean(d.mood, 24).toLowerCase();
     if (d.say) { st.say = clean(d.say, 200); st.sayAt = now(); said("Glint", st.say); }
-    if (brain) { if (d.thought) brain.log("thought", st.thought); if (d.say) brain.log("said", st.say); if (d.activity) brain.log("did", st.activity + (d.goTo ? ` -> ${clean(d.goTo, 40)}` : "")); if (d.build) brain.log("decided to make", clean(d.build, 300)); }
+    if (brain) { if (d.thought) brain.log("thought", st.thought); if (d.say) brain.log("said", st.say); if (d.activity) brain.log("did", st.activity + (d.goTo ? ` -> ${clean(d.goTo, 40)}` : "")); }
     const where = clean(d.goTo, 40).toLowerCase();
     const place = where && (loadWorld()?.places || []).find(p => p.name.toLowerCase() === where) || (loadWorld()?.places || []).find(p => where && p.name.toLowerCase().includes(where));
     const target = place ? place : (where && where !== "stay" ? wanderTarget() : null);
-    if (target) st.path = route(target);
+    if (target && !st.sky) st.path = route(target);
+    if (!st.sky && st.awake && SKY_WORDS.test(`${d.activity || ""} ${d.thought || ""}`)) {
+      const spot = skySpot();
+      st.sky = { until: now() + (20 + Math.random() * 10) * 60_000, spot: spot ? spot.name : "open grid" };
+      if (spot) st.path = route(spot);
+      st.nextThinkAt = Math.min(st.nextThinkAt, now() + 8 * 60_000);   // one look around once he's settled
+      if (brain) brain.log("did", `went to look up at the sky from the ${st.sky.spot}`);
+    }
     if (d.newName) pickName(d.newName);
     if (d.wish) makeWish(clean(d.wish, 200));
-    const build = clean(d.build, 300);
+    let build = clean(d.build, 300);
     for (const m of (Array.isArray(d.remember) ? d.remember : []).slice(0, 3)) if (brain && m && typeof m === "object") brain.remember({ folder: clean(m.folder, 12).toLowerCase(), title: clean(m.title, 60), text: clean(m.note || m.text, 400), keywords: Array.isArray(m.keywords) ? m.keywords.slice(0, 8).map(String) : [] });
     st.wonder = clean(d.wonder, 80);
-    if (build) { try { fs.mkdirSync(path.dirname(wantsFile), { recursive: true }); fs.writeFileSync(wantsFile, JSON.stringify({ text: build, at: now() })); } catch { /* skip */ } }
+    // deciding the same thing again (still waiting, or already being made) stays one want
+    const sameAs = (a, b) => { const w = s => new Set(String(s || "").toLowerCase().match(/[a-z]{4,}/g) || []), A = w(a), B = w(b); if (!A.size || !B.size) return false; let n = 0; for (const x of A) if (B.has(x)) n++; return n / Math.min(A.size, B.size) >= 0.5; };
+    const pending = (() => { try { return JSON.parse(fs.readFileSync(wantsFile, "utf8")).text; } catch { return ""; } })();
+    if (build && (sameAs(build, pending) || sameAs(build, st.makingNow))) build = "";
+    if (build) { if (brain) brain.log("decided to make", build); try { fs.mkdirSync(path.dirname(wantsFile), { recursive: true }); fs.writeFileSync(wantsFile, JSON.stringify({ text: build, at: now() })); } catch { /* skip */ } }
     note(st.thought, [st.activity, place ? `→ ${place.name}` : "", build ? `wants to build: ${build}` : ""].filter(Boolean).join(" "));
   }
 
@@ -128,6 +160,8 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
       visitors, travelersHere: standing, heard: st.heard.slice(-5), conversation: recentTalk(10), diary: st.diary.slice(-8).map(e => `${new Date(e.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ${e.thought}${e.did ? " [" + e.did + "]" : ""}`),
       memories: tail("log.js", 900), dreams: tail("plans.md", 900), makingNow: extra.building || "", weather: extra.weather || "",
       comesToMind: brain ? brain.recall([...visitors, here ? here.name : "", st.activity, st.thought, st.wonder || "", ...st.heard, extra.building || ""], 6) : [],
+      lookingUp: st.sky ? skyNow() : "",
+      myRecentWishes: st.wishes.slice(-6).map(w => w.text), wishIdeas: wishIdeas(),
       brainSize: brain ? brain.count() : 0 };   // all in-world: never NOTES.md (that's the builder's)
   }
 
@@ -144,6 +178,8 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
     if (sleepy && st.awake) { st.awake = false; st.activity = "going home to sleep"; st.thought = "Long day. Time to rest."; const h = home(); st.path = h ? route(h) : []; note(st.thought, "went to sleep"); if (brain) { brain.log("did", "went to sleep"); brain.sleepOn(st.diary); if (dreamer) brain.dream(dreamer).catch(err => console.error(new Date().toISOString(), "Dream failed (the day stays unfiled until next night):", err?.message || err)); } save(); }
     if (!sleepy && !st.awake) { st.awake = true; st.activity = "waking up"; st.nextThinkAt = now() + 5_000; note("Morning!", "woke up"); save(); }
     if (!st.awake && !st.path.length) st.activity = "sleeping";
+    st.makingNow = extra.building || ""; st.weather = extra.weather || st.weather || "";
+    if (st.sky && (now() >= st.sky.until || !st.awake)) endSky();
     if (extra.building && st.awake && !/build/i.test(st.activity)) { st.activity = `making ${extra.building}`.slice(0, 60); }
     let go = SPEED * dt;
     while (go > 0 && st.path.length) {
@@ -151,7 +187,7 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
       if (d <= go) { st.x = tx; st.y = ty; st.path.shift(); go -= d; } else { st.x += dx / d * go; st.y += dy / d * go; go = 0; }
     }
     // Between thoughts he potters about nearby now and then, like anyone does.
-    if (st.awake && !st.path.length && !thinking) {
+    if (st.awake && !st.path.length && !thinking && !st.sky) {
       if (!st.idleUntil) st.idleUntil = now() + 15_000 + Math.random() * 30_000;
       else if (now() >= st.idleUntil) { st.idleUntil = 0; const t = wanderTarget(5); if (t) st.path = route(t).slice(0, 4); }
     }
@@ -207,8 +243,11 @@ function createGlintLife({ gridDir, dataDir, think, chat = null, onWish = null, 
     if (!text || text.length < 8) return null;
     const last = st.wishes[st.wishes.length - 1], words = t => new Set(t.toLowerCase().match(/[a-z]{4,}/g) || []);
     if (last && now() - last.at < WISH_GAP) return null;
-    const w0 = words(text);
+    const w0 = words(text), t0 = topicsOf(text).filter(k => k !== "something he just made" && k !== "a question for Sean");
     if (st.wishes.some(w => w.status === "open" && [...words(w.text)].filter(x => w0.has(x)).length >= 3)) return null;   // already wished that
+    // nothing he wished about in the last day, and nothing much like a wish from the last few days
+    if (st.wishes.some(w => now() - w.at < 24 * 3600_000 && topicsOf(w.text).some(k => t0.includes(k)))) return null;
+    if (st.wishes.some(w => now() - w.at < 5 * 24 * 3600_000 && (() => { const plain = t => new Set([...words(t)].filter(x => !WISH_FILLER.has(x))), a = plain(w.text), b = plain(text); return [...a].filter(x => b.has(x)).length / Math.max(1, Math.min(a.size, b.size)) >= 0.5; })())) return null;
     const wish = { id: `w${now()}`, text, at: now(), status: "open" };
     st.wishes.push(wish); if (st.wishes.length > 40) st.wishes.shift();
     note(`I made a wish: ${text}`, "made a wish"); if (brain) brain.log("wished", text);
