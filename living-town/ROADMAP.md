@@ -9,6 +9,14 @@ Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
 1. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
+2. **Bigger room as a saving goal** (S): 🎯 in Goals with the meter and cheer, like a dream thing.
+3. **"You're saving for…" in other worlds** (S): a note on the shop's first row when the goal lives in another world.
+4. **Back-wall options for Hazel** (M): a 🎨 Style row for the tall back wall (none, hanging lamp, high shelves,
+   bunting), "none" stays the default; Hazel picks in the game.
+5. **Doorway looks for Hazel** (S): a 🎨 Style row for the doorway between rooms (plain frame default, arch, curtain,
+   painted vines).
+6. **Second room grows too** (S): the bigger room makes both rooms deeper.
+7. **UI bot sees cut-off ring words** (S): mend the check so "Bigger ro…"-style cut-offs count as problems.
 
 (Kindle and his Grid moved to their own app on 2026-11-17 and aren't part of the game any more.)
 
@@ -21,10 +29,6 @@ Up next: split it first.
   (2026-11-15). Worth finding why it wobbles.
 - Let the nightly CEO run `node scripts/room-bot.js` and `npm run lint` (both are blocked for it; only `npm test` and
   `npm run ui` run), or fold the room bot's checks into the UI bot.
-- A saving goal can only be picked in the world that sells it; a "you're saving for…" note on the shop's first row
-  when the goal lives in another world would help.
-- The bigger room as a saving goal too (🎯 in Goals, with the cheer), like a dream thing. Right now its meter only
-  shows on the house door's Big room panel.
 - The UI bot didn't notice a round pop-up button whose words were cut off with "…" ("Bigger ro…" on the door, fixed
   by a shorter name). Its check for cut-off ring words needs mending.
 - Hazel looks over the nine dream drawings (they were checked by a test, not by eye) and picks any to redo.
