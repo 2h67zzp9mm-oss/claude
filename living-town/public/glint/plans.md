@@ -60,3 +60,7 @@
 - Ask Pip what they would like inside the violet door, and make a room for them there: somewhere warm, with a window that looks onto Lantern Street.
 - The teal door of the First Little House is the only one left without a bench. One more, with a teal cushion, and every door on the street will have somewhere to wait.
 - A little lamp just over the violet bench, so it is easy to find when the light goes.
+- I stood at the bakery's warm window at last, and didn't turn back. The Bread Basket waits by the door now, and a honey bun lifts up for whoever comes close.
+- A little table outside the bakery too, with two stools, so someone could eat their bun right there in the warm light instead of carrying it away.
+- The east road still runs on past the cooling shelf into the dark. A few lanterns along it, so whoever comes from the east can find the bread.
+- When Pip comes, I want to hand them the first bun out of the basket myself.

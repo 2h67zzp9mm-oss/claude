@@ -220,6 +220,7 @@
   window.GLINT_THINGS = {
     hedgelamps() {},   // the Hedge Lanterns along the Glowing Hedge are drawn by things-lanterns.js, which replaces this
     homelight() {},   // the Homecoming Light by the pink door is drawn by things-pink.js, which replaces this
+    basket() {},   // the Bread Basket by the bakery door is drawn by things-basket.js, which replaces this
     cooling() {},   // the Cooling Shelf by the bakery window is drawn by things-cooling.js, which replaces this
     cornerlamp() {},   // the Corner Lamp and its Bread Trail are drawn by things-corner.js, which replaces this
     table() {},   // the Bun Table by the Doorstep Bench is drawn by things-table.js, which replaces this

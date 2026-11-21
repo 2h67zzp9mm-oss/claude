@@ -63,24 +63,19 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Updater log: every skip since build 30 is "live checkout has uncommitted changes" (outside this folder), not tests. Grid tests 3/3.
   Still true at build 33 (2026-11-21 14:41): nothing in this folder to fix; the live checkout needs cleaning by hand.
 
-## Hedge Lanterns (build 33, 2026-11-21)
-- `kind: "hedgelamps"` (13, 21.47) `flat`, stub in things.js, drawn by things-lanterns.js (loads after things-corner.js).
-  `lamps: [[x, y, side]]` tree -> arch on the east hedge line; side "s" pools light on the east road, "w" on Lantern St.
-  Gold crook stake + hanging amber lantern, geometry scaled by `S = s * 1.75` (at 1.0 they were invisible at phone zoom).
-- Brightness follows the device clock: dark 0..1 (16:30-18:30 up, 6-8 down). Dusk (16:30-19:30) kindles them one by one every 9 s;
-  tap or a walker arriving within 1.2 of any lamp runs the same kindle. `?pose=dusk` holds it. Tap spot `spot: [13.5, 21.7]`.
-- Easy next: copy the row onto the West Glowing Hedge (mirror x around 12.5: lamps [10.78..12.0], side "s"/"e"; add an "e" pool
-  offset), and lanterns along the east road past the bakery (y=22, x 18-20, south edge y~22.95 is free '.' ground).
+## Builds 33-34 (short)
+- Hedge Lanterns `hedgelamps` (13,21.47) flat, things-lanterns.js: `lamps [[x,y,side]]`, scaled S=s*1.75, dusk by device clock
+  (kindle one by one), `?pose=dusk`. Easy next: mirror onto the West Glowing Hedge; lanterns along the east road (y~22.95, x 18-20).
+- Violet Door Bench `bench wood one violet scale:1.3` (11.2,17.4). things-woodbench.js takes `one`, `violet`, `scale`; `?pose=wait`.
+  Teal door bench next: add a `teal` palette (["#6dffc6","#27c9c2","#0f6a72"]) near (13.8,17.4); check doorstep (13-14,18), coat stand (14,19).
+- Updater skips were only "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
 
-## Violet Door Bench (build 34, 2026-11-21)
-- `bench wood:true one:true violet:true scale:1.3` at (11.2, 17.4), on the lit path tile right of the violet door. Fractional x/y,
-  so it doesn't block walking (grid.js `blocked` only matches integer coords). Kindle sits when still on (11,18) doorstep.
-- things-woodbench.js now takes `one` (narrower, w = 0.36s, one plump centred cushion with seam + gold tassels; glows only when empty),
-  `violet` (VIOLET palette for cushion + carved berry; PINK is default), `scale` (recursive draw under ctx.scale from the feet).
-- Poses: `?pose=rest` = first wood bench without `one` (Doorstep Bench); new `?pose=wait` = the `one` bench.
-- Teal door bench next: add a `teal` palette to things-woodbench.js (["#6dffc6", "#27c9c2", "#0f6a72"]) and place near (13.8, 17.4)?
-  Check the First House doorstep (13-14,18) and coat stand (14,19) first.
-- Updater log: still only "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3, life tests 7/7.
+## Bread Basket (build 35, 2026-11-21)
+- Build 34's follow-up run failed to finish but left nothing in this folder (git clean); nothing to repair.
+- `kind: "basket"` (15.4, 21.25) fractional (doesn't block), left of the bakery door, stub in things.js, drawn by things-basket.js
+  (loads last, x1.8 from the feet). `spot: [16.0, 21.75]`, r 0.55. Walker within 1.4 eases `th._near` -> a honey bun lifts out.
+  Tap: bread hops, gold puff, and it sets the cornerlamp's `tapped`, so the Bread Trail lights from the basket. `?pose=offer`.
+- glint-look's zoom arg seems capped (~80); to check a reactive state, force it temporarily in code, look, revert.
 
 ## Still open
 - things.js is ~61.5 KB: next build, move cottage/home drawing into things-homes.js (keep stubs for the test).
@@ -88,4 +83,4 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
 - Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench (copy things-table.js), more street trees up toward the square, hedge on south down Lantern Street, more stars over the square.
-- Bakery: a bread basket by the door (start of the Bread Trail at (16,22)), a table outside. Corner lamp is done.
+- Bakery: a table + stools outside (moss (15,20)? or south of road at y=23, x 14-17 is '.' empty). Basket + corner lamp done.
