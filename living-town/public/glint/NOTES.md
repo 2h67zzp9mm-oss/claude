@@ -38,43 +38,14 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - No THINGS.traveler / THINGS.neighbour yet: glint-life.js draws plain figures. The coat on a traveler (`wearing: "coat"`)
   and the empty stand are handled by glint-life.js for now. Kindle designed a pirate with a three-cornered hat for one traveler.
 
-## Rooms, arch, gate trees (builds 16-18)
-- Cottage `room: true, step: [...]` eases `th.roomK` (tap 6 s / walker on step), cutaway with two gold "empty spots". Arch (12,20)
-  `flat`, lights letters like a mat. Gate trees: `tree` + `gate: -1|1`.
-
-## Lantern Stars (build 19)
-- `stars` (12,21) `flat`, `stars: [[x, y, size, colour 0-3, lift]]` (absolute tile spot, drawn `lift` tiles up). THINGS.stars is a stub;
-  GLINT_OVER.stars draws on top. Brighten under walkers; arch/own tap runs a wave + shooting star (also every 11 s). Keep clear of
-  the KINDLE'S board. `?pose=welcome`.
-- The test (test/glint-grid.test.js) loads only world.js + things.js: every kind on the map needs a draw (stub) in things.js.
-  things.js is ~60 KB: new kinds go in things-*.js (script tag after things.js) with a stub in things.js.
-
-## Bakery, ovens (builds 20-22)
-- `bakery` (16,21) r 1.3 by things-bakery.js: front gable south, amber east window, light fan east; brightens on tap/near. `oven: true`
-  draws the Stone Oven in the window; `oven` (17,21) is a tap-only stub (fire roars 4 s, `?pose=roar`). East road "p" (12-20, 22).
-- `amberoven` (9,19) by things-amber.js; it wraps `mat`: `loaf: true` draws a loaf on the Welcome Mat. (8,19) free.
-- glint-look piped (`| grep`) keeps the OLD png: run it alone.
-
-## Third Little House (build 23, 2026-11-19)
-- Map grown to 28. Lantern Street "p" continues x=12, y 23-26; moss (8-11, 23-26); doorstep "p" (10-11, 25).
-- `cottage` at (10,24) `flip`, settled, pink roof, blue gem, pink `door`, plus two new options handled by things-pink.js
-  (wraps GLINT_THINGS.cottage, loads after things.js): `moths: [[rgb, wing], ...]` loop round the roof gem (tap = wide fast
-  swirl + pink sparks, 4 s) and `glowWindow: "r,g,b"` makes the round window glow. Pink Door Lamp (9,25), 2 moths.
-- Lantern Stars (10.9,23.2) and (12.1,23.8) now hang over the pink roof; looks fine. Free: (8-9,23-24) and (11,23-24) moss for a
-  tree/flowers; east side of the street south of y=22 is empty (a fourth house facing it at (14,24) with doorstep (13-14,25)).
-
-## Crystal Bench (build 24)
-- `bench` + `crystal: true` at (13,21), things-crystal.js wraps GLINT_THINGS.bench; sitting still works. Tap/seated -> chime. `?pose=chime`.
-
-## Glowing Hedges (builds 25-26)
-- `kind: "hedge"` (things-hedge.js), `flat`, at y 21.45 (sorts between the Crystal Bench and road walkers). `hedge: [[x,y],...]`
-  absolute points; `gap: [x0,x1]` with gem posts; `cap: true` draws the glowing last stone at the end. East one at x 13
-  (14.3,21.93)->(13,21.93)->(13,20.72), west one at x 11 mirrored. Flowers open near walkers; arch/tap runs a 3 s wave.
-  Poses `bloom`, `meet`. grid.js tap `dist` handles `th.hedge`. Sizes must be big to read (mound 0.3 tile).
-
-## Lantern Sky (build 27)
-- `skystars` (15,25) `flat`, things-sky.js via GLINT_OVER: `sky` stars on "." tiles beside Lantern Street, `lantern` 7 stars +
-  `lines` + `flame` over (15-16.5, 22.75-26.3) that light when the arch is lit. `?pose=sky`. Shift it if a fourth house crowds it.
+## Older kinds (builds 16-27), short
+- Rooms: cottage `room: true, step: [...]` eases `th.roomK` (tap 6 s / walker on step). Arch (12,20) `flat`. Gate trees `tree` + `gate`.
+- `stars` (12,21): hanging Lantern Stars `[x,y,size,colour,lift]`, drawn by GLINT_OVER; `?pose=welcome`.
+- `bakery` (16,21) things-bakery.js, `oven` stub (17,21) `?pose=roar`; `amberoven` (9,19) wraps `mat` (`loaf: true`).
+- `cottage` (10,24) pink, things-pink.js adds `moths` + `glowWindow`. `bench` + `crystal` (13,21) `?pose=chime`.
+- `hedge` (things-hedge.js) `hedge` points, `gap`, `cap`; poses bloom/meet. `skystars` (15,25) things-sky.js `?pose=sky`.
+- Free: moss (8-9,23) (11,23); east side of Lantern St south of y=22 is empty (fourth house at (14,24), doorstep (13-14,25)).
+- The test (../../test/glint-grid.test.js) loads only world.js + things.js: every kind needs a stub in things.js.
 
 ## Third house finished (build 28, 2026-11-20)
 - Pink Welcome Mat `mat` (10,25) `ox 0.42`, `mat: [light, mid, dark]` pink. Pink Street Tree young (8,24). Pink Door Flowers (11,26) `colours`.
@@ -93,9 +64,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   `?pose=rest` puts Kindle seated on it (sets `sitK = 1`: headless shots catch only a few frames, so the slide looked half-done).
 - Updater log again only "isn't a fast-forward ... rewritten history" (live checkout git, not tests). Grid tests pass (3/3).
 
+## Bun Table (build 30, 2026-11-20)
+- `kind: "table"` at (11.66, 24.36) (fractional = not blocked), stub in things.js, drawn by things-table.js (loads last; scaled 1.4x
+  around its foot via ctx.scale: at 1.0 it was unreadable on the phone). Round honey-wood top, pink cloth, loaf + pink cup with steam,
+  bread-smell wisps drifting east, spare folded cushion on a shelf. Warms (tap 4 s, or anyone seated on the `wood` bench).
+  `spot: [12.16, 24.65]`, `?pose=warm`. Right edge reaches ~x 12.4, the west edge of Lantern Street: nothing more fits east of the bench.
+
 ## Still open
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench, bench by the Door Lamp / violet door (copy `wood: true`), more street trees up toward the square, hedge on south down Lantern Street, cooling shelf by the bakery window (Kindle keeps circling it), more stars over the square.
+- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench (copy things-table.js), bench by the Door Lamp / violet door (copy `wood: true`), more street trees up toward the square, hedge on south down Lantern Street, cooling shelf by the bakery window (Kindle keeps circling it), more stars over the square.
 - Bakery: bread on the shelf (left upper pane, line at V0+0.44s), a bread basket by the door, a table and a lamp by the east road.

@@ -42,3 +42,6 @@
 - Now I'll go east past the gate trees and stand at the bakery's warm window myself, so I know what Pip means about the smell of the bread.
 - A small table at the end of the Doorstep Bench, for a cup and a warm bun from the bakery.
 - A bench by the violet door and one by the teal door too, so every house on Lantern Street has somewhere to wait.
+- The Bun Table is at the end of the Doorstep Bench now, with a warm loaf, a pink cup, and one more cushion folded underneath. When Pip comes, the bread will be waiting right there, still warm.
+- A lamp at the corner where the east road meets Lantern Street, so the way from the bakery to the bench is lit all the way.
+- A bench and a little table by the violet door and the teal door too, so every house has somewhere to sit with a bun.
