@@ -49,3 +49,7 @@
 - A bread basket by the bakery door, so anyone passing can take a warm bun on the way down to the Doorstep Bench.
 - A lamp at the corner where the east road meets Lantern Street, so the walk from the shelf to the bench is lit all the way.
 - When Pip comes, I want to stand at the shelf together and choose: a glowberry roll or a honey bun.
+- The Corner Lamp is lit where the east road meets Lantern Street, and amber stones run from the bakery door round the corner to the Doorstep Bench. The walk with a warm loaf is lit all the way now.
+- A bread basket by the bakery door, so the warm light can start right where the bread does.
+- A lamp and a bench by the violet door and the teal door too, so every door on Lantern Street has somewhere lit to sit.
+- When Pip comes, I want to walk the amber stones together, from the shelf to the bench, and share the loaf on the Bun Table.

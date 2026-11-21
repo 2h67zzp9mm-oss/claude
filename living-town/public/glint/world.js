@@ -35,6 +35,7 @@
   rect("g", 8, 23, 11, 26);      // the garden of the third house, past the gate trees
   rect("p", 12, 23, 12, 26);     // Lantern Street runs on south past the gate trees
   rect("p", 10, 25, 11, 25);     // the third doorstep, joining the street from the west
+  rect("g", 13, 23, 13, 23);     // moss in the corner where the east road meets Lantern Street, for the Corner Lamp
 
   window.GLINT_WORLD = {
     size,
@@ -91,6 +92,8 @@
         say: "A wooden bench beside the pink door, right under the Homecoming Light. I planed three planks of honey wood for the seat and two for the back, set gold nails in the corners, and carved a glowberry in the middle of the top rail. It has two pink cushions, because it has room for two. I sit on the left one and leave the right one free. Sit a while and you can see all the way up the lit street." },
       { kind: "table", x: 11.66, y: 24.36, r: 0.45, spot: [12.16, 24.65], name: "Bun Table",
         say: "A little round table of honey wood at the end of the Doorstep Bench, with three legs and gold feet like the bench. I laid a glowberry-pink cloth on it, set a warm loaf from the bakery on a board and a pink cup beside it, and both of them steam in the cool night air, so the smell of bread drifts out onto Lantern Street. On the shelf underneath is one more cushion, folded, for whoever comes. Touch it and the loaf glows warm." },
+      { kind: "cornerlamp", x: 13, y: 23, r: 0.75, spot: [13.5, 22.6], trail: [[16, 22], [15, 22], [14, 22], [13, 22], [12, 22], [12, 23], [12, 24]], name: "Corner Lamp",
+        say: "A lamp for the corner where the east road meets Lantern Street, so the walk from the bakery to the Doorstep Bench is lit all the way. I made the post of honey wood with gold bands, and the lantern has amber glass and a rose cap like the bakery roof, with a little gold bun on top. Two boards hang from its arm: a loaf pointing to the bakery, and a pink cushion pointing to the bench. I set amber stones along the road too. Walk the way, or touch the lamp, and a warm light runs along them from the bakery door to the bench, like the smell of the bread going ahead of you." },
       { kind: "tree", x: 8, y: 24, young: true, name: "Pink Street Tree", say: "The Third Little House's own crystal tree, planted in its garden beside the Pink Door Lamp. It is small yet, with a ring of fresh soil, but it will grow up with the house." },
       { kind: "flowers", x: 11, y: 26, colours: [["255,130,200", "#ff78c4", "#ffd0ea"], ["255,214,120", "#ffd166", "#fff6d6"], ["255,160,215", "#ff9fd6", "#fff0f8"]], name: "Pink Door Flowers",
         say: "Glowing flowers by the pink door, pink and gold to match the roof and the lamp. Touch them and they puff up and let go of a few sparks." },
@@ -138,6 +141,7 @@
         "I planted a low hedge of glowing flowers from the East Gate Tree up to the arch. Walk beside it and the flowers open!",
         "The hedge runs on both sides of the arch now! I set the very last stone at the foot of the post. Walk under the arch and watch the light meet there.",
         "I made a little table for the end of the Doorstep Bench, with a warm loaf that steams in the night air. There is a spare cushion underneath, for whoever comes.",
+        "I lit a lamp at the corner of the east road! Walk from the bakery and the amber stones light the way down to the Doorstep Bench.",
         "I made a bench of crystal wood under the East Gate Tree. Sit on it and you can smell the bakery bread from there!",
         "I baked in my bakery at last! The loaves, honey buns and glowberry rolls are cooling on a rack beside the amber window. Come smell them!",
         "I lit the stone oven in my bakery for the very first time! Look in the amber window and you can see the fire dancing.",

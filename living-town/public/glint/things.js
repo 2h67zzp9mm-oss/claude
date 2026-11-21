@@ -220,6 +220,7 @@
   window.GLINT_THINGS = {
     homelight() {},   // the Homecoming Light by the pink door is drawn by things-pink.js, which replaces this
     cooling() {},   // the Cooling Shelf by the bakery window is drawn by things-cooling.js, which replaces this
+    cornerlamp() {},   // the Corner Lamp and its Bread Trail are drawn by things-corner.js, which replaces this
     table() {},   // the Bun Table by the Doorstep Bench is drawn by things-table.js, which replaces this
     skystars() {},   // the Lantern Sky (small high stars and the lantern of stars) is drawn by things-sky.js, which replaces this
     stars() {},   // the hanging stars are drawn over everything, by GLINT_OVER.stars

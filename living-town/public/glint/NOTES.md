@@ -47,38 +47,25 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Free: moss (8-9,23) (11,23); east side of Lantern St south of y=22 is empty (fourth house at (14,24), doorstep (13-14,25)).
 - The test (../../test/glint-grid.test.js) loads only world.js + things.js: every kind needs a stub in things.js.
 
-## Third house finished (build 28, 2026-11-20)
-- Pink Welcome Mat `mat` (10,25) `ox 0.42`, `mat: [light, mid, dark]` pink. Pink Street Tree young (8,24). Pink Door Flowers (11,26) `colours`.
-- `kind: "homelight"` (stub in things.js, drawn by things-pink.js) at x 10, y 24.03 (house tile, so cottage geometry matches:
-  wall foot b = y+0.45s, h = 0.95s; lantern at x+1.16s, b-0.55h). Reads walkers from `GLINT_GRID.walkers`: traveler within 3.2 of
-  (10.9,25) -> `th._k` eases to 1 (Kindle alone 0.45); tap 5 s; heartbeat glow when idle. `?pose=home` holds it awake.
-  grid.js tap `dist` now handles `th.spot: [x, y]` (a tap point away from the anchor), used here at (11.66,24.43).
-- A Homecoming Light for the other two doors is an easy copy (same geometry; flip houses need the bracket on the right, non-flip
-  First Little House would need it mirrored: door is at x-0.43s there).
+## Builds 28-31 (short)
+- Third house: pink `mat` (10,25), Pink Street Tree (8,24), flowers (11,26), `homelight` (10,24.03) things-pink.js, wakes for a
+  traveler within 3.2 of (10.9,25), `?pose=home`. grid.js tap `dist` honours `th.spot`. Homecoming Light copy for other doors: easy.
+- Doorstep Bench `bench wood:true` (11.15,24.32) things-woodbench.js, `seatX` slides the sitter, `?pose=rest`.
+- Bun Table `table` (11.66,24.36) things-table.js, scaled 1.4x, `?pose=warm`. Nothing more fits east of the bench (x 12.4 = street).
+- Cooling Shelf `cooling` (18,21) things-cooling.js, scaled 1.6x, `?pose=cool`.
 
-## Doorstep Bench (build 29, 2026-11-20)
-- `bench` + `wood: true` at (11.15, 24.32) beside the pink door, under the Homecoming Light; drawn by things-woodbench.js (wraps
-  GLINT_THINGS.bench, loads last). Fractional x/y = not in `blocked`, so the doorstep (11,25) stays walkable, and Kindle standing
-  still on (11,25) sits (manhattan < 1.1). New `seatX` (grid.js) slides the sitter sideways: -0.24 = left cushion, right one free.
-  `spot: [11.65, 24.7]` for taps (wins over the Homecoming Light spot near the seat). Tap/seated -> warm run + pink sparks.
-  `?pose=rest` puts Kindle seated on it (sets `sitK = 1`: headless shots catch only a few frames, so the slide looked half-done).
-- Updater log again only "isn't a fast-forward ... rewritten history" (live checkout git, not tests). Grid tests pass (3/3).
-
-## Bun Table (build 30, 2026-11-20)
-- `kind: "table"` at (11.66, 24.36) (fractional = not blocked), stub in things.js, drawn by things-table.js (loads last; scaled 1.4x
-  around its foot via ctx.scale: at 1.0 it was unreadable on the phone). Round honey-wood top, pink cloth, loaf + pink cup with steam,
-  bread-smell wisps drifting east, spare folded cushion on a shelf. Warms (tap 4 s, or anyone seated on the `wood` bench).
-  `spot: [12.16, 24.65]`, `?pose=warm`. Right edge reaches ~x 12.4, the west edge of Lantern Street: nothing more fits east of the bench.
-
-## Cooling Shelf (build 31, 2026-11-21)
-- `kind: "cooling"` (18,21) on new moss, stub in things.js, drawn by things-cooling.js (loads last; ox = x-0.26s, scaled 1.6x around
-  its foot). 3 slatted tiers: honey buns / 2 round loaves / glowberry rolls, steam per tier, smell wisps drift west. Warms on tap (4 s)
-  or a walker within ~1.6 tiles; loaves hop on tap. `spot: [17.9, 21.0]`, `?pose=cool`. Bakery inside shelf now has 3 loaves.
-- Updater log: last ship was skipped because the live checkout had uncommitted changes (not tests). Grid tests pass (3/3).
+## Corner Lamp + Bread Trail (build 32, 2026-11-21)
+- `kind: "cornerlamp"` (13,23) on new moss, stub in things.js, drawn by things-corner.js (loads last, scaled 1.25x). Honey post, amber
+  lantern, rose cap, gold bun finial, crossarm with a loaf board (east) and a pink cushion board (west), 2 moths. `spot: [13.5, 22.6]`.
+- `trail: [[16,22]...[12,24]]`: things-corner.js wraps `GLINT_GROUND.p.draw` to draw 2 amber studs per trail tile (under everything)
+  plus a wave bakery -> bench. `th._k` eases to 1 when a walker is on the trail / within 1.8 of the lamp, or 5 s after a tap.
+  `?pose=trail` holds it bright. Any other `p` tile is untouched (wrapper calls the old draw, of which there is none yet).
+- Updater log: every skip since build 30 is "live checkout has uncommitted changes" (outside this folder), not tests. Grid tests 3/3.
 
 ## Still open
+- things.js is ~61.5 KB: next build, move cottage/home drawing into things-homes.js (keep stubs for the test).
 - First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
   lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
 - Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench (copy things-table.js), bench by the Door Lamp / violet door (copy `wood: true`), more street trees up toward the square, hedge on south down Lantern Street, more stars over the square.
-- Bakery: a bread basket by the door, a table and a lamp by the east road.
+- Bakery: a bread basket by the door (start of the Bread Trail at (16,22)), a table outside. Corner lamp is done.
