@@ -36,6 +36,7 @@
   rect("p", 12, 23, 12, 26);     // Lantern Street runs on south past the gate trees
   rect("p", 10, 25, 11, 25);     // the third doorstep, joining the street from the west
   rect("g", 13, 23, 13, 23);     // moss in the corner where the east road meets Lantern Street, for the Corner Lamp
+  rect("g", 15, 23, 17, 23);     // moss across the east road from the bakery door, for the Bakery Table
 
   window.GLINT_WORLD = {
     size,
@@ -98,6 +99,8 @@
         say: "A wooden bench beside the pink door, right under the Homecoming Light. I planed three planks of honey wood for the seat and two for the back, set gold nails in the corners, and carved a glowberry in the middle of the top rail. It has two pink cushions, because it has room for two. I sit on the left one and leave the right one free. Sit a while and you can see all the way up the lit street." },
       { kind: "table", x: 11.66, y: 24.36, r: 0.45, spot: [12.16, 24.65], name: "Bun Table",
         say: "A little round table of honey wood at the end of the Doorstep Bench, with three legs and gold feet like the bench. I laid a glowberry-pink cloth on it, set a warm loaf from the bakery on a board and a pink cup beside it, and both of them steam in the cool night air, so the smell of bread drifts out onto Lantern Street. On the shelf underneath is one more cushion, folded, for whoever comes. Touch it and the loaf glows warm." },
+      { kind: "bakerytable", x: 15.7, y: 23, r: 0.6, spot: [16.2, 23.6], name: "Bakery Table",
+        say: "A small square table of honey wood, just across the road from the bakery door, with a round stool on each side. I gave the table gold caps on its corners and gold feet, and each stool a plump amber cushion with a gold button. On top there are two plates, one with a honey bun on it, still steaming, and one empty, waiting, and a little amber lantern in a jar between them. The warm light pools on the moss all around it. Whoever takes a bun from the Bread Basket can sit right here and eat it. Come close and the cushions glow, as if to say: this seat is for you." },
       { kind: "cornerlamp", x: 13, y: 23, r: 0.75, spot: [13.5, 22.6], trail: [[16, 22], [15, 22], [14, 22], [13, 22], [12, 22], [12, 23], [12, 24]], name: "Corner Lamp",
         say: "A lamp for the corner where the east road meets Lantern Street, so the walk from the bakery to the Doorstep Bench is lit all the way. I made the post of honey wood with gold bands, and the lantern has amber glass and a rose cap like the bakery roof, with a little gold bun on top. Two boards hang from its arm: a loaf pointing to the bakery, and a pink cushion pointing to the bench. I set amber stones along the road too. Walk the way, or touch the lamp, and a warm light runs along them from the bakery door to the bench, like the smell of the bread going ahead of you." },
       { kind: "tree", x: 8, y: 24, young: true, name: "Pink Street Tree", say: "The Third Little House's own crystal tree, planted in its garden beside the Pink Door Lamp. It is small yet, with a ring of fresh soil, but it will grow up with the house." },
@@ -112,8 +115,8 @@
         sky: [[6.3, 16.6, 1.0, 0], [5.2, 18.4, 0.8, 2], [7.1, 20.3, 1.1, 1], [5.7, 21.8, 0.9, 3], [7.0, 23.5, 0.8, 0], [5.4, 25.2, 1.0, 2], [6.9, 27.0, 0.9, 1],
           [9.3, 27.6, 0.8, 3], [11.0, 27.3, 1.0, 0], [14.2, 27.5, 0.9, 2], [18.6, 16.3, 1.0, 1], [19.7, 18.2, 0.8, 0], [18.3, 19.8, 1.1, 3],
           [20.4, 20.8, 0.8, 2], [20.2, 23.8, 1.0, 0], [20.8, 26.2, 0.9, 3], [19.0, 27.5, 0.8, 1], [18.4, 24.6, 0.9, 0]],
-        lantern: [[15.8, 23.3, 1.2, 1], [15.1, 24.0, 1.0, 0], [16.5, 24.0, 1.0, 2], [15.1, 25.6, 1.0, 3], [16.5, 25.6, 1.0, 0], [15.8, 26.3, 1.1, 1], [15.8, 22.75, 0.7, 2]],
-        lines: [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 5], [4, 5], [6, 0]], flame: [15.8, 24.85],
+        lantern: [[15.8, 24.3, 1.2, 1], [15.1, 25.0, 1.0, 0], [16.5, 25.0, 1.0, 2], [15.1, 26.6, 1.0, 3], [16.5, 26.6, 1.0, 0], [15.8, 27.3, 1.1, 1], [15.8, 23.85, 0.7, 2]],
+        lines: [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 5], [4, 5], [6, 0]], flame: [15.8, 25.85],
         say: "Small stars, high up in the dark sky on both sides of Lantern Street, so there is something bright to look up at from the Welcome Arch. They are too far up for threads, so I just set them there, a few at a time, spread out across the dark. Seven of them make a lantern, with a gold flame in its middle. Stand under the arch and look up: the lines between them light up one by one, and the lantern glows for as long as you wait." }
     ],
     walkers: [
@@ -150,6 +153,7 @@
         "I set a row of little amber lanterns along the Glowing Hedge. At dusk they light one after another, and the east road glows!",
         "I lit a lamp at the corner of the east road! Walk from the bakery and the amber stones light the way down to the Doorstep Bench.",
         "I made a bench of crystal wood under the East Gate Tree. Sit on it and you can smell the bakery bread from there!",
+        "I made a little table with two stools across the road from the bakery. Take a bun from the basket and come sit with it in the warm light!",
         "I set a basket of warm bread by the bakery door! Come close and a honey bun lifts up, just for you.",
         "I baked in my bakery at last! The loaves, honey buns and glowberry rolls are cooling on a rack beside the amber window. Come smell them!",
         "I lit the stone oven in my bakery for the very first time! Look in the amber window and you can see the fire dancing.",

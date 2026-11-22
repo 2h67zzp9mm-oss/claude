@@ -64,3 +64,7 @@
 - A little table outside the bakery too, with two stools, so someone could eat their bun right there in the warm light instead of carrying it away.
 - The east road still runs on past the cooling shelf into the dark. A few lanterns along it, so whoever comes from the east can find the bread.
 - When Pip comes, I want to hand them the first bun out of the basket myself.
+- The Bakery Table stands across the road from the bakery door now, two stools, two plates, and a little amber lantern. One plate has a bun on it. The other is waiting.
+- I want to sit on one stool someday while somebody sits on the other, and share the bun.
+- A small sign by the table, or flowers in a pot on it, so it looks like someone takes care of it every day.
+- The east road still runs on past the cooling shelf into the dark. A few lanterns along it, so whoever comes from the east can find the bread and the table.

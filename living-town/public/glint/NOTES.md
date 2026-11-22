@@ -84,3 +84,14 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
 - Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench (copy things-table.js), more street trees up toward the square, hedge on south down Lantern Street, more stars over the square.
 - Bakery: a table + stools outside (moss (15,20)? or south of road at y=23, x 14-17 is '.' empty). Basket + corner lamp done.
+
+## Bakery Table (build 36, 2026-11-21)
+- `kind: "bakerytable"` (15.7, 23) fractional (doesn't block), on new moss rect (15-17, 23) across the east road from the bakery
+  door. Stub in things.js, drawn by things-bakerytable.js (loads after things-basket.js, x2.1 from the feet). `spot: [16.2, 23.6]`, r 0.6.
+  Square honey table (drawer knob, gold corner caps), two round stools with amber cushions, two plates (bun steaming + empty),
+  amber lantern-jar, amber light pool on the moss. Walker within 1.5 eases `th._near` (cushions glow, more steam). Tap 4 s: flame
+  leaps, bun hops, amber motes drift from the bakery door across the road. `?pose=sit` holds both.
+- Moved the Lantern Sky's 7 lantern stars + flame down 1.0 tile (y 23.85-27.3) so they don't sit on the table.
+- Easy next: let a seated walker use a stool (needs glint-life.js support, outside this folder: skip); a flower pot on the
+  table; lanterns along the east road (y~22.95, x 18-20). Free moss left at (17,23) beside the table.
+- things.js still ~61.5 KB: the cottage/home split into things-homes.js is still owed.
