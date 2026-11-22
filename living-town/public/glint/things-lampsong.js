@@ -27,6 +27,7 @@
     for (const th of W.things) {
       if (th.kind === "lamp") out.push([th.x + 0.5, th.y - 0.39]);
       else if (th.kind === "waitlamp") out.push([th.x - 0.41, th.y - 1.3]);
+      else if (th.kind === "tealamp") out.push([th.x - 0.26, th.y + 0.31, "110,245,225"]);
       else if (th.kind === "cornerlamp") out.push([th.x + 0.5, th.y - 0.4]);
       else if (th.kind === "hedgelamps") for (const [lx, ly] of th.lamps || []) out.push([lx + 0.18, ly - 0.58]);
       else if (th.kind === "roadlamps") (th.lamps || []).forEach(([lx, ly], i, a) => out.push([lx + (th.west ? -0.32 : 0.32), ly - (i === a.length - 1 ? 1.42 : 1.25)]));
@@ -103,9 +104,10 @@
     const bx = th.x + 0.5, by = th.y - 0.39;
     if (!th._list || th._n !== window.GLINT_WORLD.things.length) {
       th._n = window.GLINT_WORLD.things.length;
-      th._list = heads().map(([hx, hy]) => ({ hx, hy, d: Math.hypot(hx - bx, hy - by) * STEP })).sort((a, b) => a.d - b.d);
+      th._list = heads().map(([hx, hy, rgb]) => ({ hx, hy, rgb, d: Math.hypot(hx - bx, hy - by) * STEP })).sort((a, b) => a.d - b.d);
     }
     const list = th._list, since = songOf(th, t, list), last = list.length ? list[list.length - 1].d : 0;
+    window.GLINT_SONG = { since, bx, by, step: STEP };   // lamps that answer the song themselves (tealamp) read this
     th._ringK = since < 1.6 ? 1 - since / 1.6 : since > last + CHORD && since < last + CHORD + 1.2 ? 0.7 : 0;
 
     // the Humming Lamp hums on its own: a small note every few seconds
@@ -115,7 +117,7 @@
     if (since > 90) return;
     const chord = since - last - CHORD;
     list.forEach((l, i) => {
-      const [hx, hy] = at(l.hx, l.hy), rgb = COLS[i % 4], u = since - l.d;
+      const [hx, hy] = at(l.hx, l.hy), rgb = l.rgb || COLS[i % 4], u = since - l.d;
       if (u > 0 && u < 2.2) {                 // this lamp's own note
         const k = u < 0.25 ? u / 0.25 : 1 - (u - 0.25) / 1.95;
         glow(ctx, hx, hy, s * (0.5 + 0.35 * k), rgb, 0.55 * k);

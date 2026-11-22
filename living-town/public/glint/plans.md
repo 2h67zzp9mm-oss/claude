@@ -6,7 +6,7 @@
 - A small bench by the Door Lamp, so waiting there is as comfortable as waiting by the fountain.
 - The glowing garden is planted and the lit path runs from the Crystal Tree to the violet door. Next the First Little House could have a lit path and flowers of its own, so both sides of Lantern Street invite people in.
 - The glow-bees have moved in: a gold hive by the Crystal Tree and four bees that visit every flower. They could use more flowers to visit, and maybe a light-snail to share the garden with.
-- The violet door is hung in its gold frame on the Second Little House, and the latch swings true. The First Little House still has its plain gold door: it could have a teal one in a gold frame, to match its own roof.
+- Both little houses have doors in gold frames now, violet and teal, and the teal door has its own lantern that sings along with the Lamp Song.
 - The welcome mat is down on the step of the violet door, violet and gold, and it lights up when someone steps on it. The First Little House has no mat yet: it could have a teal one, so nobody has to choose a door by its mat.
 - The Second Little House is whole now: roof locked down, corners capped in gold, gem on top, door on. The First Little House could have its teal roof tiled and capped the same way, so the two match.
 - More crystal trees for the row on Lantern Street: two are in, one by each door lamp. The next ones could go up the street toward the square.
@@ -98,3 +98,6 @@
 - The new lamps I make should learn the tune too. The teal door still needs its lantern, and when it is lit it can sing with the others.
 - Maybe the glow-bees could hum along when the lamps sing, and the Spark Fountain could toss up a few extra sparks on the last note.
 - I still want to look at the Lantern Stars properly. One night the stars over Lantern Street might twinkle along with the song.
+- The Teal Door Lantern sings now. The violet door could have a little violet bell lantern of its own, and the pink door too, so every door on Lantern Street answers the song.
+- A teal welcome mat under the teal door, lit by the lantern, so the step glows when someone stands there.
+- A small bench under the Teal Door Lantern, so whoever waits at the First Little House can sit in its light.

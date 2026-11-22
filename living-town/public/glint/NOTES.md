@@ -24,7 +24,7 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   (12,8) with KINDLE plate, crystal trees at (9,7) (15,7) (8,14) (16,14). Roads west (y=12), east (y=12), south = Lantern Street
   (x=12, y 15-19). Signpost (10,19), Welcome Arch (12,20), Lantern Street sign (13,15),
   West/East Gate Trees (10,21) (14,21) on moss.
-- First Little House (14,17): teal roof, plain gold door, round window, Door Lamp (15,18), First Street Tree (16,18),
+- First Little House (14,17): teal roof, teal `door` (build 45), round window, Door Lamp (15,18), First Street Tree (16,18),
   Glowing Coat on its stand (14,19). Doorstep (13,18)-(14,18). Has `room: true` (build 16).
 - Second Little House (10,17): `flip`, violet roof, gold gem, `settled` (tiled roof, gold caps), violet `door` that swings open
   on tap. Violet Door Lamp (9,18), Second Street Tree (8,18), Welcome Mat on (10,18) `ox: 0.36`.
@@ -62,24 +62,12 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - glint-look's 3rd arg is px per tile (~90 max useful). To check a reactive state, force it temporarily in code, look, revert.
 - Updater skips have only been "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
 
-## Lantern Street Hedge + Lanterns (build 41, 2026-11-22)
-- Map: moss strip (13, 24-26). `hedge` entry (y 23.6, points [[13.08,24],[13.08,26.9]], cap) = "Lantern Street Hedge" (vertical works).
-- `roadlamps` "Lantern Street Lanterns" (y 26.95 so posts draw after the hedge), lamps x 13.32 at y 24.9/25.85/26.8, pool (-0.6, 0.02).
-  New opts: `west` (crook reaches west), `forward` (run first -> last = corner -> pink door), `board: "door"` (doorBoard(): pink door in
-  gold frame pointing west), `wave: "<hedge name>"` (zone entry also taps that hedge). zone [11.6,13.6,23.3,27.4].
-- The old "fourth house at (14,24), doorstep (13-14,25)" idea now crosses the hedge: split the hedge into two entries with a gap, or
-  put the fourth house further south after raising `size` (28 now).
-- glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png.
-- Easy next: teal door bench + teal-glass waitlamp copy.
-
-## Bakery Weather Vane + Glass Windmill (builds 42-43, 2026-11-22)
-- `vane` things-vane.js (16,21.04) `flat`, `on: [16,21]`, `spot: [16.36,19.9]`, scale 1.45; arrow follows wind(t) (slow sines around
-  west, no real wind data), tap = one spin, `?pose=gust`. Exposes `window.GLINT_WIND = wind` (heading, radians).
-- `mill` things-mill.js "Glass Windmill" at (18.1,19.5) `scale: 1.25`, `spot: [18.6,18.6]`, on new moss tile (18,20) behind the
-  Cooling Shelf (y-sort keeps the shelf in front). Gold-wire lattice tower, rose cap, pink pennant (side = sign of cos(GLINT_WIND)),
-  4 front-facing glass vanes. Angle integrated in `th.ang`/`th.lastT` (speed = breeze(t) + tap gust); amber lantern brightens with
-  speed; rain beads run along the glass. Tap = 4 s whirl, `?pose=whirl`. At scale 1.0 / y 20 it read too small and the base hid.
-- Ideas: a millstone that grinds flour for the bakery; bunting from mill to bakery roof (use GLINT_WIND); global rain in things-sky.js.
+## Builds 41-43 (short)
+- Lantern Street Hedge: moss (13,24-26), vertical `hedge` (y 23.6). "Lantern Street Lanterns" `roadlamps` y 26.95, opts `west`, `forward`,
+  `board: "door"`, `wave: "<hedge name>"`, zone [11.6,13.6,23.3,27.4]. Fourth house idea now crosses the hedge (split it or go further south).
+- `vane` things-vane.js on the bakery roof, exposes `window.GLINT_WIND` (heading, radians; slow sines, no real data), `?pose=gust`.
+- `mill` things-mill.js "Glass Windmill" (18.1,19.5) scale 1.25 on moss (18,20); angle integrated in th.ang; tap whirl, `?pose=whirl`.
+- glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png. No PIL; sips can't write (sandbox).
 
 ## Lamp Song (build 44, 2026-11-22)
 - `lampsong` things-lampsong.js at (14,10.01) `flat`, `spot: [14.86,10.15]`: crystal bell on a gold arm hung from the lamp at (14,10), now
@@ -89,3 +77,13 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Sound: Web Audio sines (pentatonic, gain ~0.035) only after a tap; AudioContext created/resumed in a window pointerup listener (iOS).
   Lamp list is cached and rebuilt when W.things.length changes, so new lamp kinds just need a line in `heads()`.
 - `?pose=hum` holds the song ~45% through. Ideas: bees/fountain join the chord; Lantern Stars twinkle along; new lamps add to heads().
+
+## Teal Door Lantern (build 45, 2026-11-22)
+- First Little House got `door: ["#9ff7ea","#27c9c2","#127a80"]` (tap swings it as well as opening the room; looks fine).
+- `tealamp` things-tealamp.js at (14,17.01) `flat` (sorts just after the cottage), `spot: [13.74,17.32]`, `house` = cottage name.
+  Wall bracket at cottage-relative (x-0.66s, b-0.8s), lantern hook (x-0.76s, b-0.86s), body drawn under ctx.scale(1.35) (1.0 was too
+  small on the phone). Fades with the house's `roomK`. Brighter after dark / walker on doorstep (y 18, x 12.4-14.6). Tap = 4 s hum.
+- Lamp Song hook: things-lampsong.js now publishes `window.GLINT_SONG = {since,bx,by,step}` each frame and heads() entries may carry
+  a 3rd item rgb (tealamp uses teal). A lamp can react to its own turn: u = since - dist(head, bell) * step, hum while 0<u<2.4.
+  Keep tealamp's `hx0/hy0` (th.x-0.26, th.y+0.31) equal to its heads() entry. Echo note every 4.5 s, 1.2 s after the Humming Lamp's.
+- `?pose=tune` holds the hum. Same pattern fits violet/pink door lanterns (pass glass colours as opts if copied).
