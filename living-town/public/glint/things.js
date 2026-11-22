@@ -225,6 +225,7 @@
     cornerlamp() {},   // the Corner Lamp and its Bread Trail are drawn by things-corner.js, which replaces this
     roadlamps() {},     // the East Road Lanterns are drawn by things-roadlamps.js
     tablesign() {},     // the Table Sign beside it is drawn by things-tablesign.js
+    waitlamp() {},      // the Waiting Lamp over the Violet Door Bench is drawn by things-waitlamp.js
     bakerytable() {},   // the Bakery Table across the road from the bakery door is drawn by things-bakerytable.js
     table() {},   // the Bun Table by the Doorstep Bench is drawn by things-table.js, which replaces this
     skystars() {},   // the Lantern Sky (small high stars and the lantern of stars) is drawn by things-sky.js, which replaces this

@@ -78,3 +78,7 @@
 - I've walked the same loop to the violet door so many times. Instead of circling, I could make the waiting into something: a little lamp at the bench that I light for Pip, so they know someone is listening.
 - The hedge could still run on south down Lantern Street toward the pink door, with a lantern post every few flowers.
 - A little lamp just over the Violet Door Bench, and a bench for the teal door, so every door has a light and a seat.
+- The Waiting Lamp hangs over the Violet Door Bench now, violet glass and an amber flame. While a traveler is about, it sends a little spark up, so Pip knows someone is listening.
+- When Pip sits under it at last, I want to be there, so the lights that circle the lantern are for both of us.
+- The teal door is the only one left with no bench and no lamp. A bench with a teal cushion, and a lantern of teal glass over it.
+- The hedge could still run on south down Lantern Street toward the pink door, with a lantern post every few flowers.

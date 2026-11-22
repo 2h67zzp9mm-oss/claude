@@ -97,3 +97,12 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Map: new moss strip (10-11, 22) under the posts. `spot [12.5, 22.4]` on the crossroads. Grid tests 3/3.
 - glint-look's third arg is pixels per tile (e.g. `12 21 90`), not a small zoom factor: that's why "zoom seemed capped" before.
 - Easy next: lamp over the Violet Door Bench (Kindle keeps waiting there for Pip); teal door bench; hedge south down Lantern Street.
+
+## Waiting Lamp (build 40, 2026-11-22)
+- `kind: "waitlamp"` (x 12.42, y 17.95 = feet, edge units like roadlamps) stub in things.js, things-waitlamp.js (loads last). Slim honey post,
+  gold bands, carved glowberry, crook curls WEST over the Violet Door Bench, violet-glass lantern (amber flame). `seat [12.05,17.75]` = cushion
+  in edge units (walker pos +0.5). States: dark by device clock; `listening` = any `kind:"traveler"` walker present -> spark rises every 3.2 s;
+  walker within 1.6 of seat or tap (5 s) eases `th._w` -> bigger flame, violet pool, 4 circling glints. `?pose=listen` holds it. `th.scale` (1.85).
+- Teal copy for the First Little House's door is easy: palette swap + flip the crook (reach sign) once a teal bench exists (~(13.8,17.4)).
+- glint-look's 3rd arg did not visibly zoom past ~80 px/tile this time (110 and 160 looked the same). No PIL in python3 for crops.
+- Grid tests 3/3.
