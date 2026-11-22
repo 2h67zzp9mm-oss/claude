@@ -2,7 +2,9 @@
 // of the east road, past the cooling shelf and on to where the road ends. Each has gold bands, a crook arm reaching out
 // over the road and an amber lantern hanging from it that pools light on the stones. The last post (far east) is the
 // tallest and carries a little board pointing back west with a painted honey bun: "bread this way".
-// th.lamps: [[x, y], ...] absolute tile points (feet), ordered bakery -> east end.
+// th.lamps: [[x, y, poolDx?, poolDy?], ...] absolute tile points (feet), ordered bakery -> east end (the run starts at the
+// last one). Optional th.zone [x0, x1, y0, y1] (walker trigger box), th.board false (no bun board on the last post).
+// Also used for the West Hedge Lanterns along the West Glowing Hedge.
 // Kindling runs from the far east end back toward the bakery (the way in, shown to someone arriving): at dusk by the
 // device clock every 10 s, on a tap, or when a walker steps onto the road past the cooling shelf. A walker beside a
 // post makes it glow bigger. `?pose=way` holds the run halfway along. Loads after things.js (stub `roadlamps() {}`).
@@ -77,7 +79,8 @@
     const { dark, dusk } = sky();
 
     // someone on the far stretch of road (past the cooling shelf) starts a run of light from the east end back in
-    const onRoad = ws.some(w => { const [a, b] = pos(w); return a > 18.6 && a < 25.2 && b > 21.6 && b < 23.4; });
+    const Z = th.zone || [18.6, 25.2, 21.6, 23.4];   // where a walker starts the run
+    const onRoad = ws.some(w => { const [a, b] = pos(w); return a > Z[0] && a < Z[1] && b > Z[2] && b < Z[3]; });
     if (onRoad && !th._was && !(t - (th._run ?? -99) < 4)) th._run = t;
     th._was = onRoad;
     if (th.tapped != null && th.tapped > (th._run ?? -99)) th._run = th.tapped;
@@ -87,7 +90,7 @@
     const flare = i => Math.max(0, ...runs.map(e => { const q = (e - (n - 1 - i) * 0.45) / 1.0; return q > 0 && q < 1 ? Math.sin(q * Math.PI) : 0; }));
 
     const base = 0.45 + 0.55 * dark;
-    L.forEach(([lx, ly], i) => {
+    L.forEach(([lx, ly, pdx = 0, pdy = -0.42], i) => {
       const last = i === n - 1;
       const nr = Math.max(0, 1 - dist(lx, ly - 0.4) / 1.3), f = flare(i);
       const fl = 0.85 + 0.1 * Math.sin(t * 6.7 + i * 1.9) + 0.05 * Math.sin(t * 12.3 + i);
@@ -98,7 +101,7 @@
       const topY = gy - H;
 
       // light on the road stones and the moss
-      const [px, py] = at(lx, ly - 0.42);
+      const [px, py] = at(lx + pdx, ly + pdy);
       pool(ctx, px, py, s * (0.5 + 0.14 * k), s * 0.24, "255,180,90", 0.14 + 0.22 * k);
       pool(ctx, gx, gy + S * 0.02, s * 0.3, s * 0.1, "255,190,110", 0.08 + 0.1 * k);
 
@@ -124,7 +127,7 @@
       for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, r = j % 2 ? sr * 0.45 : sr; ctx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); }
       ctx.closePath(); ctx.fill();
 
-      if (last) bunBoard(ctx, gx - S * 0.02, gy - H * 0.42, S, k);
+      if (last && th.board !== false) bunBoard(ctx, gx - S * 0.02, gy - H * 0.42, S, k);
 
       const hx = gx + reach, hy = topY + S * 0.03;
       const sw = Math.sin(t * 1.4 + i * 1.1) * 0.07 + f * 0.05 * Math.sin(t * 8);

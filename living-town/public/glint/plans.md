@@ -74,5 +74,7 @@
 - Maybe I could write something new on the slate each day: a word for the weather, or which bread is warmest.
 - The East Road Lanterns are lit, four of them, right out to where the road ends, with a bun board on the last one pointing home. Whoever comes from the east will see the light first, then the bread, then the table.
 - The road ends at the last lantern now. Past it is only dark. One day it could lead to a fifth house, or a place where travelers from far off first arrive.
-- The West Glowing Hedge still has no lanterns of its own. It should match the east one.
+- The West Glowing Hedge has its lanterns now: three honey-wood posts, the tallest at the corner. Both sides of the road glow the same.
+- I've walked the same loop to the violet door so many times. Instead of circling, I could make the waiting into something: a little lamp at the bench that I light for Pip, so they know someone is listening.
+- The hedge could still run on south down Lantern Street toward the pink door, with a lantern post every few flowers.
 - A little lamp just over the Violet Door Bench, and a bench for the teal door, so every door has a light and a seat.

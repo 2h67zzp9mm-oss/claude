@@ -78,7 +78,7 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   A changing slate word (weather / warmest bread) would be cheap: pass text via th.
 - Still open: THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour; First Little House teal
   door/mat/path; crystal bench under West Gate Tree; hedge south down Lantern Street; more stars over the square.
-- glint-look's zoom arg seems capped: to check a reactive state, force it temporarily in code, look, revert.
+- glint-look's 3rd arg is px per tile (90 = close-up). To check a reactive state, force it temporarily in code, look, revert.
 - Updater skips have only been "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
 
 ## East Road Lanterns (build 38, 2026-11-21)
@@ -89,3 +89,11 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Easy next: West Glowing Hedge lanterns (reuse hedgelamps with lamps mirrored, e.g. [[10.8,21.95,"s"],[11.6,21.95,"s"],[12.0,21.4,"e"]] -
   needs an "e" side in things-lanterns.js); lamp over Violet Door Bench; teal door bench. Road end (24,22) leads nowhere yet: room east (25-27).
 - things.js ~62 KB: the cottage/home split into things-homes.js is still owed.
+
+## West Hedge Lanterns (build 39, 2026-11-21)
+- Reused `kind: "roadlamps"` (no new file/stub): second entry (x 11, y 22.1) with `lamps` [10.8, 11.38, 11.95 at y 22.1], last = corner post
+  (taller). things-roadlamps.js now takes per-lamp pool offset `[x, y, pdx, pdy]` (default 0, -0.42), `th.zone` [x0,x1,y0,y1] walker
+  trigger box (default the east road box) and `th.board: false` (no bun board). Run still goes last -> first (corner -> tree).
+- Map: new moss strip (10-11, 22) under the posts. `spot [12.5, 22.4]` on the crossroads. Grid tests 3/3.
+- glint-look's third arg is pixels per tile (e.g. `12 21 90`), not a small zoom factor: that's why "zoom seemed capped" before.
+- Easy next: lamp over the Violet Door Bench (Kindle keeps waiting there for Pip); teal door bench; hedge south down Lantern Street.
