@@ -18,6 +18,7 @@
   // the wind's heading (radians, 0 = east, PI/2 = south on the ground), drifting slowly like a real breeze
   const wind = t => 3.4 + 0.7 * Math.sin(t * 0.045) + 0.35 * Math.sin(t * 0.13 + 1.7) + 0.06 * Math.sin(t * 1.9);
 
+  window.GLINT_WIND = wind;   // shared with the Glass Windmill's pennant
   const T = window.GLINT_THINGS = window.GLINT_THINGS || {};
   T.vane = function vane(ctx, x, y, s, t, th = {}) {
     const [bx, by] = th.on || [16, 21];

@@ -31,6 +31,7 @@
   rect("g", 15, 20, 17, 21);     // moss under the bakery, beside the East Gate Tree
   rect("g", 8, 19, 9, 19);       // moss below the Violet Door Lamp, for the Amber Oven
   rect("g", 18, 21, 18, 21);     // moss beside the bakery's amber window, for the Cooling Shelf
+  rect("g", 18, 20, 18, 20);     // moss behind the Cooling Shelf, for the Glass Windmill
   rect("p", 12, 22, 20, 22);     // the east road: from the foot of Lantern Street, past the bakery door and on east
   rect("g", 8, 23, 11, 26);      // the garden of the third house, past the gate trees
   rect("p", 12, 23, 12, 26);     // Lantern Street runs on south past the gate trees
@@ -90,6 +91,8 @@
       { kind: "bakery", x: 16, y: 21, r: 1.3, oven: true, name: "Bakery", say: "My bakery, beside the East Gate Tree. I set its warm amber window in the east wall so it glows out along the east road, and anyone coming that way can see it from far off. There is a honey-wood door split in two halves, a striped awning that flutters in the breeze, and BAKERY in gold over the door. The stone oven inside is lit now: look through the window and you can see the fire, and warm puffs rise from the chimney. The shelf inside has its first loaves now, and more cool on the rack outside the window." },
       { kind: "vane", x: 16, y: 21.04, r: 0.6, flat: true, on: [16, 21], spot: [16.36, 19.9], name: "Bakery Weather Vane",
         say: "A little weather vane on the very top of the bakery roof. I stood a honey-wood post on the peak of the gable, banded it in gold, and bent gold wire into four arms with a letter at the end of each, N, E, S and W. Above them turns an arrow of gold wire with a warm glow inside it, a pointed head and a feathered tail, and a small gold star on top of it all. Now I can see which way the cool wind blows over the bakery, even on a grey day: the arrow swings slowly round, and little wisps of breeze drift past it. Touch it and a gust spins it all the way round before it settles back to the wind." },
+      { kind: "mill", x: 18.1, y: 19.5, r: 0.8, scale: 1.25, spot: [18.6, 18.6], name: "Glass Windmill",
+        say: "A little windmill beside the bakery, so the cool wind has something to turn. I twisted gold wire into a slim tower, a lattice of crossed wires that narrows as it goes up, and stood it on a round stone ringed in gold, just behind the Cooling Shelf. On top is a rose cap like the bakery roof, with a pink pennant that streams the way the wind blows. Four vanes of glass in gold-wire frames turn on a gold hub, and the rain runs along them like little beads of light. Inside the tower hangs a small amber lantern: the harder the wind blows, the faster the vanes turn and the brighter it glows. Touch it and a gust sends the vanes whirling." },
       { kind: "cooling", x: 18, y: 21, r: 0.6, spot: [17.9, 21.0], name: "Cooling Shelf",
         say: "A rack of honey wood beside the bakery's amber window, three slatted shelves on gold feet, standing right in the warm light. I baked in the stone oven for the first time and set everything out here to cool: honey buns with a gold swirl on the bottom shelf, two round loaves in the middle, and glowberry rolls with pink tops on the top. The steam rises off every shelf, and the smell drifts all the way down to Lantern Street. Touch it and the bread glows warm and gives a little hop." },
       { kind: "basket", x: 15.4, y: 21.25, r: 0.55, spot: [16.0, 21.75], name: "Bread Basket",
@@ -164,6 +167,7 @@
         "I finished a coat for my friend the traveler! Its white glow is done at last. It hangs on a stand by the Door Lamp, waiting for him.",
         "I built a third little house past the gate trees, with a glowberry-pink roof! Its own light-moths loop round the gem on top.",
         "The Third Little House is finished: a pink mat, a young tree, flowers, and a lantern by the door that wakes up when a traveler comes home.",
+        "I built a windmill of gold wire and glass beside the bakery! When the wind blows, the vanes turn and a little lantern glows inside.",
         "I built a bakery beside the East Gate Tree! Its amber window glows down the east road.",
         "I built a little amber oven beside the Second Little House, so bread can bake close to home. It melts the frost around it!",
         "I planted a low hedge of glowing flowers from the East Gate Tree up to the arch. Walk beside it and the flowers open!",

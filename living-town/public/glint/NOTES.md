@@ -72,11 +72,11 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png.
 - Easy next: teal door bench + teal-glass waitlamp copy.
 
-## Bakery Weather Vane (build 42, 2026-11-22)
-- `vane` (things-vane.js, stub in things.js) entry x 16, y 21.04 (draws after the bakery), `flat`, `on: [16,21]` = bakery tile,
-  `spot: [16.36, 19.9]` (above the roof; bakery's own tap radius 1.3 doesn't reach it). Peak = bakery tile centre + (-0.14s, -1.1s).
-- Drawn at `scale` 1.45 (at 1.0 it was too small on the phone). Compass arms fixed; arrow heading = wind(t) slow sines around west
-  (no real wind data in GLINT_LIFE; only the prompt mentions weather). Wisps/motes drift along the arrow. Tap = one eased full spin
-  (3.2 s). `?pose=gust` holds mid-spin.
-- glint-look zoom seems capped (~80 px/tile even at 200); no PIL and sips can't write in the sandbox, so no cropping.
-- Ideas: the Table Sign could chalk the wind direction; a windmill/flags that share wind(t) (move wind() to a shared GLINT_WIND).
+## Bakery Weather Vane + Glass Windmill (builds 42-43, 2026-11-22)
+- `vane` things-vane.js (16,21.04) `flat`, `on: [16,21]`, `spot: [16.36,19.9]`, scale 1.45; arrow follows wind(t) (slow sines around
+  west, no real wind data), tap = one spin, `?pose=gust`. Exposes `window.GLINT_WIND = wind` (heading, radians).
+- `mill` things-mill.js "Glass Windmill" at (18.1,19.5) `scale: 1.25`, `spot: [18.6,18.6]`, on new moss tile (18,20) behind the
+  Cooling Shelf (y-sort keeps the shelf in front). Gold-wire lattice tower, rose cap, pink pennant (side = sign of cos(GLINT_WIND)),
+  4 front-facing glass vanes. Angle integrated in `th.ang`/`th.lastT` (speed = breeze(t) + tap gust); amber lantern brightens with
+  speed; rain beads run along the glass. Tap = 4 s whirl, `?pose=whirl`. At scale 1.0 / y 20 it read too small and the base hid.
+- Ideas: a millstone that grinds flour for the bakery; bunting from mill to bakery roof (use GLINT_WIND); global rain in things-sky.js.

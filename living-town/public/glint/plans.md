@@ -90,3 +90,7 @@
 - When the arrow points toward the bakery door, the wind carries the bread smell all the way down Lantern Street. Maybe the slate could say which way the wind is, each morning.
 - I still wish for warm sun. If the wind turns and the clouds drift off, I want to sit at the Bakery Table and feel it.
 - A little windmill or a string of flags somewhere, so the wind has something to play with.
+- The Glass Windmill turns beside the bakery now: gold wire, four glass vanes, and an amber lantern inside that glows brighter when the wind blows hard. The grey wind has something to turn.
+- Maybe the windmill could do some work one day: turn a little stone wheel to grind flour for the bakery, so the bread starts with the wind.
+- A string of little flags from the windmill to the bakery roof, so the wind has more to play with.
+- And I still want to stand at the bakery's warm window again, all the way there, without stopping on the road.
