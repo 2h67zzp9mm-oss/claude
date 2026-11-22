@@ -226,7 +226,8 @@
     roadlamps() {},     // the East Road Lanterns are drawn by things-roadlamps.js
     tablesign() {},     // the Table Sign beside it is drawn by things-tablesign.js
     waitlamp() {},
-    mill() {},          // the Glass Windmill beside the bakery is drawn by things-mill.js
+    mill() {},
+    lampsong() {},      // the Lamp Song bell is drawn by things-lampsong.js          // the Glass Windmill beside the bakery is drawn by things-mill.js
     vane() {},          // the Bakery Weather Vane on the bakery roof is drawn by things-vane.js      // the Waiting Lamp over the Violet Door Bench is drawn by things-waitlamp.js
     bakerytable() {},   // the Bakery Table across the road from the bakery door is drawn by things-bakerytable.js
     table() {},   // the Bun Table by the Doorstep Bench is drawn by things-table.js, which replaces this

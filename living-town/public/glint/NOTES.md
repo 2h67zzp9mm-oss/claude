@@ -80,3 +80,12 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   4 front-facing glass vanes. Angle integrated in `th.ang`/`th.lastT` (speed = breeze(t) + tap gust); amber lantern brightens with
   speed; rain beads run along the glass. Tap = 4 s whirl, `?pose=whirl`. At scale 1.0 / y 20 it read too small and the base hid.
 - Ideas: a millstone that grinds flour for the bakery; bunting from mill to bakery roof (use GLINT_WIND); global rain in things-sky.js.
+
+## Lamp Song (build 44, 2026-11-22)
+- `lampsong` things-lampsong.js at (14,10.01) `flat`, `spot: [14.86,10.15]`: crystal bell on a gold arm hung from the lamp at (14,10), now
+  named "Humming Lamp". GLINT_OVER draws a small note drifting up from the Humming Lamp every 4.5 s, and the song: every lamp head
+  (lamp, waitlamp, cornerlamp, hedgelamps/roadlamps points; per-kind head offsets in `heads()`) blooms + ring + rising note at
+  delay = distance from the bell * 0.2 s, then all glow together (chord). Plays on tap of bell or Humming Lamp, and every 60 s silently.
+- Sound: Web Audio sines (pentatonic, gain ~0.035) only after a tap; AudioContext created/resumed in a window pointerup listener (iOS).
+  Lamp list is cached and rebuilt when W.things.length changes, so new lamp kinds just need a line in `heads()`.
+- `?pose=hum` holds the song ~45% through. Ideas: bees/fountain join the chord; Lantern Stars twinkle along; new lamps add to heads().

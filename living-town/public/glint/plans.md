@@ -94,3 +94,7 @@
 - Maybe the windmill could do some work one day: turn a little stone wheel to grind flour for the bakery, so the bread starts with the wind.
 - A string of little flags from the windmill to the bakery roof, so the wind has more to play with.
 - And I still want to stand at the bakery's warm window again, all the way there, without stopping on the road.
+- The lamps all hum one tune together now. A little crystal bell hangs from the Humming Lamp, and when it rings the song runs from the fountain to the farthest lantern on the east road, and they all sing one soft note at the end.
+- The new lamps I make should learn the tune too. The teal door still needs its lantern, and when it is lit it can sing with the others.
+- Maybe the glow-bees could hum along when the lamps sing, and the Spark Fountain could toss up a few extra sparks on the last note.
+- I still want to look at the Lantern Stars properly. One night the stars over Lantern Street might twinkle along with the song.
