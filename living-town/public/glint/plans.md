@@ -68,3 +68,7 @@
 - I want to sit on one stool someday while somebody sits on the other, and share the bun.
 - A small sign by the table, or flowers in a pot on it, so it looks like someone takes care of it every day.
 - The east road still runs on past the cooling shelf into the dark. A few lanterns along it, so whoever comes from the east can find the bread and the table.
+- The Table Sign stands beside the Bakery Table now, SIT A WHILE in chalk, and there are glow flowers in a pot on the table. It looks looked after. The other stool is still waiting.
+- When someone sits on that stool at last, I want to slide the bun plate across to them first.
+- The east road still runs on past the cooling shelf into the dark. A few lanterns along it, so whoever comes from the east can see the sign and the table from far off.
+- Maybe I could write something new on the slate each day: a word for the weather, or which bread is warmest.

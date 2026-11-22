@@ -95,3 +95,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Easy next: let a seated walker use a stool (needs glint-life.js support, outside this folder: skip); a flower pot on the
   table; lanterns along the east road (y~22.95, x 18-20). Free moss left at (17,23) beside the table.
 - things.js still ~61.5 KB: the cottage/home split into things-homes.js is still owed.
+
+## Table Sign + table flower pot (build 37, 2026-11-21)
+- `kind: "tablesign"` (17.05, 22.95) fractional, on the free moss at (17,23) right of the Bakery Table. Stub in things.js, drawn by
+  things-tablesign.js (loads after things-bakerytable.js, x1.9 from the feet). A-frame honey board, green slate, chalk "SIT / A WHILE"
+  (canvas fillText, system rounded font), chalk bun + steam, arrow to the stools, clay pot of 4 glow flowers on top.
+  `table: [16.2, 23.6]`: walker within 1.6 of that point eases `th._near` (chalk warms gold, arrow nudges). Tap 4 s: letters light one
+  by one + chalk dust. `?pose=chalk`.
+- Same file wraps `GLINT_THINGS.bakerytable`: with `pot: true` (set in world.js) it draws the flower pot on the table's left front
+  corner (shared `pot()` helper, exposed as `GLINT_THINGS._tablePot`). The underscore key isn't a map kind, so the test is unaffected.
+- Moss row (15-17, 23) is now full. Easy next: east road lanterns (y~22.95, x 18-20, need moss or flat lamps on '.');
+  a changing slate word (e.g. by weather) would be cheap: pass text via th.
+- things.js ~62 KB: the cottage/home split into things-homes.js is still owed (skipped again to keep this build small).
