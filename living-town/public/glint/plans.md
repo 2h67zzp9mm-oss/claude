@@ -72,3 +72,7 @@
 - When someone sits on that stool at last, I want to slide the bun plate across to them first.
 - The east road still runs on past the cooling shelf into the dark. A few lanterns along it, so whoever comes from the east can see the sign and the table from far off.
 - Maybe I could write something new on the slate each day: a word for the weather, or which bread is warmest.
+- The East Road Lanterns are lit, four of them, right out to where the road ends, with a bun board on the last one pointing home. Whoever comes from the east will see the light first, then the bread, then the table.
+- The road ends at the last lantern now. Past it is only dark. One day it could lead to a fifth house, or a place where travelers from far off first arrive.
+- The West Glowing Hedge still has no lanterns of its own. It should match the east one.
+- A little lamp just over the Violet Door Bench, and a bench for the teal door, so every door has a light and a seat.

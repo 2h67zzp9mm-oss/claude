@@ -70,40 +70,22 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   Teal door bench next: add a `teal` palette (["#6dffc6","#27c9c2","#0f6a72"]) near (13.8,17.4); check doorstep (13-14,18), coat stand (14,19).
 - Updater skips were only "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
 
-## Bread Basket (build 35, 2026-11-21)
-- Build 34's follow-up run failed to finish but left nothing in this folder (git clean); nothing to repair.
-- `kind: "basket"` (15.4, 21.25) fractional (doesn't block), left of the bakery door, stub in things.js, drawn by things-basket.js
-  (loads last, x1.8 from the feet). `spot: [16.0, 21.75]`, r 0.55. Walker within 1.4 eases `th._near` -> a honey bun lifts out.
-  Tap: bread hops, gold puff, and it sets the cornerlamp's `tapped`, so the Bread Trail lights from the basket. `?pose=offer`.
-- glint-look's zoom arg seems capped (~80); to check a reactive state, force it temporarily in code, look, revert.
+## Builds 35-37 (short)
+- Bread Basket `basket` (15.4,21.25) things-basket.js: walker within 1.4 lifts a bun; tap sets cornerlamp `tapped`. `?pose=offer`.
+- Bakery Table `bakerytable` (15.7,23) things-bakerytable.js, `spot [16.2,23.6]`, `pot: true` draws a flower pot (via things-tablesign.js
+  wrapper, `GLINT_THINGS._tablePot`). `?pose=sit`. Lantern Sky lantern moved down 1 tile to clear it.
+- Table Sign `tablesign` (17.05,22.95) things-tablesign.js, chalk "SIT / A WHILE" via fillText, `table` point warms chalk. `?pose=chalk`.
+  A changing slate word (weather / warmest bread) would be cheap: pass text via th.
+- Still open: THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour; First Little House teal
+  door/mat/path; crystal bench under West Gate Tree; hedge south down Lantern Street; more stars over the square.
+- glint-look's zoom arg seems capped: to check a reactive state, force it temporarily in code, look, revert.
+- Updater skips have only been "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
 
-## Still open
-- things.js is ~61.5 KB: next build, move cottage/home drawing into things-homes.js (keep stubs for the test).
-- First Little House: teal `door` ["#6dffc6", "#27c9c2", "#0f6a72"], `settled: true`, a teal mat (`x:14, y:18, ox:-0.36, flat`),
-  lit path + flowers on the east side (free moss at (13,16)); the sign at (13,15) is in the way of a path there.
-- THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour.
-- Matching crystal bench under the West Gate Tree (moss at (11,21)? check arch post), table by the Crystal Bench (copy things-table.js), more street trees up toward the square, hedge on south down Lantern Street, more stars over the square.
-- Bakery: a table + stools outside (moss (15,20)? or south of road at y=23, x 14-17 is '.' empty). Basket + corner lamp done.
-
-## Bakery Table (build 36, 2026-11-21)
-- `kind: "bakerytable"` (15.7, 23) fractional (doesn't block), on new moss rect (15-17, 23) across the east road from the bakery
-  door. Stub in things.js, drawn by things-bakerytable.js (loads after things-basket.js, x2.1 from the feet). `spot: [16.2, 23.6]`, r 0.6.
-  Square honey table (drawer knob, gold corner caps), two round stools with amber cushions, two plates (bun steaming + empty),
-  amber lantern-jar, amber light pool on the moss. Walker within 1.5 eases `th._near` (cushions glow, more steam). Tap 4 s: flame
-  leaps, bun hops, amber motes drift from the bakery door across the road. `?pose=sit` holds both.
-- Moved the Lantern Sky's 7 lantern stars + flame down 1.0 tile (y 23.85-27.3) so they don't sit on the table.
-- Easy next: let a seated walker use a stool (needs glint-life.js support, outside this folder: skip); a flower pot on the
-  table; lanterns along the east road (y~22.95, x 18-20). Free moss left at (17,23) beside the table.
-- things.js still ~61.5 KB: the cottage/home split into things-homes.js is still owed.
-
-## Table Sign + table flower pot (build 37, 2026-11-21)
-- `kind: "tablesign"` (17.05, 22.95) fractional, on the free moss at (17,23) right of the Bakery Table. Stub in things.js, drawn by
-  things-tablesign.js (loads after things-bakerytable.js, x1.9 from the feet). A-frame honey board, green slate, chalk "SIT / A WHILE"
-  (canvas fillText, system rounded font), chalk bun + steam, arrow to the stools, clay pot of 4 glow flowers on top.
-  `table: [16.2, 23.6]`: walker within 1.6 of that point eases `th._near` (chalk warms gold, arrow nudges). Tap 4 s: letters light one
-  by one + chalk dust. `?pose=chalk`.
-- Same file wraps `GLINT_THINGS.bakerytable`: with `pot: true` (set in world.js) it draws the flower pot on the table's left front
-  corner (shared `pot()` helper, exposed as `GLINT_THINGS._tablePot`). The underscore key isn't a map kind, so the test is unaffected.
-- Moss row (15-17, 23) is now full. Easy next: east road lanterns (y~22.95, x 18-20, need moss or flat lamps on '.');
-  a changing slate word (e.g. by weather) would be cheap: pass text via th.
-- things.js ~62 KB: the cottage/home split into things-homes.js is still owed (skipped again to keep this build small).
+## East Road Lanterns (build 38, 2026-11-21)
+- Map: road `p` extended (21-24, 22); moss strip (18-24, 23). `kind: "roadlamps"` (x 21, y 22.98) fractional, stub in things.js, drawn by
+  things-roadlamps.js (loads last, S = s*1.6). `lamps [[x,y]]` feet points bakery -> east end (19.1, 20.7, 22.3, 23.9 at y 22.98).
+  Honey post, gold bands + star finial, crook arm east, swinging amber lantern, road light pool. Last post taller with a west-pointing
+  bun board. Kindling runs east end -> bakery: walker entering road x 18.6-25.2 / tap / dusk (clock 16:30-20:00, every 10 s). `?pose=way`.
+- Easy next: West Glowing Hedge lanterns (reuse hedgelamps with lamps mirrored, e.g. [[10.8,21.95,"s"],[11.6,21.95,"s"],[12.0,21.4,"e"]] -
+  needs an "e" side in things-lanterns.js); lamp over Violet Door Bench; teal door bench. Road end (24,22) leads nowhere yet: room east (25-27).
+- things.js ~62 KB: the cottage/home split into things-homes.js is still owed.

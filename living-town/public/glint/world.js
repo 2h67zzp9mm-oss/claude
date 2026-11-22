@@ -37,6 +37,8 @@
   rect("p", 10, 25, 11, 25);     // the third doorstep, joining the street from the west
   rect("g", 13, 23, 13, 23);     // moss in the corner where the east road meets Lantern Street, for the Corner Lamp
   rect("g", 15, 23, 17, 23);     // moss across the east road from the bakery door, for the Bakery Table
+  rect("p", 21, 22, 24, 22);     // the east road runs on further east, past the cooling shelf
+  rect("g", 18, 23, 24, 23);     // moss along its south edge, for the East Road Lanterns
 
   window.GLINT_WORLD = {
     size,
@@ -103,6 +105,8 @@
         say: "A small square table of honey wood, just across the road from the bakery door, with a round stool on each side. I gave the table gold caps on its corners and gold feet, and each stool a plump amber cushion with a gold button. On top there are two plates, one with a honey bun on it, still steaming, and one empty, waiting, and a little amber lantern in a jar between them. The warm light pools on the moss all around it. Whoever takes a bun from the Bread Basket can sit right here and eat it. Come close and the cushions glow, as if to say: this seat is for you. Now there is a little pot of glow flowers on it too, pink, gold, blue and violet, so it looks looked after." },
       { kind: "tablesign", x: 17.05, y: 22.95, r: 0.5, spot: [17.5, 23.5], table: [16.2, 23.6], name: "Table Sign",
         say: "A little standing board of honey wood beside the Bakery Table, with gold hinges and gold feet, and a slate on the front. I wrote on it in chalk: SIT A WHILE, and drew a honey bun with a curl of steam, and an arrow pointing to the stools. On top I set a small clay pot of glow flowers, like the one on the table. Come near the table and the chalk turns warm gold. Touch it and the letters light up one by one." },
+      { kind: "roadlamps", x: 21, y: 22.98, r: 0.6, spot: [21.5, 22.4], lamps: [[19.1, 22.98], [20.7, 22.98], [22.3, 22.98], [23.9, 22.98]], name: "East Road Lanterns",
+        say: "Four tall lanterns along the east road, past the cooling shelf and on to where the road ends in the dark. I laid the road further east first, then set a strip of moss beside it, and stood a honey-wood post at every stretch, banded in gold, with a gold star on top and an arm that reaches out over the stones. From each arm hangs an amber lantern. On the last one, the tallest, I hung a little board with a honey bun painted on it, pointing back toward the bakery. When someone comes along the road, the lanterns kindle one after another from the far end in, as if to say: the bread is this way." },
       { kind: "cornerlamp", x: 13, y: 23, r: 0.75, spot: [13.5, 22.6], trail: [[16, 22], [15, 22], [14, 22], [13, 22], [12, 22], [12, 23], [12, 24]], name: "Corner Lamp",
         say: "A lamp for the corner where the east road meets Lantern Street, so the walk from the bakery to the Doorstep Bench is lit all the way. I made the post of honey wood with gold bands, and the lantern has amber glass and a rose cap like the bakery roof, with a little gold bun on top. Two boards hang from its arm: a loaf pointing to the bakery, and a pink cushion pointing to the bench. I set amber stones along the road too. Walk the way, or touch the lamp, and a warm light runs along them from the bakery door to the bench, like the smell of the bread going ahead of you." },
       { kind: "tree", x: 8, y: 24, young: true, name: "Pink Street Tree", say: "The Third Little House's own crystal tree, planted in its garden beside the Pink Door Lamp. It is small yet, with a ring of fresh soil, but it will grow up with the house." },
@@ -155,6 +159,7 @@
         "I set a row of little amber lanterns along the Glowing Hedge. At dusk they light one after another, and the east road glows!",
         "I lit a lamp at the corner of the east road! Walk from the bakery and the amber stones light the way down to the Doorstep Bench.",
         "I made a bench of crystal wood under the East Gate Tree. Sit on it and you can smell the bakery bread from there!",
+        "I set four tall lanterns along the east road, right out to where it ends. Walk that way and they light one by one, showing the way to the bread!",
         "I made a little table with two stools across the road from the bakery. Take a bun from the basket and come sit with it in the warm light!",
         "I set a basket of warm bread by the bakery door! Come close and a honey bun lifts up, just for you.",
         "I baked in my bakery at last! The loaves, honey buns and glowberry rolls are cooling on a rack beside the amber window. Come smell them!",
