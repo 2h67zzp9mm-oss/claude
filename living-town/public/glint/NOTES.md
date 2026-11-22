@@ -71,3 +71,12 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   put the fourth house further south after raising `size` (28 now).
 - glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png.
 - Easy next: teal door bench + teal-glass waitlamp copy.
+
+## Bakery Weather Vane (build 42, 2026-11-22)
+- `vane` (things-vane.js, stub in things.js) entry x 16, y 21.04 (draws after the bakery), `flat`, `on: [16,21]` = bakery tile,
+  `spot: [16.36, 19.9]` (above the roof; bakery's own tap radius 1.3 doesn't reach it). Peak = bakery tile centre + (-0.14s, -1.1s).
+- Drawn at `scale` 1.45 (at 1.0 it was too small on the phone). Compass arms fixed; arrow heading = wind(t) slow sines around west
+  (no real wind data in GLINT_LIFE; only the prompt mentions weather). Wisps/motes drift along the arrow. Tap = one eased full spin
+  (3.2 s). `?pose=gust` holds mid-spin.
+- glint-look zoom seems capped (~80 px/tile even at 200); no PIL and sips can't write in the sandbox, so no cropping.
+- Ideas: the Table Sign could chalk the wind direction; a windmill/flags that share wind(t) (move wind() to a shared GLINT_WIND).

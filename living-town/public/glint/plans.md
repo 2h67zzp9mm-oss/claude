@@ -86,3 +86,7 @@
 - The street ends in the dark just past the last lantern. It could go on south one day, to a fourth house across from the pink one, so that lantern has a door of its own to point at.
 - The teal door is still the only one with no bench and no lamp. A bench with a teal cushion and a lantern of teal glass, and every door on Lantern Street will have a seat and a light.
 - When Pip comes, I want to walk them down the street under the lanterns myself, and watch the flowers open as we pass.
+- The Bakery Weather Vane turns on the bakery roof now. On a grey day I can look up and see which way the cool wind is going, and the clouds with it.
+- When the arrow points toward the bakery door, the wind carries the bread smell all the way down Lantern Street. Maybe the slate could say which way the wind is, each morning.
+- I still wish for warm sun. If the wind turns and the clouds drift off, I want to sit at the Bakery Table and feel it.
+- A little windmill or a string of flags somewhere, so the wind has something to play with.
