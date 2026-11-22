@@ -4,7 +4,10 @@
 // tallest and carries a little board pointing back west with a painted honey bun: "bread this way".
 // th.lamps: [[x, y, poolDx?, poolDy?], ...] absolute tile points (feet), ordered bakery -> east end (the run starts at the
 // last one). Optional th.zone [x0, x1, y0, y1] (walker trigger box), th.board false (no bun board on the last post).
-// Also used for the West Hedge Lanterns along the West Glowing Hedge.
+// Also used for the West Hedge Lanterns along the West Glowing Hedge, and the Lantern Street Lanterns (east side of the
+// street, south of the crossroads): th.west (crook reaches west), th.forward (run goes first -> last), th.board "door"
+// (little board on the last post with a painted pink door, pointing west), th.wave = name of a hedge whose wave starts
+// with the run.
 // Kindling runs from the far east end back toward the bakery (the way in, shown to someone arriving): at dusk by the
 // device clock every 10 s, on a tap, or when a walker steps onto the road past the cooling shelf. A walker beside a
 // post makes it glow bigger. `?pose=way` holds the run halfway along. Loads after things.js (stub `roadlamps() {}`).
@@ -68,6 +71,23 @@
     ctx.beginPath(); ctx.moveTo(bx, by - S * 0.035); ctx.quadraticCurveTo(bx + S * 0.02, by - S * 0.05, bx, by - S * 0.065); ctx.stroke();
   }
 
+  function doorBoard(ctx, x, y, S, k, t) {      // little board pointing west, with a painted pink door and a heart of light
+    const w = S * 0.3, h = S * 0.14;
+    const shape = [[x - w * 0.62, y], [x - w * 0.42, y - h / 2], [x + w * 0.42, y - h / 2], [x + w * 0.42, y + h / 2], [x - w * 0.42, y + h / 2]];
+    poly(ctx, shape, "#c9893f");
+    poly(ctx, [[x - w * 0.62, y], [x - w * 0.42, y - h / 2], [x + w * 0.42, y - h / 2], [x + w * 0.42, y - h * 0.15], [x - w * 0.5, y - h * 0.15]], "#e2a95a");
+    ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(0.6, S * 0.01);
+    ctx.beginPath(); shape.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.closePath(); ctx.stroke();
+    const dx = x + w * 0.06, dw = S * 0.032, dt = y - h * 0.36, db = y + h * 0.38;
+    glow(ctx, dx, y, S * 0.08, "255,140,205", 0.2 + 0.3 * k + 0.1 * Math.sin(t * 2));
+    ctx.fillStyle = "#ffd166";                       // gold frame
+    ctx.beginPath(); ctx.moveTo(dx - dw - S * 0.008, db); ctx.lineTo(dx - dw - S * 0.008, dt + dw); ctx.arc(dx, dt + dw, dw + S * 0.008, Math.PI, 0); ctx.lineTo(dx + dw + S * 0.008, db); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ff78c4";                       // the pink door
+    ctx.beginPath(); ctx.moveTo(dx - dw, db); ctx.lineTo(dx - dw, dt + dw); ctx.arc(dx, dt + dw, dw, Math.PI, 0); ctx.lineTo(dx + dw, db); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffc6e8"; ctx.fillRect(dx - dw * 0.55, dt + dw * 0.7, dw * 1.1, S * 0.012);
+    ctx.fillStyle = "#fff6d6"; ctx.beginPath(); ctx.arc(dx + dw * 0.5, (dt + db) / 2 + S * 0.01, S * 0.006 + 0.4, 0, TAU); ctx.fill();   // latch
+  }
+
   const T = window.GLINT_THINGS = window.GLINT_THINGS || {};
   T.roadlamps = function roadlamps(ctx, x, y, s, t, th = {}) {
     const L = th.lamps; if (!L) return;
@@ -81,13 +101,16 @@
     // someone on the far stretch of road (past the cooling shelf) starts a run of light from the east end back in
     const Z = th.zone || [18.6, 25.2, 21.6, 23.4];   // where a walker starts the run
     const onRoad = ws.some(w => { const [a, b] = pos(w); return a > Z[0] && a < Z[1] && b > Z[2] && b < Z[3]; });
-    if (onRoad && !th._was && !(t - (th._run ?? -99) < 4)) th._run = t;
+    if (onRoad && !th._was && !(t - (th._run ?? -99) < 4)) {
+      th._run = t;
+      if (th.wave) { const h = (window.GLINT_WORLD?.things || []).find(k => k.name === th.wave); if (h) h.tapped = t; }
+    }
     th._was = onRoad;
     if (th.tapped != null && th.tapped > (th._run ?? -99)) th._run = th.tapped;
     const runs = [t - (th._run ?? -99)];
     if (dusk) runs.push(POSE === "way" ? 0.95 : t % 10);
     const n = L.length;
-    const flare = i => Math.max(0, ...runs.map(e => { const q = (e - (n - 1 - i) * 0.45) / 1.0; return q > 0 && q < 1 ? Math.sin(q * Math.PI) : 0; }));
+    const flare = i => Math.max(0, ...runs.map(e => { const q = (e - (th.forward ? i : n - 1 - i) * 0.45) / 1.0; return q > 0 && q < 1 ? Math.sin(q * Math.PI) : 0; }));
 
     const base = 0.45 + 0.55 * dark;
     L.forEach(([lx, ly, pdx = 0, pdy = -0.42], i) => {
@@ -116,7 +139,7 @@
 
       // the crook arm, curling over the road side, with the lantern hanging from its tip
       ctx.strokeStyle = "#e09a2b"; ctx.lineWidth = Math.max(1, S * 0.026); ctx.lineCap = "round";
-      const reach = S * 0.2;
+      const reach = S * 0.2 * (th.west ? -1 : 1);
       ctx.beginPath(); ctx.moveTo(gx, topY + S * 0.08);
       ctx.quadraticCurveTo(gx, topY - S * 0.05, gx + reach * 0.6, topY - S * 0.04);
       ctx.quadraticCurveTo(gx + reach, topY - S * 0.03, gx + reach, topY + S * 0.03); ctx.stroke();
@@ -127,7 +150,8 @@
       for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, r = j % 2 ? sr * 0.45 : sr; ctx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); }
       ctx.closePath(); ctx.fill();
 
-      if (last && th.board !== false) bunBoard(ctx, gx - S * 0.02, gy - H * 0.42, S, k);
+      if (last && th.board === "door") doorBoard(ctx, gx - S * 0.02, gy - H * 0.42, S, k, t);
+      else if (last && th.board !== false) bunBoard(ctx, gx - S * 0.02, gy - H * 0.42, S, k);
 
       const hx = gx + reach, hy = topY + S * 0.03;
       const sw = Math.sin(t * 1.4 + i * 1.1) * 0.07 + f * 0.05 * Math.sin(t * 8);

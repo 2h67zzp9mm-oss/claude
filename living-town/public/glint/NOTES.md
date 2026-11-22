@@ -47,62 +47,27 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Free: moss (8-9,23) (11,23); east side of Lantern St south of y=22 is empty (fourth house at (14,24), doorstep (13-14,25)).
 - The test (../../test/glint-grid.test.js) loads only world.js + things.js: every kind needs a stub in things.js.
 
-## Builds 28-31 (short)
-- Third house: pink `mat` (10,25), Pink Street Tree (8,24), flowers (11,26), `homelight` (10,24.03) things-pink.js, wakes for a
-  traveler within 3.2 of (10.9,25), `?pose=home`. grid.js tap `dist` honours `th.spot`. Homecoming Light copy for other doors: easy.
-- Doorstep Bench `bench wood:true` (11.15,24.32) things-woodbench.js, `seatX` slides the sitter, `?pose=rest`.
-- Bun Table `table` (11.66,24.36) things-table.js, scaled 1.4x, `?pose=warm`. Nothing more fits east of the bench (x 12.4 = street).
-- Cooling Shelf `cooling` (18,21) things-cooling.js, scaled 1.6x, `?pose=cool`.
-
-## Corner Lamp + Bread Trail (build 32, 2026-11-21)
-- `kind: "cornerlamp"` (13,23) on new moss, stub in things.js, drawn by things-corner.js (loads last, scaled 1.25x). Honey post, amber
-  lantern, rose cap, gold bun finial, crossarm with a loaf board (east) and a pink cushion board (west), 2 moths. `spot: [13.5, 22.6]`.
-- `trail: [[16,22]...[12,24]]`: things-corner.js wraps `GLINT_GROUND.p.draw` to draw 2 amber studs per trail tile (under everything)
-  plus a wave bakery -> bench. `th._k` eases to 1 when a walker is on the trail / within 1.8 of the lamp, or 5 s after a tap.
-  `?pose=trail` holds it bright. Any other `p` tile is untouched (wrapper calls the old draw, of which there is none yet).
-- Updater log: every skip since build 30 is "live checkout has uncommitted changes" (outside this folder), not tests. Grid tests 3/3.
-  Still true at build 33 (2026-11-21 14:41): nothing in this folder to fix; the live checkout needs cleaning by hand.
-
-## Builds 33-34 (short)
-- Hedge Lanterns `hedgelamps` (13,21.47) flat, things-lanterns.js: `lamps [[x,y,side]]`, scaled S=s*1.75, dusk by device clock
-  (kindle one by one), `?pose=dusk`. Easy next: mirror onto the West Glowing Hedge; lanterns along the east road (y~22.95, x 18-20).
-- Violet Door Bench `bench wood one violet scale:1.3` (11.2,17.4). things-woodbench.js takes `one`, `violet`, `scale`; `?pose=wait`.
-  Teal door bench next: add a `teal` palette (["#6dffc6","#27c9c2","#0f6a72"]) near (13.8,17.4); check doorstep (13-14,18), coat stand (14,19).
-- Updater skips were only "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
-
-## Builds 35-37 (short)
-- Bread Basket `basket` (15.4,21.25) things-basket.js: walker within 1.4 lifts a bun; tap sets cornerlamp `tapped`. `?pose=offer`.
-- Bakery Table `bakerytable` (15.7,23) things-bakerytable.js, `spot [16.2,23.6]`, `pot: true` draws a flower pot (via things-tablesign.js
-  wrapper, `GLINT_THINGS._tablePot`). `?pose=sit`. Lantern Sky lantern moved down 1 tile to clear it.
-- Table Sign `tablesign` (17.05,22.95) things-tablesign.js, chalk "SIT / A WHILE" via fillText, `table` point warms chalk. `?pose=chalk`.
-  A changing slate word (weather / warmest bread) would be cheap: pass text via th.
-- Still open: THINGS.traveler (pirate look, coat when `wearing === "coat"`, keep name label), THINGS.neighbour; First Little House teal
-  door/mat/path; crystal bench under West Gate Tree; hedge south down Lantern Street; more stars over the square.
-- glint-look's 3rd arg is px per tile (90 = close-up). To check a reactive state, force it temporarily in code, look, revert.
+## Builds 28-40 (short)
+- Third house (10,24) pink: mat (10,25), Pink Street Tree (8,24), flowers (11,26), `homelight` (10,24.03) `?pose=home`. Doorstep Bench
+  `bench wood` (11.15,24.32) things-woodbench.js (`seatX`, `one`, `violet`, `scale`; `?pose=rest|wait`), Bun Table (11.66,24.36) `?pose=warm`.
+- Cooling Shelf (18,21) `?pose=cool`. Corner Lamp `cornerlamp` (13,23) things-corner.js + amber `trail` studs (wraps GLINT_GROUND.p.draw), `?pose=trail`.
+- Hedge Lanterns `hedgelamps` (13,21.47) things-lanterns.js `?pose=dusk`. Violet Door Bench (11.2,17.4). Bread Basket (15.4,21.25) `?pose=offer`.
+  Bakery Table (15.7,23) `pot`, Table Sign (17.05,22.95) chalk via fillText `?pose=chalk`.
+- `roadlamps` things-roadlamps.js (S = s*1.6), used 3x: East Road Lanterns (x 21, y 22.98, bun board on last), West Hedge Lanterns
+  (y 22.1, `board:false`), Lantern Street Lanterns (below). Opts: lamps `[x,y,pdx,pdy]`, `zone`, `board`, dusk by device clock, `?pose=way`.
+- Waiting Lamp `waitlamp` (12.42,17.95) things-waitlamp.js: violet glass, spark while a traveler is present, `seat`, `?pose=listen`.
+  Teal copy = palette swap + flip the crook, once a teal bench exists (~(13.8,17.4); check doorstep (13-14,18), coat stand (14,19)).
+- Coordinates: things at fractional x/y are drawn at x+0.5 like any thing; `hedge`/`lamps` points are absolute (n+0.5 = tile centre).
+- Still open: THINGS.traveler (pirate, coat when `wearing === "coat"`, keep name label), THINGS.neighbour; things.js split (~62 KB).
+- glint-look's 3rd arg is px per tile (~90 max useful). To check a reactive state, force it temporarily in code, look, revert.
 - Updater skips have only been "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
 
-## East Road Lanterns (build 38, 2026-11-21)
-- Map: road `p` extended (21-24, 22); moss strip (18-24, 23). `kind: "roadlamps"` (x 21, y 22.98) fractional, stub in things.js, drawn by
-  things-roadlamps.js (loads last, S = s*1.6). `lamps [[x,y]]` feet points bakery -> east end (19.1, 20.7, 22.3, 23.9 at y 22.98).
-  Honey post, gold bands + star finial, crook arm east, swinging amber lantern, road light pool. Last post taller with a west-pointing
-  bun board. Kindling runs east end -> bakery: walker entering road x 18.6-25.2 / tap / dusk (clock 16:30-20:00, every 10 s). `?pose=way`.
-- Easy next: West Glowing Hedge lanterns (reuse hedgelamps with lamps mirrored, e.g. [[10.8,21.95,"s"],[11.6,21.95,"s"],[12.0,21.4,"e"]] -
-  needs an "e" side in things-lanterns.js); lamp over Violet Door Bench; teal door bench. Road end (24,22) leads nowhere yet: room east (25-27).
-- things.js ~62 KB: the cottage/home split into things-homes.js is still owed.
-
-## West Hedge Lanterns (build 39, 2026-11-21)
-- Reused `kind: "roadlamps"` (no new file/stub): second entry (x 11, y 22.1) with `lamps` [10.8, 11.38, 11.95 at y 22.1], last = corner post
-  (taller). things-roadlamps.js now takes per-lamp pool offset `[x, y, pdx, pdy]` (default 0, -0.42), `th.zone` [x0,x1,y0,y1] walker
-  trigger box (default the east road box) and `th.board: false` (no bun board). Run still goes last -> first (corner -> tree).
-- Map: new moss strip (10-11, 22) under the posts. `spot [12.5, 22.4]` on the crossroads. Grid tests 3/3.
-- glint-look's third arg is pixels per tile (e.g. `12 21 90`), not a small zoom factor: that's why "zoom seemed capped" before.
-- Easy next: lamp over the Violet Door Bench (Kindle keeps waiting there for Pip); teal door bench; hedge south down Lantern Street.
-
-## Waiting Lamp (build 40, 2026-11-22)
-- `kind: "waitlamp"` (x 12.42, y 17.95 = feet, edge units like roadlamps) stub in things.js, things-waitlamp.js (loads last). Slim honey post,
-  gold bands, carved glowberry, crook curls WEST over the Violet Door Bench, violet-glass lantern (amber flame). `seat [12.05,17.75]` = cushion
-  in edge units (walker pos +0.5). States: dark by device clock; `listening` = any `kind:"traveler"` walker present -> spark rises every 3.2 s;
-  walker within 1.6 of seat or tap (5 s) eases `th._w` -> bigger flame, violet pool, 4 circling glints. `?pose=listen` holds it. `th.scale` (1.85).
-- Teal copy for the First Little House's door is easy: palette swap + flip the crook (reach sign) once a teal bench exists (~(13.8,17.4)).
-- glint-look's 3rd arg did not visibly zoom past ~80 px/tile this time (110 and 160 looked the same). No PIL in python3 for crops.
-- Grid tests 3/3.
+## Lantern Street Hedge + Lanterns (build 41, 2026-11-22)
+- Map: moss strip (13, 24-26). `hedge` entry (y 23.6, points [[13.08,24],[13.08,26.9]], cap) = "Lantern Street Hedge" (vertical works).
+- `roadlamps` "Lantern Street Lanterns" (y 26.95 so posts draw after the hedge), lamps x 13.32 at y 24.9/25.85/26.8, pool (-0.6, 0.02).
+  New opts: `west` (crook reaches west), `forward` (run first -> last = corner -> pink door), `board: "door"` (doorBoard(): pink door in
+  gold frame pointing west), `wave: "<hedge name>"` (zone entry also taps that hedge). zone [11.6,13.6,23.3,27.4].
+- The old "fourth house at (14,24), doorstep (13-14,25)" idea now crosses the hedge: split the hedge into two entries with a gap, or
+  put the fourth house further south after raising `size` (28 now).
+- glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png.
+- Easy next: teal door bench + teal-glass waitlamp copy.

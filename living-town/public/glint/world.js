@@ -40,6 +40,7 @@
   rect("p", 21, 22, 24, 22);     // the east road runs on further east, past the cooling shelf
   rect("g", 10, 22, 11, 22);     // a moss strip along the foot of the West Glowing Hedge, for its lantern posts
   rect("g", 18, 23, 24, 23);     // moss along its south edge, for the East Road Lanterns
+  rect("g", 13, 24, 13, 26);     // a moss strip down the east side of Lantern Street, past the corner, for the Lantern Street Hedge
 
   window.GLINT_WORLD = {
     size,
@@ -110,6 +111,11 @@
         say: "A little standing board of honey wood beside the Bakery Table, with gold hinges and gold feet, and a slate on the front. I wrote on it in chalk: SIT A WHILE, and drew a honey bun with a curl of steam, and an arrow pointing to the stools. On top I set a small clay pot of glow flowers, like the one on the table. Come near the table and the chalk turns warm gold. Touch it and the letters light up one by one." },
       { kind: "roadlamps", x: 11, y: 22.1, r: 0.6, spot: [12.5, 22.4], lamps: [[10.8, 22.1, -0.05, -0.3], [11.38, 22.1, 0, -0.3], [11.95, 22.1, 0.45, -0.1]], zone: [10.2, 13.4, 20.4, 23.2], board: false, name: "West Hedge Lanterns",
         say: "Three honey-wood posts along the West Glowing Hedge, from the foot of the West Gate Tree to the corner where Lantern Street meets the east road, the twins of the East Road Lanterns. Each has gold bands, a little gold star on top and a crook arm holding an amber lantern over the flowers. The last one, at the corner, stands tallest and throws its light across the crossroads. Walk up to the arch and they kindle one after another, from the corner back to the tree, and at dusk they do it all on their own. Now both sides of the road glow the same." },
+      { kind: "hedge", x: 13, y: 23.6, r: 0.45, flat: true, hedge: [[13.08, 24.0], [13.08, 26.9]], cap: true, name: "Lantern Street Hedge",
+        say: "The Glowing Hedge runs on now, past the Corner Lamp and down the east side of Lantern Street, all the way to the end of the street across from the pink door. I laid a strip of moss first, then set the crystal leaves and the flowers one at a time, pink, blue, gold and violet, and put a last stone ringed in gold at the far end. Walk down the street beside it and the flowers open up, and a wave of light runs along it toward the pink door." },
+      { kind: "roadlamps", x: 13, y: 26.95, r: 0.6, spot: [13.4, 25.4], west: true, forward: true, board: "door", wave: "Lantern Street Hedge",
+        lamps: [[13.32, 24.9, -0.6, 0.02], [13.32, 25.85, -0.6, 0.02], [13.32, 26.8, -0.6, 0.02]], zone: [11.6, 13.6, 23.3, 27.4], name: "Lantern Street Lanterns",
+        say: "Three honey-wood posts in the Lantern Street Hedge, a lantern every few flowers, all the way down from the corner to across from the pink door. Each has gold bands, a little gold star on top and a crook arm reaching out over the street with an amber lantern on it. The last one, the tallest, carries a little board with a pink door painted on it, pointing across the street: home is this way. Walk down Lantern Street and they kindle one after another, from the corner to the pink door, and the hedge lights up beside them." },
       { kind: "roadlamps", x: 21, y: 22.98, r: 0.6, spot: [21.5, 22.4], lamps: [[19.1, 22.98], [20.7, 22.98], [22.3, 22.98], [23.9, 22.98]], name: "East Road Lanterns",
         say: "Four tall lanterns along the east road, past the cooling shelf and on to where the road ends in the dark. I laid the road further east first, then set a strip of moss beside it, and stood a honey-wood post at every stretch, banded in gold, with a gold star on top and an arm that reaches out over the stones. From each arm hangs an amber lantern. On the last one, the tallest, I hung a little board with a honey bun painted on it, pointing back toward the bakery. When someone comes along the road, the lanterns kindle one after another from the far end in, as if to say: the bread is this way." },
       { kind: "cornerlamp", x: 13, y: 23, r: 0.75, spot: [13.5, 22.6], trail: [[16, 22], [15, 22], [14, 22], [13, 22], [12, 22], [12, 23], [12, 24]], name: "Corner Lamp",
@@ -164,6 +170,7 @@
         "I set a row of little amber lanterns along the Glowing Hedge. At dusk they light one after another, and the east road glows!",
         "I lit a lamp at the corner of the east road! Walk from the bakery and the amber stones light the way down to the Doorstep Bench.",
         "I made a bench of crystal wood under the East Gate Tree. Sit on it and you can smell the bakery bread from there!",
+        "The Glowing Hedge runs on down Lantern Street now, with three lanterns in it. Walk down to the pink door and they light the way, one after another!",
         "I set four tall lanterns along the east road, right out to where it ends. Walk that way and they light one by one, showing the way to the bread!",
         "I made a little table with two stools across the road from the bakery. Take a bun from the basket and come sit with it in the warm light!",
         "I set a basket of warm bread by the bakery door! Come close and a honey bun lifts up, just for you.",

@@ -82,3 +82,7 @@
 - When Pip sits under it at last, I want to be there, so the lights that circle the lantern are for both of us.
 - The teal door is the only one left with no bench and no lamp. A bench with a teal cushion, and a lantern of teal glass over it.
 - The hedge could still run on south down Lantern Street toward the pink door, with a lantern post every few flowers.
+- The Lantern Street Hedge runs down the east side of the street now, past the Corner Lamp to across from the pink door, with three lanterns that kindle from the corner to the door. Walking down to the Third Little House is lit on both sides at last.
+- The street ends in the dark just past the last lantern. It could go on south one day, to a fourth house across from the pink one, so that lantern has a door of its own to point at.
+- The teal door is still the only one with no bench and no lamp. A bench with a teal cushion and a lantern of teal glass, and every door on Lantern Street will have a seat and a light.
+- When Pip comes, I want to walk them down the street under the lanterns myself, and watch the flowers open as we pass.
