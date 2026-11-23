@@ -69,22 +69,17 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `mill` things-mill.js "Glass Windmill" (18.1,19.5) scale 1.25 on moss (18,20); angle integrated in th.ang; tap whirl, `?pose=whirl`.
 - glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png. No PIL; sips can't write (sandbox).
 
-## Builds 44-47 (short)
-- `lampsong` (14,10.01): bell on the Humming Lamp; publishes `window.GLINT_SONG = {since,bx,by,step}`; lamps in `heads()` bloom at
-  dist*step. New lamp kinds that should sing: add to heads(). Web Audio unlocked on pointerup (iOS).
-- `tealamp` (14,17.01) Teal Door Lantern (glass spot must match heads()); Teal Door Bench `bench wood one teal` (13.05,17.45) with
-  `lanternLight()` in things-woodbench.js. Glint sits when stopped within 1.1 of a bench.
-- `flags` things-flags.js (17.4,21.06) Wind Flags, `from`/`to` absolute; answers GLINT_SONG; `?pose=ripple`.
-- glint-look zoom caps ~80 px/tile.
-
-## North Road + Waymark Cairn (build 48, 2026-11-22)
-- Tiles: North Meadow moss (11-17, 0-4); path (13,9)-(14,9) joins Kindle's doorstep (12,9), then North Road x=14, y 2-9.
-  (14,10) is the Humming Lamp (blocks walking), hence the jog via (13,9).
-- "North Road Lanterns" = `roadlamps` at (15.05, 5.4) and (15.05, 3.6), `west`, `forward`, `board:false`, zone over the road.
-- `cairn` things-cairn.js at (14,1) scale 1.6: 4 slate stones with glowing bands + gold star-pebble on top ("kept for Pip").
-  Frost glints, far stars from `th.stars` (absolute, y<0 = the black sky past the north edge), walker-near breathing, tap =
-  bands light bottom-up + rising chime (Web Audio, pointerup unlock) + spark. `?pose=climb`.
-- To check a pose: POSE consts are read at script load, so a temporary `history.replaceState(...?pose=X)` must go BEFORE
-  glint-life.js in index.html (then revert). Map is at the top edge now (y=0): growing further north means shifting
-  everything down (update `start`, all coords, hedge/lamps absolute points, zones, spots) or extending sideways instead.
-- Next ideas: North Meadow lookout/bench, grinding stone at the mill, teal mat (13-14,18), pink door lantern.
+## Builds 44-49 (short)
+- `lampsong` (14,10.01) bell on the Humming Lamp, publishes `window.GLINT_SONG = {since,bx,by,step}`; lamps in `heads()` bloom at
+  dist*step (new singing lamps: add to heads()). `tealamp` (14,17.01); Teal Door Bench `bench wood one teal` + `lanternLight()`.
+  `flags` things-flags.js (17.4,21.06), `from`/`to` absolute, answers GLINT_SONG. Web Audio unlocked on pointerup (iOS).
+- North: Meadow moss (11-17,0-4); path (13,9)-(14,9) then North Road x=14 y 2-9 (Humming Lamp at (14,10) blocks walking).
+  North Road Lanterns `roadlamps` (15.05, 5.4/3.6). `cairn` things-cairn.js (14,1) scale 1.6, far stars `th.stars` (y<0), `?pose=climb`.
+  Map touches y=0: growing north means shifting everything down (start, coords, absolute points, zones, spots); prefer sideways.
+- Build 49: path (13,2). "Star Lookout" `bench wood night blanket` (12.8,1.55) scale 1.35 seatX -0.24 (new woodbench opts:
+  `night` palette + gold stars on both cushions; `blanket` folded on the back, fringe on GLINT_WIND). `spyglass` things-lookout.js
+  "Star Spyglass" (11.55,1.45): tap = shooting star `from`->`to` (absolute) + burst + giggle bells; auto star every 40 s at dusk; `?pose=wish`.
+- Pose check keeping glint-look's camera: temporary `<script>history.replaceState(null,"",location.search+(location.search?"&":"?")+"pose=X")</script>`
+  before glint-life.js, look, then delete it.
+- Next ideas: lantern by the Star Lookout (into heads()), wish-card box, meadow paths west/east, grinding stone at the mill,
+  teal mat (13-14,18), pink door lantern. things.js is ~63 KB: split it next time it grows.

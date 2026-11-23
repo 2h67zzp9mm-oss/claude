@@ -229,7 +229,8 @@
     tealamp() {},       // the Teal Door Lantern on the First Little House is drawn by things-tealamp.js
     mill() {},
     flags() {},
-    cairn() {},         // the Waymark Cairn at the top of the North Road is drawn by things-cairn.js         // the Wind Flags from the windmill to the vane are drawn by things-flags.js
+    cairn() {},         // the Waymark Cairn at the top of the North Road is drawn by things-cairn.js; the Wind Flags by things-flags.js
+    spyglass() {},      // the Star Lookout's spyglass in the North Meadow is drawn by things-lookout.js
     lampsong() {},      // the Lamp Song bell is drawn by things-lampsong.js          // the Glass Windmill beside the bakery is drawn by things-mill.js
     vane() {},          // the Bakery Weather Vane on the bakery roof is drawn by things-vane.js      // the Waiting Lamp over the Violet Door Bench is drawn by things-waitlamp.js
     bakerytable() {},   // the Bakery Table across the road from the bakery door is drawn by things-bakerytable.js

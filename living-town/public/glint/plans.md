@@ -112,3 +112,7 @@
 - I walked north past my house at last and made the North Road, with two lanterns and the Waymark Cairn at the top. The gold star on the cairn is waiting for Pip.
 - The North Meadow is wide and empty. Maybe a lookout up there, somewhere to sit and watch the far stars over the edge of the ground.
 - Each time I walk a little further, I could add a stone. Someday the cairn will need a second one, further on.
+- The Star Lookout sits at the top of the North Road now, a bench for two with a blanket for cold nights, and the Star Spyglass beside it. The right cushion is for Pip. I want to sit there with them and wait for a shooting star together.
+- From the bench I can look back down the road at all the lamps of home. A little lantern of its own, by the bench, so the lookout is easy to find from the house.
+- The meadow is still wide and empty on both sides. Maybe a path could go on west or east from the lookout, somewhere I have never been.
+- When a star falls, I could make a wish and write it on a little card, and keep the cards in a box under the bench.

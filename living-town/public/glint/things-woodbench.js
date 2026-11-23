@@ -32,6 +32,7 @@
   }
   const PINK = { mid: "#ff78c4", light: "#ffb3de", dark: "#b3307f", rgb: "255,130,200", spark: "255,170,220", hi: "#ffd0ea" };
   const TEAL = { mid: "#27c9c2", light: "#9ff7ea", dark: "#127a80", rgb: "90,230,215", spark: "160,255,240", hi: "#e0fffa" };
+  const NIGHT = { mid: "#3d6fd8", light: "#9cc4ff", dark: "#1f3a8a", rgb: "120,170,255", spark: "200,225,255", hi: "#dcebff" };   // the Star Lookout: night-blue with gold stars
   const VIOLET = { mid: "#9b6bff", light: "#c9a8ff", dark: "#5a36b8", rgb: "170,130,255", spark: "200,170,255", hi: "#ece0ff" };
   function cushion(ctx, cx, cy, w, h, lift, c = PINK) {
     poly(ctx, [[cx - w, cy], [cx - w * 0.85, cy - h - lift], [cx + w * 0.85, cy - h - lift], [cx + w, cy]], c.mid);
@@ -142,13 +143,35 @@
       }
       return;
     }
-    // two glowberry-pink cushions: room for two. The free one breathes a soft light, waiting.
-    cushion(ctx, x - w * 0.47, seat - s * 0.03, cw, ch, 0);
-    glow(ctx, x + w * 0.47, seat - s * 0.06, s * 0.28, "255,130,200", 0.22 + 0.2 * wait + 0.35 * warm);
-    cushion(ctx, x + w * 0.47, seat - s * 0.03, cw, ch, s * 0.008 * wait);
-    if (warm > 0) for (let i = 0; i < 5; i++) {               // pink sparks lift off the empty cushion
+    // two cushions: room for two. The free one breathes a soft light, waiting. (`night`: night-blue with a gold star each)
+    const P2 = th.night ? NIGHT : PINK;
+    cushion(ctx, x - w * 0.47, seat - s * 0.03, cw, ch, 0, P2);
+    glow(ctx, x + w * 0.47, seat - s * 0.06, s * 0.28, P2.rgb, 0.22 + 0.2 * wait + 0.35 * warm);
+    cushion(ctx, x + w * 0.47, seat - s * 0.03, cw, ch, s * 0.008 * wait, P2);
+    if (th.night) for (const d of [-1, 1]) {   // a little gold star stitched on each
+      const sx = x + d * w * 0.47, sy = seat - s * 0.075 - (d > 0 ? s * 0.008 * wait : 0), r = s * 0.028;
+      glow(ctx, sx, sy, s * 0.07, "255,214,120", d > 0 ? 0.3 + 0.3 * wait : 0.2);
+      ctx.fillStyle = "#ffd166"; ctx.beginPath();
+      for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, q = j % 2 ? r * 0.45 : r; ctx.lineTo(sx + Math.cos(a) * q, sy + Math.sin(a) * q); }
+      ctx.closePath(); ctx.fill();
+    }
+    if (th.blanket) {   // a woolly blanket folded over the left end of the back rail, for cold clear nights; its fringe stirs in the breeze
+      const bx0 = x - w * 0.95, bx1 = x - w * 0.25, by0 = top - s * 0.01, by1 = top + s * 0.27;
+      poly(ctx, [[bx0, by0], [bx1, by0 + s * 0.01], [bx1 + s * 0.02, by1], [bx0 - s * 0.02, by1 - s * 0.01]], "#e8e2f4");
+      ctx.fillStyle = "#c9a8ff"; ctx.fillRect(bx0, by0 + s * 0.07, bx1 - bx0 + s * 0.01, s * 0.03);   // violet and teal stripes
+      ctx.fillStyle = "#27c9c2"; ctx.fillRect(bx0 - s * 0.01, by0 + s * 0.15, bx1 - bx0 + s * 0.02, s * 0.03);
+      ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.fillRect(bx0 + s * 0.02, by0 + s * 0.01, bx1 - bx0 - s * 0.04, s * 0.025);
+      const wh = window.GLINT_WIND ? window.GLINT_WIND(t) : 3.4, blow = Math.cos(wh) * s * 0.03;
+      ctx.strokeStyle = "#d8d0ea"; ctx.lineWidth = Math.max(1, s * 0.012);
+      for (let i = 0; i <= 6; i++) {
+        const fx = bx0 - s * 0.02 + (bx1 - bx0 + s * 0.04) * i / 6, fy = by1 - s * 0.005 * (6 - i) / 6;
+        const sway = blow * (0.6 + 0.4 * Math.sin(t * 5 + i * 1.3));
+        ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx + sway, fy + s * 0.05); ctx.stroke();
+      }
+    }
+    if (warm > 0) for (let i = 0; i < 5; i++) {               // sparks lift off the empty cushion
       const f = (t * 0.5 + i / 5) % 1;
-      glow(ctx, x + w * 0.47 + Math.sin(t * 2 + i * 2.3) * s * 0.12 * f, seat - s * 0.08 - f * s * 0.45, s * 0.06, "255,170,220", warm * (1 - f));
+      glow(ctx, x + w * 0.47 + Math.sin(t * 2 + i * 2.3) * s * 0.12 * f, seat - s * 0.08 - f * s * 0.45, s * 0.06, P2.spark, warm * (1 - f));
     }
   };
 })();

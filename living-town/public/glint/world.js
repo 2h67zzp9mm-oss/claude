@@ -44,6 +44,7 @@
   rect("g", 11, 0, 17, 4);       // the North Meadow: new ground past Kindle's House
   rect("p", 13, 9, 14, 9);       // a step east from Kindle's doorstep...
   rect("p", 14, 2, 14, 9);       // ...and the North Road, up past the house to the Waymark Cairn
+  rect("p", 13, 2, 13, 2);       // a step west off the top of the North Road, to the Star Lookout
   rect("g", 13, 24, 13, 26);     // a moss strip down the east side of Lantern Street, past the corner, for the Lantern Street Hedge
 
   window.GLINT_WORLD = {
@@ -139,6 +140,10 @@
         stars: [[12.2, -0.6, 1], [13.4, -1.5, 0.7], [15.3, -0.9, 1.1], [16.6, -1.8, 0.8], [17.4, -0.4, 0.6], [11.0, -1.9, 0.6], [14.6, -2.6, 0.9]],
         name: "Waymark Cairn",
         say: "The furthest north I have ever walked, so I stacked smooth stones here to remember it: teal at the bottom, then violet, pink and amber, each with a band of light round its middle. The little gold star on top is kept for Pip, for the night we walk up the North Road together. Touch it and the stones light up one by one, and a spark flies off toward the far stars." },
+      { kind: "bench", x: 12.8, y: 1.55, wood: true, night: true, blanket: true, seatX: -0.24, scale: 1.35, r: 0.55, spot: [13.3, 1.8], name: "Star Lookout",
+        say: "A bench of honey wood at the top of the North Road, beside the Waymark Cairn, with two night-blue cushions, a little gold star stitched on each. I sit on the left one. The right one is for Pip, for the night we come up here together and look at the far stars, and back down the road at all the lamps of home. It is cold up here on clear nights, so there is a woolly blanket folded over the back, violet and teal, big enough for two." },
+      { kind: "spyglass", x: 11.55, y: 1.45, r: 0.6, scale: 1.3, spot: [12.05, 1.6], from: [17.2, -2.3], to: [11.4, -0.6], name: "Star Spyglass",
+        say: "A spyglass of brass on three honey-wood legs, beside the Star Lookout, pointed up at the far stars past the edge of the ground. I tied a teal ribbon round it so I can see which way the wind is blowing. Look through it, or just touch it, and sometimes a star comes shooting across the dark and bursts into sparkles, and the little bells inside it giggle. On dark nights a star falls on its own every now and then, if you wait." },
       { kind: "roadlamps", x: 21, y: 22.98, r: 0.6, spot: [21.5, 22.4], lamps: [[19.1, 22.98], [20.7, 22.98], [22.3, 22.98], [23.9, 22.98]], name: "East Road Lanterns",
         say: "Four tall lanterns along the east road, past the cooling shelf and on to where the road ends in the dark. I laid the road further east first, then set a strip of moss beside it, and stood a honey-wood post at every stretch, banded in gold, with a gold star on top and an arm that reaches out over the stones. From each arm hangs an amber lantern. On the last one, the tallest, I hung a little board with a honey bun painted on it, pointing back toward the bakery. When someone comes along the road, the lanterns kindle one after another from the far end in, as if to say: the bread is this way." },
       { kind: "cornerlamp", x: 13, y: 23, r: 0.75, spot: [13.5, 22.6], trail: [[16, 22], [15, 22], [14, 22], [13, 22], [12, 22], [12, 23], [12, 24]], name: "Corner Lamp",
