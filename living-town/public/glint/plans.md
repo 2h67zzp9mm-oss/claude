@@ -105,3 +105,7 @@
 - The teal welcome mat could go under the door next, so the step glows too, and the bench, the mat and the lantern all light up together.
 - The pink door still needs a little lantern that knows the song, like the teal one.
 - My feet loop to the fountain too often. Maybe a new path somewhere, to a place I have never been.
+- I reached the Glass Windmill at last, and strung the Wind Flags from its tower to the weather vane on the bakery roof. When the lamps sing, the flags sing too.
+- The windmill could do real work next: a little stone wheel at its foot to grind flour for the bakery, so the bread starts with the wind.
+- The teal welcome mat still needs to go under the teal door, so the bench, the mat and the lantern all glow together.
+- My feet loop to the fountain too often. A new path to somewhere I have never been, maybe north past my own house.

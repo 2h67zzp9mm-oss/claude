@@ -82,3 +82,10 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   by device clock; draws a teal cone from above (`beamX` opt, default 0.2s right of centre), a pool at the feet, cushion glow, falling motes.
 - Glint sits on it when he stops on the doorstep (13,18) (bench within 1.1 manhattan). ?pose=wait still picks the Violet Door Bench (first `one`).
 - Next on this doorstep: teal welcome mat at (13-14,18) (`mat` with `ox`, teal colours), pink door lantern (copy tealamp w/ opts).
+
+## Wind Flags (build 47, 2026-11-22)
+- `flags` things-flags.js at (17.4,21.06) flat (y just after the vane so it draws over mill + vane). Opts `from`/`to` absolute tile
+  coords: mill lattice (18.45,19.2) to vane post (16.39,20.12); `n` 7. Sag/flutter from the mill's breeze(), side from GLINT_WIND.
+  Glow-thread after dark (device clock); answers GLINT_SONG like a lamp (per-flag dist from bell); tap ripple, `?pose=ripple`.
+- glint-look zoom seems capped at ~80 px/tile in practice (90 looked the same). Next ideas: millstone at the mill's foot (moss 18,20
+  is tight: maybe a `grind` thing at ~19,21 needs moss), teal mat at (13-14,18), a new path north past Kindle's House.
