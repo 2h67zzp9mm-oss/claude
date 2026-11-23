@@ -230,6 +230,8 @@
     mill() {},
     flags() {},
     cairn() {},         // the Waymark Cairn at the top of the North Road is drawn by things-cairn.js; the Wind Flags by things-flags.js
+    meadowlamp() {},    // the Meadow Lamp and the Meadow Path's stones are drawn by things-meadowpath.js
+    meadowpath() {},
     chimes() {},        // the Giggle Chimes on the North Road are drawn by things-chimes.js
     wishlamp() {},      // the Wish Lantern behind the Star Lookout is drawn by things-wishlamp.js
     spyglass() {},      // the Star Lookout's spyglass in the North Meadow is drawn by things-lookout.js

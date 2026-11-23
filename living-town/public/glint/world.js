@@ -45,6 +45,8 @@
   rect("p", 13, 9, 14, 9);       // a step east from Kindle's doorstep...
   rect("p", 14, 2, 14, 9);       // ...and the North Road, up past the house to the Waymark Cairn
   rect("p", 13, 2, 13, 2);       // a step west off the top of the North Road, to the Star Lookout
+  rect("g", 7, 0, 10, 4);        // the North Meadow runs on west, bare moss...
+  rect("f", 12, 4, 13, 4); rect("f", 12, 3, 12, 3); rect("f", 9, 3, 11, 3); rect("f", 8, 2, 9, 2);   // ...and the Meadow Path of pale stones winds west into it
   rect("g", 13, 24, 13, 26);     // a moss strip down the east side of Lantern Street, past the corner, for the Lantern Street Hedge
 
   window.GLINT_WORLD = {
@@ -146,6 +148,11 @@
         say: "A spyglass of brass on three honey-wood legs, beside the Star Lookout, pointed up at the far stars past the edge of the ground. I tied a teal ribbon round it so I can see which way the wind is blowing. Look through it, or just touch it, and sometimes a star comes shooting across the dark and bursts into sparkles, and the little bells inside it giggle. On dark nights a star falls on its own every now and then, if you wait." },
       { kind: "wishlamp", x: 12.8, y: 0.9, r: 0.6, scale: 1.3, spot: [12.9, 0.5], name: "Wish Lantern",
         say: "A honey-wood post behind the Star Lookout, with a gold crook that leans over the bench, so its lantern of night-blue glass shines on both cushions. Now the bench is easy to find from the house, and the lantern sings along when the Lamp Song comes up the road. On the post is a little Wish Box with a star latch, full of wish cards. My first one says: someday Pip will walk up the North Road with me, giggling all the way. Touch the lantern and a card flies up through the light and turns into a star." },
+      { kind: "meadowlamp", x: 13.25, y: 4.3, r: 0.5, scale: 1.6, spot: [13.7, 4.35], from: [14, 4],
+        path: [[13, 4], [12, 4], [12, 3], [11, 3], [10, 3], [9, 3], [9, 2], [8, 2]], name: "Meadow Lamp",
+        say: "A little lamp at the first step of the Meadow Path, where it leaves the North Road. I stacked two pale stones for a pillar, ringed the top in gold, and set a lantern of cream glass on it with a peaked gold roof and a star. Its light falls on the first stones, so anyone coming up the road can see the way into the meadow, even on a cold grey morning. Step onto the first stone, or touch it, and a warm light runs west along the stones ahead of you." },
+      { kind: "meadowpath", x: 8, y: 2, r: 0.5, flat: true, spot: [10.5, 3.5], name: "Meadow Path",
+        say: "A little path of pale stones, winding west off the North Road into the bare meadow. I promised myself every morning that I would start it, and one cold clear morning I finally laid the first stone, then the next, and kept going. It bends twice on the way, around the moss, because a path should wander a little. It ends here for now, out in the open meadow, where something new could grow. Walk it, and the stones light up under the lamp." },
       { kind: "chimes", x: 16.1, y: 2.6, r: 0.7, scale: 1.3, spot: [15.4, 2.9], name: "Giggle Chimes",
         say: "A honey-wood post on the east side of the North Road, banded in gold, with a gold crook and a little gold star on top. From the crook hangs a gold hoop, and from the hoop five tubes of crystal, teal, violet, pink, amber and blue, each a different length, so each sings a different note. In the middle swings a glowing star with a teal sail under it to catch the cold breeze. When the wind blows, the star taps the tubes and they sparkle. Touch them and they all swing and ring together, skipping up and down, and it sounds just like Pip giggling. Now there are giggles up here even when Pip is far away." },
       { kind: "roadlamps", x: 21, y: 22.98, r: 0.6, spot: [21.5, 22.4], lamps: [[19.1, 22.98], [20.7, 22.98], [22.3, 22.98], [23.9, 22.98]], name: "East Road Lanterns",

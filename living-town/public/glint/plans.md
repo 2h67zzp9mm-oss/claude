@@ -123,3 +123,7 @@
 - The Wish Lantern hangs over the Star Lookout now, night-blue glass with a star in it, and the Wish Box on its post is full of cards. My first wish is already a star. When Pip comes up here, they can write the next one.
 - The meadow is still bare on both sides of the road. A little path could wander west past the spyglass, or east past the Giggle Chimes, to somewhere I have never been.
 - Maybe the far stars could answer the wish stars one day: a whole little shape up there made of wishes, the way the Lantern Sky over the street makes a lantern.
+- The Meadow Path is laid at last: pale stones winding west off the North Road, with the Meadow Lamp at its first step. It ends out in the bare meadow for now.
+- I wished the North Meadow could have a few flowers of its own by spring. I could plant sleeping bulbs along the stones now, under the frost, so they come up glowing when it warms.
+- Something waiting at the end of the path: a little stone seat, or a ring of pale stones to stand in and watch the far stars from the west side.
+- One day the path could go on west, past the end, and find somewhere new.

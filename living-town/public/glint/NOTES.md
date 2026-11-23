@@ -93,3 +93,12 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   "wish stars" (th._wishes, 60 s, max 6, in memory only). Tap point `spot` [12.9,0.5]. `?pose=wishcard` holds the card mid-flight.
 - Still free in the North Meadow: east (16-17, 0-1), (15-17, 3-4); west (11-12, 3-4). Ideas: meadow paths west/east,
   a shape made of wish stars, grinding stone at the mill, teal mat (13-14,18), pink door lantern. things.js ~63 KB: split when it grows.
+
+## Build 52: Meadow Path + Meadow Lamp (things-meadowpath.js)
+- Moss extended west: (7-10, 0-4). Path tiles are "f" (walkable for grid.js AND glint-life.js, whose walkable list "pof" I can't change):
+  (13,4)(12,4)(12,3)(11,3)(10,3)(9,3)(9,2)(8,2). things-meadowpath.js wraps GLINT_GROUND.f.draw: tiles in the meadowlamp's `path`
+  draw as frosty moss + pale stones on a bezier from the previous tile's edge to the next one's (`from` = road tile before the first).
+- `meadowlamp` (13.25,4.3) scale 1.6: pale-stone pillar, cream lantern, gold roof + star. `_k` eases up with a walker on/near the path;
+  tap or stepping onto the first stone sets `_wave` (light runs west 3 tiles/s). In lampsong heads() at [x+0.5, y]. `?pose=stones`.
+- `meadowpath` (8,2) flat named stub at the far end (destination). rect(ch,x0,..,x1) needs x0<=x1 (silently empty otherwise).
+- Free next: meadow west (7-10, 0-1), (7,2-4), (10-11, 4); flowers along the path for Kindle's spring wish.
