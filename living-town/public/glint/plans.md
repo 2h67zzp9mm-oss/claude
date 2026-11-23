@@ -101,3 +101,7 @@
 - The Teal Door Lantern sings now. The violet door could have a little violet bell lantern of its own, and the pink door too, so every door on Lantern Street answers the song.
 - A teal welcome mat under the teal door, lit by the lantern, so the step glows when someone stands there.
 - A small bench under the Teal Door Lantern, so whoever waits at the First Little House can sit in its light.
+- The Teal Door Bench sits under the Teal Door Lantern now, and the lantern's light falls right on its cushion. Whoever waits at the First Little House has a place to sit.
+- The teal welcome mat could go under the door next, so the step glows too, and the bench, the mat and the lantern all light up together.
+- The pink door still needs a little lantern that knows the song, like the teal one.
+- My feet loop to the fountain too often. Maybe a new path somewhere, to a place I have never been.

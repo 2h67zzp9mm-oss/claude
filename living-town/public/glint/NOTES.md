@@ -69,21 +69,16 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `mill` things-mill.js "Glass Windmill" (18.1,19.5) scale 1.25 on moss (18,20); angle integrated in th.ang; tap whirl, `?pose=whirl`.
 - glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png. No PIL; sips can't write (sandbox).
 
-## Lamp Song (build 44, 2026-11-22)
-- `lampsong` things-lampsong.js at (14,10.01) `flat`, `spot: [14.86,10.15]`: crystal bell on a gold arm hung from the lamp at (14,10), now
-  named "Humming Lamp". GLINT_OVER draws a small note drifting up from the Humming Lamp every 4.5 s, and the song: every lamp head
-  (lamp, waitlamp, cornerlamp, hedgelamps/roadlamps points; per-kind head offsets in `heads()`) blooms + ring + rising note at
-  delay = distance from the bell * 0.2 s, then all glow together (chord). Plays on tap of bell or Humming Lamp, and every 60 s silently.
-- Sound: Web Audio sines (pentatonic, gain ~0.035) only after a tap; AudioContext created/resumed in a window pointerup listener (iOS).
-  Lamp list is cached and rebuilt when W.things.length changes, so new lamp kinds just need a line in `heads()`.
-- `?pose=hum` holds the song ~45% through. Ideas: bees/fountain join the chord; Lantern Stars twinkle along; new lamps add to heads().
+## Lamp Song + Teal Door Lantern (builds 44-45)
+- `lampsong` (14,10.01) flat: bell on the Humming Lamp; song = each lamp head in `heads()` blooms at delay dist*0.2 s, then chord.
+  Plays on tap and every 60 s. Web Audio only after a tap (pointerup unlock, iOS). Publishes `window.GLINT_SONG = {since,bx,by,step}`;
+  heads() entries may carry rgb. A lamp reacts to its turn: u = since - dist*step, hum while 0<u<2.4. New lamp kinds: add to heads().
+- `tealamp` (14,17.01) flat, house = "First Little House" (fades with roomK); glass spot (x-0.26, y+0.31) must match heads().
+  Brighter at dusk / walker on doorstep; tap 4 s hum; `?pose=tune`, `?pose=hum`. Cottage `door` colours swing on tap.
 
-## Teal Door Lantern (build 45, 2026-11-22)
-- First Little House got `door: ["#9ff7ea","#27c9c2","#127a80"]` (tap swings it as well as opening the room; looks fine).
-- `tealamp` things-tealamp.js at (14,17.01) `flat` (sorts just after the cottage), `spot: [13.74,17.32]`, `house` = cottage name.
-  Wall bracket at cottage-relative (x-0.66s, b-0.8s), lantern hook (x-0.76s, b-0.86s), body drawn under ctx.scale(1.35) (1.0 was too
-  small on the phone). Fades with the house's `roomK`. Brighter after dark / walker on doorstep (y 18, x 12.4-14.6). Tap = 4 s hum.
-- Lamp Song hook: things-lampsong.js now publishes `window.GLINT_SONG = {since,bx,by,step}` each frame and heads() entries may carry
-  a 3rd item rgb (tealamp uses teal). A lamp can react to its own turn: u = since - dist(head, bell) * step, hum while 0<u<2.4.
-  Keep tealamp's `hx0/hy0` (th.x-0.26, th.y+0.31) equal to its heads() entry. Echo note every 4.5 s, 1.2 s after the Humming Lamp's.
-- `?pose=tune` holds the hum. Same pattern fits violet/pink door lanterns (pass glass colours as opts if copied).
+## Teal Door Bench (build 46, 2026-11-22)
+- `bench wood one teal scale 1.15` at (13.05,17.45), spot [13.4,17.75], under the Teal Door Lantern. things-woodbench.js got a TEAL palette
+  and `lanternLight()`: finds the `tealamp` thing, same hum timing as things-tealamp.js (GLINT_SONG, lantern tap, ?pose=tune|lit) + dusk
+  by device clock; draws a teal cone from above (`beamX` opt, default 0.2s right of centre), a pool at the feet, cushion glow, falling motes.
+- Glint sits on it when he stops on the doorstep (13,18) (bench within 1.1 manhattan). ?pose=wait still picks the Violet Door Bench (first `one`).
+- Next on this doorstep: teal welcome mat at (13-14,18) (`mat` with `ox`, teal colours), pink door lantern (copy tealamp w/ opts).

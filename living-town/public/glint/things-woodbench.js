@@ -31,12 +31,29 @@
     if (knot != null) { ctx.fillStyle = grain; ctx.beginPath(); ctx.ellipse(x0 + (x1 - x0) * knot, y + h * 0.55, h * 0.28, h * 0.17, 0, 0, TAU); ctx.fill(); }
   }
   const PINK = { mid: "#ff78c4", light: "#ffb3de", dark: "#b3307f", rgb: "255,130,200", spark: "255,170,220", hi: "#ffd0ea" };
+  const TEAL = { mid: "#27c9c2", light: "#9ff7ea", dark: "#127a80", rgb: "90,230,215", spark: "160,255,240", hi: "#e0fffa" };
   const VIOLET = { mid: "#9b6bff", light: "#c9a8ff", dark: "#5a36b8", rgb: "170,130,255", spark: "200,170,255", hi: "#ece0ff" };
   function cushion(ctx, cx, cy, w, h, lift, c = PINK) {
     poly(ctx, [[cx - w, cy], [cx - w * 0.85, cy - h - lift], [cx + w * 0.85, cy - h - lift], [cx + w, cy]], c.mid);
     poly(ctx, [[cx - w * 0.8, cy - h * 0.55 - lift], [cx - w * 0.7, cy - h - lift], [cx + w * 0.7, cy - h - lift], [cx + w * 0.8, cy - h * 0.55 - lift]], c.light);
     poly(ctx, [[cx - w, cy], [cx + w, cy], [cx + w * 0.96, cy + h * 0.35], [cx - w * 0.96, cy + h * 0.35]], c.dark);
     ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(cx, cy - h * 0.55 - lift, Math.max(1, h * 0.18), 0, TAU); ctx.fill();   // a gold button
+  }
+
+  // Teal Door Bench: how strongly the Teal Door Lantern above is shining on it (dusk, the Lamp Song reaching the lantern,
+  // a tap on the bench). Same hum timing as things-tealamp.js, measured at that lantern's glass.
+  const POSE = new URLSearchParams(location.search).get("pose");
+  function lanternLight(th, t) {
+    const L = (window.GLINT_WORLD?.things || []).find(k => k.kind === "tealamp");
+    const lx = L ? L.x - 0.26 : th.x + 0.6, ly = L ? L.y + 0.31 : th.y - 0.1;
+    const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+    const dark = h >= 19 || h < 6 ? 1 : h >= 17 ? (h - 17) / 2 : h < 7.5 ? (7.5 - h) / 1.5 : 0;
+    let hum = 0;
+    const S = window.GLINT_SONG;
+    if (S && S.since < 90) { const u = S.since - Math.hypot(lx - S.bx, ly - S.by) * S.step; if (u > 0 && u < 2.4) hum = u < 0.25 ? u / 0.25 : 1 - (u - 0.25) / 2.15; }
+    if (L && L.tapped != null && t - L.tapped < 4) hum = Math.max(hum, Math.sin(Math.min(1, (t - L.tapped) / 4) * Math.PI));
+    if (POSE === "tune" || POSE === "lit") hum = 1;
+    return { dark, hum };
   }
 
   T.bench = function bench(ctx, x, y, s, t, th = {}) {
@@ -48,7 +65,7 @@
       try { bench(ctx, x, y, s, t, th); } finally { th._scaling = false; ctx.restore(); }
       return;
     }
-    const one = !!th.one, C = th.violet ? VIOLET : PINK;   // `one`: a small bench with a single soft cushion
+    const one = !!th.one, C = th.violet ? VIOLET : th.teal ? TEAL : PINK;   // `one`: a small bench with a single soft cushion
     const b = y + s * 0.3, w = s * (one ? 0.36 : 0.5), seat = b - s * 0.24, top = b - s * 0.54;
     const walkers = window.GLINT_GRID?.walkers || [];
     const sat = walkers.some(k => k.seated && k.bench === th);
@@ -58,6 +75,17 @@
 
     ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(x, b + s * 0.02, s * 0.56, s * 0.1, 0, 0, TAU); ctx.fill();
     glow(ctx, x, seat, s * (0.75 + 0.2 * warm), "255,190,110", 0.18 + 0.06 * Math.sin(t * 1.1) + 0.3 * warm);
+    let LL = null;
+    if (th.teal) {   // the Teal Door Lantern's light falls on the bench: a soft teal cone from above, a pool on the seat
+      LL = lanternLight(th, t);
+      const a = 0.16 + 0.12 * LL.dark + 0.35 * LL.hum + 0.04 * Math.sin(t * 1.3);
+      const ax = x + s * (th.beamX ?? 0.2), ay = b - s * 1.25, g = ctx.createLinearGradient(ax, ay, ax, b);
+      g.addColorStop(0, `rgba(${C.rgb},${a * 0.9})`); g.addColorStop(1, `rgba(${C.rgb},0)`);
+      ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(ax - s * 0.05, ay); ctx.lineTo(ax + s * 0.05, ay); ctx.lineTo(x + w * 1.3, b); ctx.lineTo(x - w * 1.3, b); ctx.closePath(); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      glow(ctx, x, b - s * 0.02, s * 0.6, C.rgb, a * 1.3);
+    }
 
     // back legs / posts, rounded at the top
     for (const d of [-1, 1]) {
@@ -90,6 +118,13 @@
       ctx.fillStyle = "#ffd166"; ctx.fillRect(lx - s * 0.05, b - s * 0.03, s * 0.1, s * 0.04);
     }
     const cw = w * 0.42, ch = s * 0.065, wait = 0.5 + 0.5 * Math.sin(t * 1.4);
+    if (LL) {
+      glow(ctx, x, seat - s * 0.05, s * (0.45 + 0.15 * LL.hum), C.rgb, 0.15 + 0.1 * LL.dark + 0.45 * LL.hum);
+      if (LL.hum > 0.05) for (let i = 0; i < 4; i++) {   // little teal motes drift down from the lantern onto the cushion
+        const f = (t * 0.6 + i / 4) % 1;
+        glow(ctx, x + s * 0.2 - f * s * 0.2 + Math.sin(t * 3 + i * 1.7) * s * 0.06, seat - s * 0.75 + f * s * 0.62, s * 0.045, C.spark, LL.hum * Math.sin(f * Math.PI));
+      }
+    }
     if (one) {
       // one soft cushion, plumper than the pink ones, in the middle of the seat. Empty, it breathes a soft light, waiting.
       const cx = x, lift = sat ? 0 : s * 0.008 * wait;
