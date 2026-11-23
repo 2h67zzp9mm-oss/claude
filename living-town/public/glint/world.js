@@ -41,6 +41,9 @@
   rect("p", 21, 22, 24, 22);     // the east road runs on further east, past the cooling shelf
   rect("g", 10, 22, 11, 22);     // a moss strip along the foot of the West Glowing Hedge, for its lantern posts
   rect("g", 18, 23, 24, 23);     // moss along its south edge, for the East Road Lanterns
+  rect("g", 11, 0, 17, 4);       // the North Meadow: new ground past Kindle's House
+  rect("p", 13, 9, 14, 9);       // a step east from Kindle's doorstep...
+  rect("p", 14, 2, 14, 9);       // ...and the North Road, up past the house to the Waymark Cairn
   rect("g", 13, 24, 13, 26);     // a moss strip down the east side of Lantern Street, past the corner, for the Lantern Street Hedge
 
   window.GLINT_WORLD = {
@@ -129,6 +132,13 @@
       { kind: "roadlamps", x: 13, y: 26.95, r: 0.6, spot: [13.4, 25.4], west: true, forward: true, board: "door", wave: "Lantern Street Hedge",
         lamps: [[13.32, 24.9, -0.6, 0.02], [13.32, 25.85, -0.6, 0.02], [13.32, 26.8, -0.6, 0.02]], zone: [11.6, 13.6, 23.3, 27.4], name: "Lantern Street Lanterns",
         say: "Three honey-wood posts in the Lantern Street Hedge, a lantern every few flowers, all the way down from the corner to across from the pink door. Each has gold bands, a little gold star on top and a crook arm reaching out over the street with an amber lantern on it. The last one, the tallest, carries a little board with a pink door painted on it, pointing across the street: home is this way. Walk down Lantern Street and they kindle one after another, from the corner to the pink door, and the hedge lights up beside them." },
+      { kind: "roadlamps", x: 15, y: 5.4, r: 0.6, spot: [14.6, 4.6], lamps: [[15.05, 5.4, -0.45, -0.1], [15.05, 3.6, -0.45, -0.1]], west: true, forward: true, board: false,
+        zone: [13.6, 15.6, 2.4, 10.2], name: "North Road Lanterns",
+        say: "Two honey-wood posts on the North Road, each with an amber lantern on a gold crook leaning out over the stones. The first stands where the last lamp I knew used to be, and the second stands further on, on ground I had never walked. When someone steps onto the road, the light runs north ahead of them, as if to say: keep going." },
+      { kind: "cairn", x: 14, y: 1, r: 0.9, scale: 1.6, spot: [14.5, 2.6],
+        stars: [[12.2, -0.6, 1], [13.4, -1.5, 0.7], [15.3, -0.9, 1.1], [16.6, -1.8, 0.8], [17.4, -0.4, 0.6], [11.0, -1.9, 0.6], [14.6, -2.6, 0.9]],
+        name: "Waymark Cairn",
+        say: "The furthest north I have ever walked, so I stacked smooth stones here to remember it: teal at the bottom, then violet, pink and amber, each with a band of light round its middle. The little gold star on top is kept for Pip, for the night we walk up the North Road together. Touch it and the stones light up one by one, and a spark flies off toward the far stars." },
       { kind: "roadlamps", x: 21, y: 22.98, r: 0.6, spot: [21.5, 22.4], lamps: [[19.1, 22.98], [20.7, 22.98], [22.3, 22.98], [23.9, 22.98]], name: "East Road Lanterns",
         say: "Four tall lanterns along the east road, past the cooling shelf and on to where the road ends in the dark. I laid the road further east first, then set a strip of moss beside it, and stood a honey-wood post at every stretch, banded in gold, with a gold star on top and an arm that reaches out over the stones. From each arm hangs an amber lantern. On the last one, the tallest, I hung a little board with a honey bun painted on it, pointing back toward the bakery. When someone comes along the road, the lanterns kindle one after another from the far end in, as if to say: the bread is this way." },
       { kind: "cornerlamp", x: 13, y: 23, r: 0.75, spot: [13.5, 22.6], trail: [[16, 22], [15, 22], [14, 22], [13, 22], [12, 22], [12, 23], [12, 24]], name: "Corner Lamp",

@@ -109,3 +109,6 @@
 - The windmill could do real work next: a little stone wheel at its foot to grind flour for the bakery, so the bread starts with the wind.
 - The teal welcome mat still needs to go under the teal door, so the bench, the mat and the lantern all glow together.
 - My feet loop to the fountain too often. A new path to somewhere I have never been, maybe north past my own house.
+- I walked north past my house at last and made the North Road, with two lanterns and the Waymark Cairn at the top. The gold star on the cairn is waiting for Pip.
+- The North Meadow is wide and empty. Maybe a lookout up there, somewhere to sit and watch the far stars over the edge of the ground.
+- Each time I walk a little further, I could add a stone. Someday the cairn will need a second one, further on.
