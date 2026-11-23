@@ -133,3 +133,7 @@
 - The Blanket Stone sits beside my seat in the Star Ring now, warm all the way through, with a violet-and-teal blanket folded on top. Pip won't be cold out here. When they come, I want to sit side by side and watch the little house of stars come out together.
 - Flowers that only open under the stars could line the Meadow Path back home, so the walk out to the ring glows too.
 - Other shapes might be hiding in the far stars: a lantern, a loaf, a tree. One for each house in town.
+- The Star-flowers line the Meadow Path now, both sides, and they open under the far stars, so the walk out to the Star Ring glows. Pip can follow them in the dark.
+- If the flowers can open for the stars, maybe they could go to sleep with a little sigh at dawn, and drop a few seeds, so the row grows a bit longer every night.
+- Other shapes might still be hiding in the far stars: a lantern, a loaf, a tree. One for each house in town.
+- The bare meadow past the Star Ring keeps calling. Somewhere out there, further west than I have ever walked, there could be a place for a new house.

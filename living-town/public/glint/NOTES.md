@@ -69,29 +69,24 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `mill` things-mill.js "Glass Windmill" (18.1,19.5) scale 1.25 on moss (18,20); angle integrated in th.ang; tap whirl, `?pose=whirl`.
 - glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png. No PIL; sips can't write (sandbox).
 
-## Builds 44-49 (short)
-- `lampsong` bell (14,10.01) publishes `window.GLINT_SONG`; singing lamps go in heads(). `tealamp`, `flags` answer it. Web Audio unlocked on pointerup.
-- North Meadow (moss 11-17,0-4), North Road x=14 y 2-9, `cairn` (14,1) with far `stars` (y<0), Star Lookout bench (`night`, `blanket`),
-  `spyglass` (11.55,1.45) shooting stars `from`->`to`. Map touches y=0: grow sideways, not north.
-- Pose check keeping the camera: temporary `<script>history.replaceState(null,"",location.search+(location.search?"&":"?")+"pose=X")</script>`
-  BEFORE glint-life.js (files read POSE at load), look, then delete it.
+## Builds 44-52 (short)
+- `lampsong` bell (14,10.01) publishes `window.GLINT_SONG`; singing lamps go in heads(). Web Audio unlocked on pointerup.
+- North Meadow (moss 6-17,0-4), North Road x=14 y 2-9: `cairn` (14,1), Star Lookout bench, `spyglass`, `chimes` (16.1,2.6),
+  `wishlamp` (12.8,0.9). Lesson: draw all "lighter" glows first, then solids.
+- Meadow Path: "f" tiles listed in meadowlamp `path`; things-meadowpath.js wraps G.f.draw (stones on a bezier). `meadowlamp` `_wave`
+  (3 tiles/s west), `?pose=stones`. rect() needs x0<=x1.
+- Pose check keeping the camera: zoom arg `"75&pose=X"` works with glint-look.
 
-## Builds 50-52 (short)
-- `chimes` (16.1,2.6) canvas, breeze + GLINT_WIND sway, `?pose=giggle`. Lesson: draw all "lighter" glows first, then solids.
-- `wishlamp` (12.8,0.9) behind the Star Lookout; in heads(); GLINT_OVER draws light pool, flying card, wish stars; `?pose=wishcard`.
-- Meadow Path: "f" tiles listed in meadowlamp `path`; things-meadowpath.js wraps GLINT_GROUND.f.draw (stones on a bezier between
-  neighbours). `meadowlamp` (13.25,4.3) `_k` + `_wave` (3 tiles/s west), in heads(); `?pose=stones`. rect() needs x0<=x1.
+## Builds 53-54 (short)
+- `starring` (7,2) things-starring.js: last "f" tile of meadowlamp `path`, scale 1.55, flat + `seat` (grid.js BENCHES includes th.seat).
+  Back stones main pass, front stones GLINT_OVER. `stars` absolute (y<0) + `shape` gold threads (a house); `_go` lights it. `?pose=ring`.
+- `blanketstone` (6.53,2.1) things-blanketstone.js, `spot`, warmth `_k` (Kindle seated / traveler near), tap = breath. `?pose=warmstone`.
+- Free meadow: (6-10, 0-1), (6, 3-4), (7-8, 3-4), (10-11, 4). Map touches y=0 and x=6 is the west edge of the meadow.
 
-## Build 53: Star Ring (things-starring.js)
-- `starring` (7,2) "f" tile, appended to meadowlamp `path` (so (8,2) stones curve into it and the wave runs in); moss (6,0-4).
-  Own G.f wrapper (outermost) draws plain frosty moss on its tile. scale 1.55, flat + `seat: true`: grid.js BENCHES now includes
-  `th.seat`, so Kindle sits on the middle stone. 9 stones on 10 slots (east slot open = doorway). Back stones in main pass,
-  front stones in GLINT_OVER (in front of the sitter). `stars` absolute (y<0), `shape` index pairs = gold threads (a house).
-  `_go` lights it: tap, Kindle settling in, or Meadow Lamp wave arriving (lw 2.6-3.2). Threads faint while seated. `?pose=ring`.
-- Free next: meadow (6-10, 0-1), (6, 3-4), (7-8, 3-4), (10-11, 4). Ideas: more constellations, night flowers along the path.
-
-## Build 54: Blanket Stone (things-blanketstone.js)
-- `blanketstone` (6.53,2.1) scale 1.5, flat, `spot` [7.03,2.58] (spot = tap point), r 0.35, inside the Star Ring west of the seat.
-  Melted-moss patch, amber heart, Lookout-style violet/teal folded blanket + gold star, fringe in GLINT_WIND, heat wisps.
-  `_k` warmth: 0.45 idle, 0.75 while Kindle sits in the ring, 1 with a traveler within 1.2 tiles. Tap = 3 s "breath"
-  (blanket puffs, warm ring spreads, sparks). `?pose=warmstone`. Ring's west front stone (OVER) overlaps its left edge: fine.
+## Build 55: Star-flowers (things-starflowers.js)
+- `starflowers` (10,3) flat, spot [10.5,3.2], r 0.7: stub thing; flowers are generated from meadowlamp `path` (3 per tile, both
+  sides, offset ~0.3 tile perpendicular to the stone bezier; ring tile skipped). Solids drawn in its own G.f wrapper (now outermost,
+  calls the ring/path wrappers first); halos + rising motes in GLINT_OVER (uses GLINT_GRID.cam to place absolute coords).
+- Open = device-clock darkness (same curve as blanketstone) or a bloom wave: Meadow Lamp `_wave` east->west, or tap west->east
+  (ring back home), 3 tiles/s, hold ~5 s. Walker within 0.9 tiles brightens. `?pose=starbloom` (night), `?pose=starbud` (day buds).
+- First pass at R 0.075 s was invisible on the phone: 0.12 s heads, 0.2 s stems read well at 75 px/tile.
