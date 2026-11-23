@@ -70,35 +70,22 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png. No PIL; sips can't write (sandbox).
 
 ## Builds 44-49 (short)
-- `lampsong` (14,10.01) bell on the Humming Lamp, publishes `window.GLINT_SONG = {since,bx,by,step}`; lamps in `heads()` bloom at
-  dist*step (new singing lamps: add to heads()). `tealamp` (14,17.01); Teal Door Bench `bench wood one teal` + `lanternLight()`.
-  `flags` things-flags.js (17.4,21.06), `from`/`to` absolute, answers GLINT_SONG. Web Audio unlocked on pointerup (iOS).
-- North: Meadow moss (11-17,0-4); path (13,9)-(14,9) then North Road x=14 y 2-9 (Humming Lamp at (14,10) blocks walking).
-  North Road Lanterns `roadlamps` (15.05, 5.4/3.6). `cairn` things-cairn.js (14,1) scale 1.6, far stars `th.stars` (y<0), `?pose=climb`.
-  Map touches y=0: growing north means shifting everything down (start, coords, absolute points, zones, spots); prefer sideways.
-- Build 49: path (13,2). "Star Lookout" `bench wood night blanket` (12.8,1.55) scale 1.35 seatX -0.24 (new woodbench opts:
-  `night` palette + gold stars on both cushions; `blanket` folded on the back, fringe on GLINT_WIND). `spyglass` things-lookout.js
-  "Star Spyglass" (11.55,1.45): tap = shooting star `from`->`to` (absolute) + burst + giggle bells; auto star every 40 s at dusk; `?pose=wish`.
-- Pose check keeping glint-look's camera: temporary `<script>history.replaceState(null,"",location.search+(location.search?"&":"?")+"pose=X")</script>`
-  before glint-life.js, look, then delete it.
-- Next ideas: lantern by the Star Lookout (into heads()), wish-card box, meadow paths west/east, grinding stone at the mill,
-  teal mat (13-14,18), pink door lantern. things.js is ~63 KB: split it next time it grows.
+- `lampsong` bell (14,10.01) publishes `window.GLINT_SONG`; singing lamps go in heads(). `tealamp`, `flags` answer it. Web Audio unlocked on pointerup.
+- North Meadow (moss 11-17,0-4), North Road x=14 y 2-9, `cairn` (14,1) with far `stars` (y<0), Star Lookout bench (`night`, `blanket`),
+  `spyglass` (11.55,1.45) shooting stars `from`->`to`. Map touches y=0: grow sideways, not north.
+- Pose check keeping the camera: temporary `<script>history.replaceState(null,"",location.search+(location.search?"&":"?")+"pose=X")</script>`
+  BEFORE glint-life.js (files read POSE at load), look, then delete it.
 
-## Builds 50-51
-- `chimes` things-chimes.js "Giggle Chimes" (16.1,2.6) scale 1.3: canvas only; sway from breeze sum + GLINT_WIND; walker within 2.2 = tinkle;
-  answers GLINT_SONG visually (not in heads()); tap = giggle notes, `?pose=giggle`. Lesson: draw all "lighter" glows first, then solids.
-- `wishlamp` things-wishlamp.js "Wish Lantern" (12.8,0.9) scale 1.3, right behind the Star Lookout bench (draws before it; post base hidden
-  by the bench back). Crook leans west, night-blue lantern (inner ctx.scale 1.4) hangs over the left cushion. Wish Box on the post.
-  In heads() at [x+0.08, y-0.37]. GLINT_OVER draws the light pool on the cushions, the flying card (box -> lantern -> sky, 5 s) and
-  "wish stars" (th._wishes, 60 s, max 6, in memory only). Tap point `spot` [12.9,0.5]. `?pose=wishcard` holds the card mid-flight.
-- Still free in the North Meadow: east (16-17, 0-1), (15-17, 3-4); west (11-12, 3-4). Ideas: meadow paths west/east,
-  a shape made of wish stars, grinding stone at the mill, teal mat (13-14,18), pink door lantern. things.js ~63 KB: split when it grows.
+## Builds 50-52 (short)
+- `chimes` (16.1,2.6) canvas, breeze + GLINT_WIND sway, `?pose=giggle`. Lesson: draw all "lighter" glows first, then solids.
+- `wishlamp` (12.8,0.9) behind the Star Lookout; in heads(); GLINT_OVER draws light pool, flying card, wish stars; `?pose=wishcard`.
+- Meadow Path: "f" tiles listed in meadowlamp `path`; things-meadowpath.js wraps GLINT_GROUND.f.draw (stones on a bezier between
+  neighbours). `meadowlamp` (13.25,4.3) `_k` + `_wave` (3 tiles/s west), in heads(); `?pose=stones`. rect() needs x0<=x1.
 
-## Build 52: Meadow Path + Meadow Lamp (things-meadowpath.js)
-- Moss extended west: (7-10, 0-4). Path tiles are "f" (walkable for grid.js AND glint-life.js, whose walkable list "pof" I can't change):
-  (13,4)(12,4)(12,3)(11,3)(10,3)(9,3)(9,2)(8,2). things-meadowpath.js wraps GLINT_GROUND.f.draw: tiles in the meadowlamp's `path`
-  draw as frosty moss + pale stones on a bezier from the previous tile's edge to the next one's (`from` = road tile before the first).
-- `meadowlamp` (13.25,4.3) scale 1.6: pale-stone pillar, cream lantern, gold roof + star. `_k` eases up with a walker on/near the path;
-  tap or stepping onto the first stone sets `_wave` (light runs west 3 tiles/s). In lampsong heads() at [x+0.5, y]. `?pose=stones`.
-- `meadowpath` (8,2) flat named stub at the far end (destination). rect(ch,x0,..,x1) needs x0<=x1 (silently empty otherwise).
-- Free next: meadow west (7-10, 0-1), (7,2-4), (10-11, 4); flowers along the path for Kindle's spring wish.
+## Build 53: Star Ring (things-starring.js)
+- `starring` (7,2) "f" tile, appended to meadowlamp `path` (so (8,2) stones curve into it and the wave runs in); moss (6,0-4).
+  Own G.f wrapper (outermost) draws plain frosty moss on its tile. scale 1.55, flat + `seat: true`: grid.js BENCHES now includes
+  `th.seat`, so Kindle sits on the middle stone. 9 stones on 10 slots (east slot open = doorway). Back stones in main pass,
+  front stones in GLINT_OVER (in front of the sitter). `stars` absolute (y<0), `shape` index pairs = gold threads (a house).
+  `_go` lights it: tap, Kindle settling in, or Meadow Lamp wave arriving (lw 2.6-3.2). Threads faint while seated. `?pose=ring`.
+- Free next: meadow (6-10, 0-1), (6, 3-4), (7-8, 3-4), (10-11, 4). Ideas: more constellations, night flowers along the path.

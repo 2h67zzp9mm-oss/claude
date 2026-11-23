@@ -10,7 +10,7 @@ addEventListener("error", e => { document.body.dataset.error = String(e.message 
     if (n("x") != null) cam.x = n("x"); if (n("y") != null) cam.y = n("y"); if (n("z") != null) cam.s = Math.max(10, Math.min(80, n("z"))); }
   const WALKERS = W.walkers || [];
   let follow = null, lastT = 0;
-  const BENCHES = W.things.filter(th => th.kind === "bench");
+  const BENCHES = W.things.filter(th => th.kind === "bench" || th.seat);   // th.seat: something else to sit in (the Star Ring)
   const POSE = new URLSearchParams(location.search).get("pose");   // ?pose=sleep|wave|walk|sit holds Glint in a pose (for checking how he looks)
 
   // Walkers stroll from tile to tile along paths and plaza, around anything standing there.

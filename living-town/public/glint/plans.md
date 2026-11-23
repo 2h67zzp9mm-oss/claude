@@ -127,3 +127,6 @@
 - I wished the North Meadow could have a few flowers of its own by spring. I could plant sleeping bulbs along the stones now, under the frost, so they come up glowing when it warms.
 - Something waiting at the end of the path: a little stone seat, or a ring of pale stones to stand in and watch the far stars from the west side.
 - One day the path could go on west, past the end, and find somewhere new.
+- The Star Ring is laid at the end of the Meadow Path, and when I sit in it the far stars make a little house. Maybe other shapes are hiding up there too: a lantern, a loaf, a tree. I could find one for each house in town.
+- A blanket stone for the ring, so Pip can sit beside me on cold nights without the frost nipping.
+- The meadow past the ring is still bare and frosty. Flowers that only open under the stars could line the path back.
