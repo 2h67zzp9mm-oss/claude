@@ -8,15 +8,14 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **Town screen in the UI bot** (S): add the town map screen to `scripts/ui-bot.js` SCREENS.
-2. **Bigger room as a saving goal** (S): 🎯 in Goals with the meter and cheer, like a dream thing.
-3. **"You're saving for…" in other worlds** (S): a note on the shop's first row when the goal lives in another world.
-4. **Back-wall options for Hazel** (M): a 🎨 Style row for the tall back wall (none, hanging lamp, high shelves,
+1. **Bigger room as a saving goal** (S): 🎯 in Goals with the meter and cheer, like a dream thing.
+2. **"You're saving for…" in other worlds** (S): a note on the shop's first row when the goal lives in another world.
+3. **Back-wall options for Hazel** (M): a 🎨 Style row for the tall back wall (none, hanging lamp, high shelves,
    bunting), "none" stays the default; Hazel picks in the game.
-5. **Doorway looks for Hazel** (S): a 🎨 Style row for the doorway between rooms (plain frame default, arch, curtain,
+4. **Doorway looks for Hazel** (S): a 🎨 Style row for the doorway between rooms (plain frame default, arch, curtain,
    painted vines).
-6. **Second room grows too** (S): the bigger room makes both rooms deeper.
-7. **UI bot sees cut-off ring words** (S): mend the check so "Bigger ro…"-style cut-offs count as problems.
+5. **Second room grows too** (S): the bigger room makes both rooms deeper.
+6. **UI bot sees cut-off ring words** (S): mend the check so "Bigger ro…"-style cut-offs count as problems.
 
 (Kindle and his Grid moved to their own app on 2026-11-17 and aren't part of the game any more.)
 
@@ -43,7 +42,15 @@ Up next: split it first.
   town (the bot can't pretend someone is home in town yet).
 - The first row of garden beds sits right on the front fence in every world (the fence shows through the beds' back
   edge). Moving that row a little further in, or the fence out, would look tidier.
+- The town map's top still has things to tap (the profile circle, and `‹ Town` / `⬆ Upstairs` when you're inside a
+  house there), unlike the home plot where the top is display-only. The UI bot lets the town off that rule for now.
+- The town's "Next: …" banner cuts long event names off with "…" (the bot only checks it's big enough to tap).
 ## Done
+- 2026-11-23 Town screen in the UI bot: the bot now checks the town map (and the inside of a house in town, when
+  you're in one) like the other menus: nothing off the screen or sideways, buttons big enough, words not cut off,
+  the dock low by the thumbs, the resident card not covering half the screen, and the map showing. It found four
+  buttons too small to tap, now fixed: the "Next: …" event banner, the ⌖ centre-map button, and the ✎ and ⌃ buttons
+  on the resident card (all 44 wide and tall now). 145 screens, 0 problems.
 - 2026-11-21 Garden beds in Pirate Cove: checked, and they show (wooden planter beds inside the fence, with crops,
   wet soil and every growing stage), so nothing needed fixing. The UI bot now stands in the garden of every world with
   something growing in each bed, takes a picture (`<world>_garden`), and fails if a world is missing the bed, wet soil

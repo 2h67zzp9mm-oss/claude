@@ -129,6 +129,35 @@ const PAGE = `(() => {
   return true;
 })()`;
 
+// Runs in the page on the town map (before the home plot opens). The town has its own older pieces (.topbar, .dock,
+// the resident sheet, the inside-a-house view), so it gets its own measuring stick: nothing off the screen or sideways,
+// every button big enough to tap with its words in full, the dock low by the thumbs, and the map (or room) showing.
+const TOWN = `(() => {
+  const vw = innerWidth, vh = innerHeight, bad = [], name = b => JSON.stringify((b.innerText || b.getAttribute("aria-label") || "").replace(/\\s+/g, " ").trim().slice(0, 24));
+  const shown = e => { if (!e || e.closest(".hidden")) return false; const q = e.getBoundingClientRect(), s = getComputedStyle(e); return q.width > 0 && q.height > 0 && s.visibility !== "hidden" && s.display !== "none"; };
+  const inside = shown(document.querySelector("#interior"));
+  if (document.documentElement.scrollWidth > vw + 1) bad.push("the town scrolls sideways (" + document.documentElement.scrollWidth + "px wide)");
+  const sheet = document.querySelector("#residentSheet"), sheetTop = shown(sheet) ? sheet.getBoundingClientRect().top : vh;
+  for (const b of document.querySelectorAll(".topbar button, .dock button, .world-card > button, .interior-bar button, #residentSheet .resident-heading button")) {
+    if (!shown(b)) continue;
+    const q = b.getBoundingClientRect();
+    if (q.width < 44 - 0.5 || q.height < 44 - 0.5) bad.push("button " + name(b) + " is " + Math.round(q.width) + "x" + Math.round(q.height) + " (smallest allowed is 44x44)");
+    if (q.left < -0.5 || q.right > vw + 0.5 || q.top < -0.5 || q.bottom > vh + 0.5) bad.push("button " + name(b) + " runs off the screen");
+    if (b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 1) bad.push("button " + name(b) + " has clipped text");
+    if (q.height > 62 && !b.closest(".dock")) bad.push("button " + name(b) + " wraps onto too many lines (" + Math.round(q.height) + "px tall)");
+    if (!b.closest(".dock, #residentSheet") && q.top < sheetTop && q.bottom > sheetTop + 0.5) bad.push("button " + name(b) + " is half under the resident card");
+  }
+  for (const e of document.querySelectorAll(".topbar span, .topbar small, .topbar strong, .interior-bar strong, .dock span")) if (shown(e) && e.children.length === 0 && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).display !== "inline") bad.push("text " + JSON.stringify(e.innerText.slice(0, 24)) + " is cut off");
+  const dock = document.querySelector(".dock");
+  if (!shown(dock)) bad.push("the town has no dock of buttons at the bottom");
+  else { const r = dock.getBoundingClientRect(); if (vh - r.bottom > 40) bad.push("the dock is not at the bottom by the thumbs"); if (r.left < -0.5 || r.right > vw + 0.5) bad.push("the dock runs off the side of the screen"); if (dock.scrollWidth > dock.clientWidth + 1) bad.push("the dock scrolls sideways"); }
+  if (shown(sheet) && !sheet.classList.contains("open") && vh - Math.max(0, sheetTop) > vh * 0.5) bad.push("the resident card covers more than half the screen while it's closed");
+  const view = document.querySelector(inside ? "#roomCanvas" : "#townCanvas"), v = view && view.getBoundingClientRect();
+  if (!shown(view) || v.width < vw * 0.8 || v.height < 150) bad.push(inside ? "the inside of the house is not showing" : "the town map is not showing");
+  else if (inside && (v.left < -0.5 || v.right > vw + 0.5)) bad.push("the inside of the house runs off the side of the screen");
+  return { bad, inside, text: (document.querySelector(inside ? "#interiorTitle" : "#placeChip")?.innerText || "").trim() };
+})()`;
+
 async function main() {
   fs.mkdirSync(out, { recursive: true });
   const dataDir = tempDir("ui-bot-data-"), port = await freePort(), debugPort = await freePort();
@@ -160,7 +189,16 @@ async function main() {
     await send("Page.navigate", { url }); await sleep(4000);
     for (let i = 0; i < 12 && !await run("!!window.LivingTownHome?.isOpen"); i++) await sleep(500);   // the app opens the home plot by itself after sign-in
     await run("window.LivingTownHome?.isOpen && window.LivingTownHome.close()"); await sleep(1500);
-    await shot("town"); report.screens.push({ screen: "town", bad: [] });
+    // The town: if you're inside a house there (asleep at night, say), check that view, then step out to the map in Town mode.
+    let t = await run(TOWN);
+    if (t.inside) {
+      await shot("town-inside"); for (const b of t.bad) problem("town-inside", b); report.screens.push({ screen: "town-inside", bad: t.bad, text: t.text });
+      await run(`document.querySelector("#leaveInterior")?.click()`); await sleep(1200);
+    }
+    await run(`document.querySelector(".dock-button[data-mode=observe]")?.click()`); await sleep(800);
+    t = await run(TOWN);
+    if (t.inside) t.bad.push("the town map does not come back after tapping ‹ Town");
+    await shot("town"); for (const b of t.bad) problem("town", b); report.screens.push({ screen: "town", bad: t.bad, text: t.text });
     await run(`document.querySelector("#homeButton")?.click()`); await sleep(4000);
     await run(PAGE);
     for (let i = 0; i < 20 && !await run("window.__ui.ready()"); i++) await sleep(500);

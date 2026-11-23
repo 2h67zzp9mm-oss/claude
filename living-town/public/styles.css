@@ -141,8 +141,8 @@ button {
   z-index: 3;
   right: 14px;
   bottom: 150px;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   font-size: 1.35rem;
 }
 .bottom-sheet {
@@ -213,8 +213,8 @@ button {
   letter-spacing: 0.14em;
 }
 .circle-button {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
 }
 .bottom-sheet.open .circle-button {
