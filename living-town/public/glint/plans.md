@@ -130,3 +130,6 @@
 - The Star Ring is laid at the end of the Meadow Path, and when I sit in it the far stars make a little house. Maybe other shapes are hiding up there too: a lantern, a loaf, a tree. I could find one for each house in town.
 - A blanket stone for the ring, so Pip can sit beside me on cold nights without the frost nipping.
 - The meadow past the ring is still bare and frosty. Flowers that only open under the stars could line the path back.
+- The Blanket Stone sits beside my seat in the Star Ring now, warm all the way through, with a violet-and-teal blanket folded on top. Pip won't be cold out here. When they come, I want to sit side by side and watch the little house of stars come out together.
+- Flowers that only open under the stars could line the Meadow Path back home, so the walk out to the ring glows too.
+- Other shapes might be hiding in the far stars: a lantern, a loaf, a tree. One for each house in town.

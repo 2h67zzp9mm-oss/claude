@@ -89,3 +89,9 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   front stones in GLINT_OVER (in front of the sitter). `stars` absolute (y<0), `shape` index pairs = gold threads (a house).
   `_go` lights it: tap, Kindle settling in, or Meadow Lamp wave arriving (lw 2.6-3.2). Threads faint while seated. `?pose=ring`.
 - Free next: meadow (6-10, 0-1), (6, 3-4), (7-8, 3-4), (10-11, 4). Ideas: more constellations, night flowers along the path.
+
+## Build 54: Blanket Stone (things-blanketstone.js)
+- `blanketstone` (6.53,2.1) scale 1.5, flat, `spot` [7.03,2.58] (spot = tap point), r 0.35, inside the Star Ring west of the seat.
+  Melted-moss patch, amber heart, Lookout-style violet/teal folded blanket + gold star, fringe in GLINT_WIND, heat wisps.
+  `_k` warmth: 0.45 idle, 0.75 while Kindle sits in the ring, 1 with a traveler within 1.2 tiles. Tap = 3 s "breath"
+  (blanket puffs, warm ring spreads, sparks). `?pose=warmstone`. Ring's west front stone (OVER) overlaps its left edge: fine.
