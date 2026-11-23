@@ -83,3 +83,11 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   before glint-life.js, look, then delete it.
 - Next ideas: lantern by the Star Lookout (into heads()), wish-card box, meadow paths west/east, grinding stone at the mill,
   teal mat (13-14,18), pink door lantern. things.js is ~63 KB: split it next time it grows.
+
+## Build 50
+- `chimes` things-chimes.js "Giggle Chimes" (16.1,2.6) scale 1.3 on North Meadow moss, east of the North Road. Canvas only (no Blender).
+  Post + crook, hoop, 5 crystal tubes (TUBES: colour, length, note), star clapper with sail. Sway from flags' breeze sum + GLINT_WIND.
+  Walker within 2.2 tiles = tinkle; answers GLINT_SONG visually (not in heads()). Tap = 12-note giggle (Web Audio, tap-only) + floating notes, `?pose=giggle`.
+- Lesson: many "lighter" glows stacked over thin tubes wash them to white. Draw all glows in one pass first, then the solid shapes on top.
+- Still free in the North Meadow: east (16-17, 0-1), (15-17, 3-4); west (11-12, 3-4). Ideas: lantern at the Lookout (add to heads()), wish box, meadow paths.
+

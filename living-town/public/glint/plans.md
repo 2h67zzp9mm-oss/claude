@@ -116,3 +116,7 @@
 - From the bench I can look back down the road at all the lamps of home. A little lantern of its own, by the bench, so the lookout is easy to find from the house.
 - The meadow is still wide and empty on both sides. Maybe a path could go on west or east from the lookout, somewhere I have never been.
 - When a star falls, I could make a wish and write it on a little card, and keep the cards in a box under the bench.
+- The Giggle Chimes hang on the North Road now, across from the Waymark Cairn, and the cold wind plays them. When Pip finally walks up here with me, I want to touch them together and see whose giggle is louder.
+- A little lantern by the Star Lookout, so the bench is easy to find at night and can sing along with the Lamp Song too.
+- The North Meadow is still mostly bare moss. A path could wander off east or west from the road into ground I have never seen. Who knows what is out there?
+- A box beside the Star Spyglass for wishes, so anyone who sees a shooting star can leave one there.
