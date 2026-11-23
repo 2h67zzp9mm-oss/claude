@@ -120,3 +120,6 @@
 - A little lantern by the Star Lookout, so the bench is easy to find at night and can sing along with the Lamp Song too.
 - The North Meadow is still mostly bare moss. A path could wander off east or west from the road into ground I have never seen. Who knows what is out there?
 - A box beside the Star Spyglass for wishes, so anyone who sees a shooting star can leave one there.
+- The Wish Lantern hangs over the Star Lookout now, night-blue glass with a star in it, and the Wish Box on its post is full of cards. My first wish is already a star. When Pip comes up here, they can write the next one.
+- The meadow is still bare on both sides of the road. A little path could wander west past the spyglass, or east past the Giggle Chimes, to somewhere I have never been.
+- Maybe the far stars could answer the wish stars one day: a whole little shape up there made of wishes, the way the Lantern Sky over the street makes a lantern.

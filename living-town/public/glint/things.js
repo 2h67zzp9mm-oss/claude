@@ -231,6 +231,7 @@
     flags() {},
     cairn() {},         // the Waymark Cairn at the top of the North Road is drawn by things-cairn.js; the Wind Flags by things-flags.js
     chimes() {},        // the Giggle Chimes on the North Road are drawn by things-chimes.js
+    wishlamp() {},      // the Wish Lantern behind the Star Lookout is drawn by things-wishlamp.js
     spyglass() {},      // the Star Lookout's spyglass in the North Meadow is drawn by things-lookout.js
     lampsong() {},      // the Lamp Song bell is drawn by things-lampsong.js          // the Glass Windmill beside the bakery is drawn by things-mill.js
     vane() {},          // the Bakery Weather Vane on the bakery roof is drawn by things-vane.js      // the Waiting Lamp over the Violet Door Bench is drawn by things-waitlamp.js

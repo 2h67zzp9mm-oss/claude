@@ -84,10 +84,12 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Next ideas: lantern by the Star Lookout (into heads()), wish-card box, meadow paths west/east, grinding stone at the mill,
   teal mat (13-14,18), pink door lantern. things.js is ~63 KB: split it next time it grows.
 
-## Build 50
-- `chimes` things-chimes.js "Giggle Chimes" (16.1,2.6) scale 1.3 on North Meadow moss, east of the North Road. Canvas only (no Blender).
-  Post + crook, hoop, 5 crystal tubes (TUBES: colour, length, note), star clapper with sail. Sway from flags' breeze sum + GLINT_WIND.
-  Walker within 2.2 tiles = tinkle; answers GLINT_SONG visually (not in heads()). Tap = 12-note giggle (Web Audio, tap-only) + floating notes, `?pose=giggle`.
-- Lesson: many "lighter" glows stacked over thin tubes wash them to white. Draw all glows in one pass first, then the solid shapes on top.
-- Still free in the North Meadow: east (16-17, 0-1), (15-17, 3-4); west (11-12, 3-4). Ideas: lantern at the Lookout (add to heads()), wish box, meadow paths.
-
+## Builds 50-51
+- `chimes` things-chimes.js "Giggle Chimes" (16.1,2.6) scale 1.3: canvas only; sway from breeze sum + GLINT_WIND; walker within 2.2 = tinkle;
+  answers GLINT_SONG visually (not in heads()); tap = giggle notes, `?pose=giggle`. Lesson: draw all "lighter" glows first, then solids.
+- `wishlamp` things-wishlamp.js "Wish Lantern" (12.8,0.9) scale 1.3, right behind the Star Lookout bench (draws before it; post base hidden
+  by the bench back). Crook leans west, night-blue lantern (inner ctx.scale 1.4) hangs over the left cushion. Wish Box on the post.
+  In heads() at [x+0.08, y-0.37]. GLINT_OVER draws the light pool on the cushions, the flying card (box -> lantern -> sky, 5 s) and
+  "wish stars" (th._wishes, 60 s, max 6, in memory only). Tap point `spot` [12.9,0.5]. `?pose=wishcard` holds the card mid-flight.
+- Still free in the North Meadow: east (16-17, 0-1), (15-17, 3-4); west (11-12, 3-4). Ideas: meadow paths west/east,
+  a shape made of wish stars, grinding stone at the mill, teal mat (13-14,18), pink door lantern. things.js ~63 KB: split when it grows.
