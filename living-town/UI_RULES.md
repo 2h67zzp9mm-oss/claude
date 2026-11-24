@@ -39,7 +39,8 @@ like a finished game, not a web page.
 - A saving goal (a ⭐ Dream thing tapped in the house shop) is marked `🎯` with `have/need⭐` on its shop button, gets
   one row with a meter in 🎯 Goals, and its shop button is the green one once you have enough.
 - The bigger room (`🏗️ Big room` on the house door, until the family has it) is one panel: a `have/need⭐` row with a
-  meter, and `🏗️ Build it 1000⭐`, which is the green button only once you have enough. The bigger room is deeper, never
+  meter, and `🏗️ Build it 1000⭐`, which is the green button only once you have enough. Until then `🎯 Save for it`
+  makes it your saving goal (like a dream thing: a row in 🎯 Goals and one cheer), and the panel's note says `🎯 Your goal`. The bigger room is deeper, never
   wider, so floor tiles stay the same size on a phone.
 - The room fills all the space between the top and the bottom panel: tiles are as wide as the screen allows, then
   spare height opens the floor up a little and makes the back wall taller (the window, door and wall things stay at

@@ -9,7 +9,8 @@
  *   h.bigRoom = true           (the family bought the bigger room; missing on old saves = the small room)
  *   h.secondRoom = true        (the family bought the second room; missing on old saves = one room)
  *   h.rooms2[world] = { items } (what's in the second room, like h.rooms; only used once h.secondRoom is true)
- *   h.dreamGoals = { [residentId]: id }   (the dream thing each person is saving up for; missing on old saves = no goal)
+ *   h.dreamGoals = { [residentId]: id }   (the dream thing each person is saving up for, or "room:big" for the bigger room;
+ *                                          missing on old saves = no goal)
  * The catalog and the fit check live in shared/decor.js so the phone can check a drag before asking.
  */
 const D = require("../shared/decor");
@@ -40,12 +41,14 @@ function nextUid(h) {
 const sizeOf = (h, which = 1) => D.roomFor(h.bigRoom === true, h.secondRoom === true, which);   // the small room unless the family bought the bigger one
 const whichOf = (h, msg) => (msg.room === 2 && h.secondRoom === true ? 2 : 1);   // the second room, once the family has it
 const dreamsOf = h => (Array.isArray(h.dreams) ? h.dreams : []);
+const BIG_GOAL = "room:big";   // the bigger room can be a saving goal too (never a catalog id)
 const goalsOf = h => (h.dreamGoals && typeof h.dreamGoals === "object" && !Array.isArray(h.dreamGoals) ? h.dreamGoals : {});
 /** The dream thing this person is saving up for (null once the family has it, or if it left the catalog). */
 function goalOf(h, r) {
-  const id = r ? goalsOf(h)[r.id] : null, d = typeof id === "string" ? D.BY_ID[id] : null;
+  const id = r ? goalsOf(h)[r.id] : null, have = Math.max(0, Number(r?.stars) || 0);
+  if (id === BIG_GOAL) return h.bigRoom === true ? null : { id, name: "bigger room", emoji: "🏗️", have, need: D.BIG_ROOM_PRICE, ready: have >= D.BIG_ROOM_PRICE, room: true };
+  const d = typeof id === "string" ? D.BY_ID[id] : null;
   if (!d?.dream || dreamsOf(h).includes(id)) return null;
-  const have = Math.max(0, Number(r.stars) || 0);
   return { id, name: d.name, emoji: d.emoji, have, need: d.price, ready: have >= d.price };
 }
 const num = v => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : NaN);
@@ -85,6 +88,7 @@ function act(h, r, msg, { world, householdId, now }) {
       if (h.bigRoom === true) return { ok: false, toast: "🏠 Your room is already the big one!" };
       if ((Number(r.stars) || 0) < D.BIG_ROOM_PRICE) return { ok: false, toast: `You need ${D.BIG_ROOM_PRICE}⭐ for the bigger room. Keep saving!` };
       r.stars -= D.BIG_ROOM_PRICE; h.bigRoom = true;
+      if (h.dreamGoals) h.dreamGoals = Object.fromEntries(Object.entries(goalsOf(h)).filter(([, g]) => g !== BIG_GOAL));   // goal reached
       return { ok: true, roomUpgraded: true };   // the phone cheers with a banner
     }
     case "artPick": {
@@ -93,7 +97,12 @@ function act(h, r, msg, { world, householdId, now }) {
       h.art = { ...artOf(h), [key]: v };
       return { ok: true, artPicked: key, toast: "🎨 New look!" };
     }
-    case "dreamGoal": {   // pick a dream thing to save up for; picking another one swaps it
+    case "dreamGoal": {   // pick a dream thing (or the bigger room) to save up for; picking another one swaps it
+      if (msg.item === BIG_GOAL) {
+        if (h.bigRoom === true) return { ok: false, toast: "🏠 Your room is already the big one!" };
+        h.dreamGoals = { ...goalsOf(h), [r.id]: BIG_GOAL };
+        return { ok: true, dreamGoal: BIG_GOAL, toast: "🎯 Saving up for the bigger room!" };
+      }
       const id = typeof msg.item === "string" ? msg.item : "", d = D.BY_ID[id];
       if (!d?.dream) return { ok: false, toast: "Pick a ⭐ Dream thing to save up for!" };
       if (!D.inWorld(d, world)) return { ok: false, toast: `The ${d.name} is sold in another world.` };
@@ -152,4 +161,4 @@ function act(h, r, msg, { world, householdId, now }) {
   return { ok: false, toast: "Hmm, I don't know how to do that." };
 }
 
-module.exports = { ACTIONS, ART, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, BIG_ROOM: D.BIG_ROOM, BIG_ROOM_PRICE: D.BIG_ROOM_PRICE, ROOM2: D.ROOM2, ROOM2_PRICE: D.ROOM2_PRICE, shopToday: D.shopToday, dreams: D.dreams, fits: D.fits, footprint: D.footprint, view, act, dayKey };
+module.exports = { ACTIONS, ART, CATALOG: D.CATALOG, BY_ID: D.BY_ID, ROOM: D.ROOM, BIG_ROOM: D.BIG_ROOM, BIG_ROOM_PRICE: D.BIG_ROOM_PRICE, ROOM2: D.ROOM2, ROOM2_PRICE: D.ROOM2_PRICE, BIG_GOAL, shopToday: D.shopToday, dreams: D.dreams, fits: D.fits, footprint: D.footprint, view, act, dayKey };

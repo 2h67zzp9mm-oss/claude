@@ -31,7 +31,7 @@ const SCREENS = [
   ["idle", []], ["goals", ["Goals"]], ["story", ["Goals", "Story"]], ["build", ["Goals", "Build"]], ["book", ["Goals", "Book"]], ["level", ["Goals", "Level"]],
   ["pets", ["Pets"]], ["bag", ["Bag"]], ["look", ["Look"]], ["world", ["World"]], ["house", ["World", "Pick house"]],
   ["pop-plot", ["pop:plot"]], ["pop-pond", ["pop:pond"]], ["pop-mailbox", ["pop:mailbox"]], ["pop-crate", ["pop:crate"]], ["shop", ["pop:crate", "Seed shop"]],
-  ["pop-door", ["pop:door"]], ["room-up", ["pop:door", "Big room"]], ["room-new", ["pop:door", "New room"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]],
+  ["pop-door", ["pop:door"]], ["room-up", ["pop:door", "Big room"]], ["room-up-goal", ["pop:door", "Big room", "Save for it"]], ["room-new", ["pop:door", "New room"]], ["room", ["pop:door", "Go inside"]], ["room-shop", ["pop:door", "Go inside", "Shop"]], ["room-stored", ["pop:door", "Go inside", "Stored"]], ["room-decorate", ["pop:door", "Go inside", "Decorate"]], ["room-style", ["pop:door", "Go inside", "Style"]],
   // a saving goal: tap a dream thing in the house shop, then the Goals panel has a have/need row for it
   ["room-shop-goal", ["pop:door", "Go inside", "Shop", "Sparkle Fountain"]], ["goals-saving", ["Goals"]]
 ];
@@ -249,6 +249,26 @@ async function main() {
       if (!cheer?.row.includes("You can get the")) problem("goal-cheer", "the Goals row does not say you can get it");
       report.screens.push({ screen: "goal-cheer", bad: [], text: cheer?.text || "" });
     } else problem("goal-cheer", "could not open Goals");
+    // The bigger room as a saving goal: tap 🎯 Save for it on the house door's Bigger room panel, then Goals has its
+    // have/need row, and when the stars arrive one banner says to build it at the house door.
+    {
+      const miss = await run(`window.__ui.open(["pop:door", "Big room", "Save for it"])`);
+      const mark = miss ? "" : await run(`document.querySelector(".home-roomup .home-head")?.innerText || ""`);
+      if (miss) problem("room-goal", miss === "missing" ? "no 🎯 Save for it button on the Bigger room panel" : miss);
+      else if (!mark.includes("Your goal")) problem("room-goal", `the Bigger room panel does not say it's your goal: ${JSON.stringify(mark)}`);
+      else if (await run(`window.__ui.open(["Goals"])`)) problem("room-goal", "could not open Goals");
+      else {
+        const before = await run(`document.querySelector(".home-bar").innerText.replace(/\\s+/g, " ")`);
+        if (!before.includes("Save for the bigger room")) problem("room-goal", "Goals has no row for the bigger room");
+        await run(`(() => { const H = window.LivingTownHome, v = H._test.view(), g = v.decor.goal; if (!g) return; const rich = { ...v, stars: g.need, decor: { ...v.decor, goal: { ...g, have: g.need, ready: true } } }; H.onState({ home: rich }); H.onState({ home: rich }); })()`);
+        let cheer = null; for (let i = 0; i < 24 && !cheer?.n; i++) { await sleep(250); cheer = await run(`(() => { const b = [...document.querySelectorAll(".home-banner")], q = b[0]?.getBoundingClientRect(), bar = document.querySelector(".home-bar"); return { n: b.length, text: b[0]?.innerText || "", clear: !q || (q.bottom <= bar.getBoundingClientRect().top && q.left >= 0 && q.right <= innerWidth), row: bar.innerText.replace(/\\s+/g, " ") }; })()`); }
+        await shot("room-goal-cheer");
+        if (cheer?.n !== 1 || !cheer.text.includes("house door")) problem("room-goal", `expected one "build it at your house door" banner, saw ${cheer?.n || 0}: ${JSON.stringify(cheer?.text || "")}`);
+        else if (!cheer.clear) problem("room-goal", "the banner covers the buttons or runs off the screen");
+        if (!cheer?.row.includes("You can build the bigger room")) problem("room-goal", "the Goals row does not say you can build it");
+        report.screens.push({ screen: "room-goal-cheer", bad: [], text: cheer?.text || "" });
+      }
+    }
     // The room fills the screen: in every style (clay, storybook, pixel), the room reaches from just under the top
     // display to just above the bottom panel, with no big empty band above or below it.
     {

@@ -356,7 +356,7 @@
     const note = `All 3: +${view?.allBonus ?? 5}⭐${view?.streak ? ` · 🔥 ${view.streak} day${view.streak > 1 ? "s" : ""}${view.streakToday ? "" : ", keep it going!"}` : " and a 🔥 streak"}`;
     const st = view?.story, m = view?.me;
     const sg = view?.decor?.goal;   // the dream thing you picked in the house shop
-    const save = sg ? row(sg.emoji, sg.ready ? `You can get the ${esc(sg.name)}!` : `Save for the ${esc(sg.name)}`, `${meter(sg.have, sg.need)}<small>${Math.min(sg.have, sg.need)}/${sg.need}⭐</small>`, sg.ready) : "";
+    const save = sg ? row(sg.emoji, sg.ready ? `You can ${sg.room ? "build" : "get"} the ${esc(sg.name)}!` : `Save for the ${esc(sg.name)}`, `${meter(sg.have, sg.need)}<small>${Math.min(sg.have, sg.need)}/${sg.need}⭐</small>`, sg.ready) : "";
     const more = save + (st ? (st.done ? row("📖", "Story finished here. Try another world!") : row("📖", esc(st.job), `<small>${st.have}/${st.n} · +${st.stars}⭐</small>`)) : "")
       + (m ? row("⭐", `Level ${m.level} · ${esc(m.title)}`, `${meter(m.into, m.need)}<small>${m.into}/${m.need} XP</small>`) : "");
     setBar(`<span class="home-goals home-today"><span class="home-head"><b>🎯 Today’s goals</b><small>${note}</small></span>${rows}${more}</span>`,
@@ -439,9 +439,9 @@
   // A bigger room to save up for (from the house door): the price, how far along you are, and one button to build it.
   function roomUpBar() {
     const dc = view?.decor; if (!dc || dc.big) return idleBar();
-    const need = dc.bigPrice || 1000, can = view.stars >= need;
-    setBar(`<span class="home-goals home-roomup"><span class="home-head"><b>🏗️ Bigger room</b><small>You have ${view.stars}⭐</small></span>${row("🏠", can ? "You can build it!" : "More floor for your things", `${meter(view.stars, need)}<small>${Math.min(view.stars, need)}/${need}⭐</small>`, can)}</span>`,
-      [{ label: `🏗️ Build it ${need}⭐`, big: can, off: !can, go: () => act("roomUpgrade") }, { label: "Back", go: idleBar }]);
+    const need = dc.bigPrice || 1000, can = view.stars >= need, mine = dc.goal?.id === "room:big";   // it can be your 🎯 saving goal, like a dream thing
+    setBar(`<span class="home-goals home-roomup"><span class="home-head"><b>🏗️ Bigger room</b><small>${mine ? "🎯 Your goal · " : ""}You have ${view.stars}⭐</small></span>${row("🏠", can ? "You can build it!" : "More floor for your things", `${meter(view.stars, need)}<small>${Math.min(view.stars, need)}/${need}⭐</small>`, can)}</span>`,
+      [{ label: `🏗️ Build it ${need}⭐`, big: can, off: !can, go: () => act("roomUpgrade") }, ...(can || mine ? [] : [{ label: "🎯 Save for it", go: () => act("dreamGoal", { item: "room:big" }) }]), { label: "Back", go: idleBar }]);
   }
   // A second room to save up for (from the house door), with a doorway to walk between the two. Same panel as the bigger room.
   function roomTwoBar() {
@@ -622,7 +622,7 @@
     else if (bar.querySelector(".home-roomup")) roomUpBar();   // keep the stars on the Bigger room panel fresh
     else if (bar.querySelector(".home-roomtwo")) roomTwoBar();
     const sg = view.decor?.goal;   // cheer once when you've saved enough for your dream thing
-    if (sg?.ready && cheered !== sg.id) { banner(`🎉 You saved enough!<br>${sg.emoji} <b>${esc(sg.name)}</b> is in your house 🛒 Shop`, "big"); SFX.goal(); if (bar.querySelector(".home-today")) goalsBar(); }
+    if (sg?.ready && cheered !== sg.id) { banner(sg.room ? `🎉 You saved enough!<br>${sg.emoji} Build the <b>${esc(sg.name)}</b> at your house door` : `🎉 You saved enough!<br>${sg.emoji} <b>${esc(sg.name)}</b> is in your house 🛒 Shop`, "big"); SFX.goal(); if (bar.querySelector(".home-today")) goalsBar(); }
     cheered = sg?.ready ? sg.id : null;
     for (const o of view.others || []) {
       const cur = others.get(o.id) || { x: o.x, y: o.y, dir: o.dir, step: 0, name: o.name, id: o.id, inside: Boolean(o.inside) };

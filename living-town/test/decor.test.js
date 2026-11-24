@@ -172,6 +172,28 @@ test("decor: a saving goal: pick a dream thing, watch have/need fill up, and it 
   assert.equal(hs.view(state, "home-1", null, now).decor.goal, null, "someone just looking has no goal");
 });
 
+test("decor: the bigger room can be a saving goal, and it clears once the family builds it", () => {
+  const hs = createHomestead();
+  const me = { id: "dad", name: "Sean", stars: 300 }, kid = { id: "hazel", name: "Hazel", stars: 50 }, state = { residents: [me, kid] };
+  const now = Date.parse("2026-11-24T10:00:00"), act = (who, m) => hs.act(state, "home-1", who, m, now), goal = who => hs.view(state, "home-1", who, now).decor.goal;
+  assert.equal(Decor.BIG_GOAL, "room:big"); assert.equal(Decor.BY_ID["room:big"], undefined, "never a shop thing");
+  const set = act(me, { action: "dreamGoal", item: "room:big" });
+  assert.deepEqual([set.ok, set.dreamGoal, me.stars], [true, "room:big", 300], "picking it is free");
+  assert.deepEqual(goal(me), { id: "room:big", name: "bigger room", emoji: "🏗️", have: 300, need: 1000, ready: false, room: true });
+  assert.equal(goal(kid), null, "each person has their own goal");
+  assert.equal(act(kid, { action: "dreamGoal", item: "room:big" }).ok, true);
+  assert.equal(act(kid, { action: "dreamGoal", item: "fountain" }).ok, true); assert.equal(goal(kid).id, "fountain", "a dream thing swaps it");
+  assert.equal(act(kid, { action: "dreamGoal", item: "room:big" }).ok, true); assert.equal(goal(kid).id, "room:big", "and back again");
+  me.stars = 1000; assert.equal(goal(me).ready, true, "ready when you have enough");
+  assert.equal(act(me, { action: "roomUpgrade" }).ok, true);
+  assert.equal(goal(me), null, "built: the goal is done"); assert.equal(goal(kid), null, "the family has it, so nobody is saving for it");
+  assert.equal(state.homesteads["home-1"].dreamGoals.hazel, undefined, "the save forgets it");
+  const again = act(kid, { action: "dreamGoal", item: "room:big" });
+  assert.equal(again.ok, false); assert.match(again.toast, /already/);
+  // a save that says the room is a goal but already has the big room never shows a goal
+  state.homesteads["home-1"].dreamGoals = { hazel: "room:big" }; assert.equal(goal(kid), null);
+});
+
 test("decor: dream things are always in the shop, never in the daily mix, and bought once per family", () => {
   const WORLDS = ["clay", "scifi", "castle", "night", "pirate"], dreams = Decor.CATALOG.filter(d => d.dream);
   assert.ok(dreams.length >= 8 && dreams.length <= 10, `about 8 dream things (${dreams.length})`);
