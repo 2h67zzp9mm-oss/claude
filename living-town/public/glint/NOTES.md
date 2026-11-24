@@ -74,15 +74,9 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `blanketstone` (6.53,2.1) things-blanketstone.js, `spot`, warmth `_k` (Kindle seated / traveler near), tap = breath. `?pose=warmstone`.
 - Free meadow: (6-10, 0-1), (6, 3-4), (7-8, 3-4), (10-11, 4). Map touches y=0 and x=6 is the west edge of the meadow.
 
-## Build 55: Star-flowers (things-starflowers.js)
-- `starflowers` (10,3) flat stub; flowers generated from meadowlamp `path` (3/tile, both sides), outermost G.f wrapper; halos in GLINT_OVER.
-  Open at night or on a bloom wave (Meadow Lamp east->west, tap west->east). `?pose=starbloom|starbud`. Heads 0.12 s, stems 0.2 s read well.
-
-## Build 56: Star Chart (things-starchart.js)
-- `starchart` (9.6,0.85) scale 1.4, spot [10.6,1.6]: standing stone with slate face. `shapes` [{name, rgb, heart, pts absolute y<0, lines}]
-  (Lantern teal, Loaf amber, Tree pink, all around x 9.3-10.7, y -0.55..-2.7, between ring house and cairn stars).
-- Next shape on tap / walker arriving within 1.1 tiles / every 16 s when dark (soft 0.6). Hold 11 s. `?pose=starchart0|1|2`.
-- Adding a shape = one more entry in `shapes` (ticks under the slate adapt). Ideas: violet door, pink cushion.
+## Builds 55-56 (short)
+- `starflowers` (10,3) flat stub, flowers from meadowlamp `path`, halos in GLINT_OVER; open at night or on a wave. `?pose=starbloom|starbud`.
+- `starchart` (9.6,0.85): `shapes` [{name, rgb, heart, pts absolute y<0, lines}]; next shape on tap/near/16 s at night. `?pose=starchart0|1|2`.
 
 ## Builds 57-59 (short)
 - `westlamp` (5.8,2.3) scale 1.5 things-westlamp.js: honey post, light = 7 soft pools fanning west (pools, not a hard wedge). Tap wave
@@ -98,3 +92,11 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Night open (device clock); West Lamp tap = bloom east->west; tap flowers = west->east; Spark Lamp `_land`/`_col` = colour flush
   running east at 2.2 tiles/s (half-opens buds by day). `?pose=sparkbloom|sparkbud|sparkwave`.
 - Next: another lamp further west (free moss x 3-5 rows 1, 3-4; map tiles 0-2 empty), or a house site under the Spark Lamp's light.
+
+## Build 61: Morning Hearth (things-hearth.js)
+- `hearth` (10.45,4.15) scale 1.7, spot [11,4.6], `from: 3.6` (meadowlamp path index where pulses start). Publishes
+  `window.GLINT_HEARTH {k, wave, from}`; things-meadowpath.js reads it: warm stones (melted dark ring, amber heart, steam curls,
+  fewer frost glints) + an amber pulse both ways at 2.6 tiles/s. Auto pulse every 18 s (9 s 5-10am device clock), tap = pulse.
+  `?pose=hearth`. Stub `hearth() {}` in things.js. Script tag must come before things-meadowpath.js (it isn't needed, read lazily, but keep).
+- glint-look zoom seems capped around 90 px/tile (150 looked the same).
+- Next ideas: warmth to the West Meadow stepping stones (sparklamp `steps`), a two-seat bench by the hearth.

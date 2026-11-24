@@ -238,6 +238,7 @@
     westlamp() {},      // the West Lamp at the edge of the Star Ring is drawn by things-westlamp.js
     lampspot() {},      // the Lamp Spot in the West Meadow is drawn by things-lampspot.js
     sparklamp() {},     // the Spark Lamp in the West Meadow is drawn by things-sparklamp.js
+    hearth() {},   // the Morning Hearth beside the bend of the Meadow Path is drawn by things-hearth.js
     westflowers() {},   // the Spark-flowers along the stepping stones to the Spark Lamp are drawn by things-westflowers.js
     starring() {},      // the Star Ring at the far end of the Meadow Path is drawn by things-starring.js
     chimes() {},        // the Giggle Chimes on the North Road are drawn by things-chimes.js

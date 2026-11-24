@@ -155,3 +155,7 @@
 - Past the Spark Lamp the frost is still bare. The next lamp should go one more step west, and maybe the flowers will follow it on their own.
 - Out there, under the coloured light, there could be room for a little house at last, for whoever comes to live by the lamps.
 - When Pip comes, I want to stand by the Spark Lamp with them and watch a spark land, and see the flowers turn colour all the way back to the ring.
+- The Morning Hearth burns beside the bend of the Meadow Path now, and every stone is warm and glowing. The frost is gone round them. Pip can walk out barefoot if they like.
+- The stepping stones out west to the Spark Lamp are still cold. The hearth's warmth could reach them too, one more stone at a time.
+- A little bench by the hearth, for warming hands on the way out to the Star Ring, with room for two.
+- When Pip comes, we can toast bread from the bakery on the grate, and watch the warm pulse run along the stones.

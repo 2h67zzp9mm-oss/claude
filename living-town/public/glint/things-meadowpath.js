@@ -38,11 +38,12 @@
     // meadow moss under the stones, with the same faint grid line as the rest of the meadow
     ctx.fillStyle = "#0c2a2c"; ctx.fillRect(sx, sy, s, s);
     ctx.strokeStyle = "#1c6b5c"; ctx.lineWidth = 1; ctx.strokeRect(sx + 0.5, sy + 0.5, s - 1, s - 1);
-    // frost glints and little grass tufts on the bare moss
+    // frost glints and little grass tufts on the bare moss (fewer since the Morning Hearth warms the stones)
+    const HE = window.GLINT_HEARTH, warm = HE ? 0.55 + 0.45 * HE.k : 0;
     for (let k = 0; k < 5; k++) {
       const fx = hash(tx * 7 + k, ty * 3), fy = hash(ty * 5 + k, tx * 11 + k);
       const tw = 0.4 + 0.6 * Math.max(0, Math.sin(t * 1.3 + k * 2.1 + tx));
-      ctx.fillStyle = `rgba(220,245,255,${0.25 + 0.4 * tw})`; ctx.fillRect(sx + fx * s, sy + fy * s, Math.max(1, s * 0.022), Math.max(1, s * 0.022));
+      ctx.fillStyle = `rgba(220,245,255,${(0.25 + 0.4 * tw) * (1 - 0.6 * warm)})`; ctx.fillRect(sx + fx * s, sy + fy * s, Math.max(1, s * 0.022), Math.max(1, s * 0.022));
     }
     ctx.strokeStyle = "#2f8f72"; ctx.lineWidth = Math.max(1, s * 0.018); ctx.lineCap = "round";
     for (let k = 0; k < 3; k++) {
@@ -64,10 +65,26 @@
       const lit = Math.max(0, 1 - Math.abs(wv - along) / 1.2);
       const side = (j % 2 ? 1 : -1) * 0.05, rw = (0.15 + hash(tx * 3 + j, ty) * 0.05) * (next ? 1 : 1.15), rh = rw * 0.66, rot = hash(j, tx + ty) * 1.2 - 0.6;
       const cx = sx + (px + side) * s, cy = sy + (py + side * 0.6) * s;
+      // the Morning Hearth's warmth: a pulse running both ways from the bend, a melted ring of dark moss, an amber heart
+      const hr = HE && HE.wave != null ? (t - HE.wave) * 2.6 : -9, hp = HE && hr < 7 ? Math.max(0, 1 - Math.abs(Math.abs(along - HE.from) - hr) / 1.1) : 0;
+      if (warm > 0) {
+        ctx.fillStyle = "rgba(14,52,40,0.8)"; ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.02, rw * s * 1.45, rh * s * 1.6, rot, 0, TAU); ctx.fill();
+        ctx.fillStyle = "rgba(34,96,62,0.5)"; ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.02, rw * s * 1.25, rh * s * 1.35, rot, 0, TAU); ctx.fill();
+        glow(ctx, cx, cy, s * rw * (1.9 + 0.8 * hp), "255,160,80", 0.1 * warm + 0.5 * hp);
+      }
       if (lit > 0.05 || k > 0.05) glow(ctx, cx, cy, s * rw * 2.2, "255,214,140", 0.15 * k + 0.55 * lit);
       ctx.fillStyle = "#5d6b78"; ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.025, rw * s, rh * s, rot, 0, TAU); ctx.fill();   // the stone's dark side
       ctx.fillStyle = lit > 0.4 ? "#fff6dc" : "#d6dbd4"; ctx.beginPath(); ctx.ellipse(cx, cy, rw * s, rh * s, rot, 0, TAU); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.ellipse(cx - rw * s * 0.3, cy - rh * s * 0.3, rw * s * 0.45, rh * s * 0.35, rot, 0, TAU); ctx.fill();   // frost on top
+      if (warm > 0) {   // warm stone: an amber heart showing through, a soft shine instead of frost, and curls of warm breath
+        ctx.fillStyle = `rgba(255,${150 + 40 * hp | 0},80,${0.3 + 0.15 * warm + 0.35 * hp})`; ctx.beginPath(); ctx.ellipse(cx + rw * s * 0.1, cy + rh * s * 0.15, rw * s * 0.55, rh * s * 0.45, rot, 0, TAU); ctx.fill();
+        ctx.fillStyle = "rgba(255,240,215,0.45)"; ctx.beginPath(); ctx.ellipse(cx - rw * s * 0.35, cy - rh * s * 0.35, rw * s * 0.3, rh * s * 0.22, rot, 0, TAU); ctx.fill();
+        const ph = (t * 0.22 + hash(tx * 5 + j, ty * 3)) % 1;
+        if (ph < 0.6 || hp > 0.3) {
+          const u = hp > 0.3 ? Math.max(ph, 0.2) : ph / 0.6, wy = cy - s * 0.04 - u * s * 0.32, wx = cx + Math.sin(u * 5 + j) * s * 0.03;
+          ctx.strokeStyle = `rgba(255,236,210,${0.4 * Math.sin(u * Math.PI)})`; ctx.lineWidth = Math.max(1, s * 0.012);
+          ctx.beginPath(); ctx.moveTo(wx, wy + s * 0.07); ctx.quadraticCurveTo(wx + s * 0.035, wy + s * 0.035, wx, wy); ctx.quadraticCurveTo(wx - s * 0.035, wy - s * 0.035, wx, wy - s * 0.06); ctx.stroke();
+        }
+      } else { ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.ellipse(cx - rw * s * 0.3, cy - rh * s * 0.3, rw * s * 0.45, rh * s * 0.35, rot, 0, TAU); ctx.fill(); }   // frost on top
     });
   };
 
