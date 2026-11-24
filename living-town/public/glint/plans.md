@@ -137,3 +137,7 @@
 - If the flowers can open for the stars, maybe they could go to sleep with a little sigh at dawn, and drop a few seeds, so the row grows a bit longer every night.
 - Other shapes might still be hiding in the far stars: a lantern, a loaf, a tree. One for each house in town.
 - The bare meadow past the Star Ring keeps calling. Somewhere out there, further west than I have ever walked, there could be a place for a new house.
+- The Star Chart stands above the Star-flowers now, and three new shapes have come out of the far stars: a lantern, a loaf and a tree. Touch the stone and they light up one after another.
+- The Second Little House and the pink house still need shapes of their own. There must be a violet door and a pink cushion hiding up there somewhere.
+- When Pip comes, I want to lie in the frost beside the Star Chart and let them find the next shape first.
+- The meadow past the Star Ring is still bare. One day a new house could stand out there, under its own shape of stars.

@@ -48,19 +48,10 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - The test (../../test/glint-grid.test.js) loads only world.js + things.js: every kind needs a stub in things.js.
 
 ## Builds 28-40 (short)
-- Third house (10,24) pink: mat (10,25), Pink Street Tree (8,24), flowers (11,26), `homelight` (10,24.03) `?pose=home`. Doorstep Bench
-  `bench wood` (11.15,24.32) things-woodbench.js (`seatX`, `one`, `violet`, `scale`; `?pose=rest|wait`), Bun Table (11.66,24.36) `?pose=warm`.
-- Cooling Shelf (18,21) `?pose=cool`. Corner Lamp `cornerlamp` (13,23) things-corner.js + amber `trail` studs (wraps GLINT_GROUND.p.draw), `?pose=trail`.
-- Hedge Lanterns `hedgelamps` (13,21.47) things-lanterns.js `?pose=dusk`. Violet Door Bench (11.2,17.4). Bread Basket (15.4,21.25) `?pose=offer`.
-  Bakery Table (15.7,23) `pot`, Table Sign (17.05,22.95) chalk via fillText `?pose=chalk`.
-- `roadlamps` things-roadlamps.js (S = s*1.6), used 3x: East Road Lanterns (x 21, y 22.98, bun board on last), West Hedge Lanterns
-  (y 22.1, `board:false`), Lantern Street Lanterns (below). Opts: lamps `[x,y,pdx,pdy]`, `zone`, `board`, dusk by device clock, `?pose=way`.
-- Waiting Lamp `waitlamp` (12.42,17.95) things-waitlamp.js: violet glass, spark while a traveler is present, `seat`, `?pose=listen`.
-  Teal copy = palette swap + flip the crook, once a teal bench exists (~(13.8,17.4); check doorstep (13-14,18), coat stand (14,19)).
-- Coordinates: things at fractional x/y are drawn at x+0.5 like any thing; `hedge`/`lamps` points are absolute (n+0.5 = tile centre).
-- Still open: THINGS.traveler (pirate, coat when `wearing === "coat"`, keep name label), THINGS.neighbour; things.js split (~62 KB).
-- glint-look's 3rd arg is px per tile (~90 max useful). To check a reactive state, force it temporarily in code, look, revert.
-- Updater skips have only been "live checkout has uncommitted changes" (outside this folder). Grid tests 3/3.
+- Pink house (10,24) set: mat, tree, flowers, `homelight`, Doorstep Bench `bench wood` (things-woodbench.js), Bun Table. Cooling Shelf, Corner Lamp
+  + amber `trail`, Hedge Lanterns, Violet Door Bench, Bread Basket, Bakery Table + Table Sign. `roadlamps` (lamps [x,y,pdx,pdy], zone, board) used 3x.
+  Waiting Lamp `waitlamp` (12.42,17.95). Each kind has a `?pose=` to hold its lit state.
+- Fractional things are drawn at x+0.5; `hedge`/`lamps` points are absolute. glint-look 3rd arg = px per tile (~90 max).
 
 ## Builds 41-43 (short)
 - Lantern Street Hedge: moss (13,24-26), vertical `hedge` (y 23.6). "Lantern Street Lanterns" `roadlamps` y 26.95, opts `west`, `forward`,
@@ -90,3 +81,9 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Open = device-clock darkness (same curve as blanketstone) or a bloom wave: Meadow Lamp `_wave` east->west, or tap west->east
   (ring back home), 3 tiles/s, hold ~5 s. Walker within 0.9 tiles brightens. `?pose=starbloom` (night), `?pose=starbud` (day buds).
 - First pass at R 0.075 s was invisible on the phone: 0.12 s heads, 0.2 s stems read well at 75 px/tile.
+
+## Build 56: Star Chart (things-starchart.js)
+- `starchart` (9.6,0.85) scale 1.4, spot [10.6,1.6]: standing stone with slate face. `shapes` [{name, rgb, heart, pts absolute y<0, lines}]
+  (Lantern teal, Loaf amber, Tree pink, all around x 9.3-10.7, y -0.55..-2.7, between ring house and cairn stars).
+- Next shape on tap / walker arriving within 1.1 tiles / every 16 s when dark (soft 0.6). Hold 11 s. `?pose=starchart0|1|2`.
+- Adding a shape = one more entry in `shapes` (ticks under the slate adapt). Ideas: violet door, pink cushion.
