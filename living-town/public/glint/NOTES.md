@@ -90,3 +90,11 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   bread basket + gold toasting fork at the right end. Warms with window.GLINT_HEARTH (pulse wave -> planks glow + sparks). Kindle
   sits from path tile (9,3) (Manhattan 1.03 < 1.1). Hearth option `toast: true` draws a round loaf on the grate with steam.
 - Next ideas: hearth warmth to the West Meadow stepping stones (sparklamp `steps`), cup hook by the hearth.
+
+## Build 63: Keeping Shelf (things-warmshelf.js)
+- `warmshelf` (11.5,4.95) scale 1.65, spot [11.6,5.4], just SE of the hearth (clear of its logs). Canvas-only: stone cubby with glowing
+  arch, plate + toast + pink star tag, honey-wood plank, copper kettle (steam), honey jar, teal/pink cups on gold hooks.
+  Reads window.GLINT_HEARTH.wave (pulse arrives 0.8 s later -> flare + puff), th.tapped (lid rattle, cup swing), near walkers.
+  `?pose=keeping`. Stub in things.js, script after things-hearth.js in index.html. Test passes.
+- Why: diary had the toast for Pip going cold on the fork while Kindle tended the Glowing Garden; plans asked for a cup shelf.
+- Next ideas: hearth warmth to the West Meadow stepping stones (sparklamp `steps`); Kindle pouring cups when a traveler sits.

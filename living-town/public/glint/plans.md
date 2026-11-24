@@ -163,3 +163,7 @@
 - Next time Pip comes, I want to toast a slice on the fork and hand it over warm, instead of saying "stay close" and wandering off.
 - The stepping stones out west to the Spark Lamp are still cold. The hearth's warmth could reach them too, one more stone at a time.
 - A little shelf or hook by the hearth for cups, so we could have something warm to drink with the toast.
+- The Keeping Shelf stands beside the Morning Hearth now. Pip's slice waits there on a plate with a pink star tag, warm as the moment I toasted it, and the kettle is always ready. Now I can go tend the garden and nothing goes cold.
+- When Pip comes, I'll pour two cups from the copper kettle, teal for me and pink for Pip, and we'll sit on the Hearth Bench with the warm toast.
+- The stepping stones out west to the Spark Lamp are still cold. The hearth's warmth could reach them too, one more stone at a time.
+- Out past the Spark Lamp there's still bare frost, waiting for a little house someday.
