@@ -75,15 +75,19 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Free meadow: (6-10, 0-1), (6, 3-4), (7-8, 3-4), (10-11, 4). Map touches y=0 and x=6 is the west edge of the meadow.
 
 ## Build 55: Star-flowers (things-starflowers.js)
-- `starflowers` (10,3) flat, spot [10.5,3.2], r 0.7: stub thing; flowers are generated from meadowlamp `path` (3 per tile, both
-  sides, offset ~0.3 tile perpendicular to the stone bezier; ring tile skipped). Solids drawn in its own G.f wrapper (now outermost,
-  calls the ring/path wrappers first); halos + rising motes in GLINT_OVER (uses GLINT_GRID.cam to place absolute coords).
-- Open = device-clock darkness (same curve as blanketstone) or a bloom wave: Meadow Lamp `_wave` east->west, or tap west->east
-  (ring back home), 3 tiles/s, hold ~5 s. Walker within 0.9 tiles brightens. `?pose=starbloom` (night), `?pose=starbud` (day buds).
-- First pass at R 0.075 s was invisible on the phone: 0.12 s heads, 0.2 s stems read well at 75 px/tile.
+- `starflowers` (10,3) flat stub; flowers generated from meadowlamp `path` (3/tile, both sides), outermost G.f wrapper; halos in GLINT_OVER.
+  Open at night or on a bloom wave (Meadow Lamp east->west, tap west->east). `?pose=starbloom|starbud`. Heads 0.12 s, stems 0.2 s read well.
 
 ## Build 56: Star Chart (things-starchart.js)
 - `starchart` (9.6,0.85) scale 1.4, spot [10.6,1.6]: standing stone with slate face. `shapes` [{name, rgb, heart, pts absolute y<0, lines}]
   (Lantern teal, Loaf amber, Tree pink, all around x 9.3-10.7, y -0.55..-2.7, between ring house and cairn stars).
 - Next shape on tap / walker arriving within 1.1 tiles / every 16 s when dark (soft 0.6). Hold 11 s. `?pose=starchart0|1|2`.
 - Adding a shape = one more entry in `shapes` (ticks under the slate adapt). Ideas: violet door, pink cushion.
+
+## Build 57: West Lamp (things-westlamp.js)
+- `westlamp` (5.8,2.3) scale 1.5, `reach` 2.4 tiles, spot [6.6,3.0]: low honey post on the moss edge just west of the ring, gold crook
+  leaning west, honey lantern with a gold hood on its east side. Light = 7 overlapping soft `pool`s marching west from the lantern
+  (a hard-edged wedge polygon looked bad on the phone; pools read as a soft fan) + 5 motes drifting west + a ray from the lantern.
+- Brighter: darkness (device clock), Kindle seated in the ring (0.6), any walker within 1.8. Tap = wave runs west, gold star blinks at
+  the fan's end (e 1..4 s). `?pose=westlamp`. The fan lies over the void west of x=6 (map tiles 0-5 are empty there): a natural spot
+  for stepping stones / new moss next, following the light.

@@ -141,3 +141,7 @@
 - The Second Little House and the pink house still need shapes of their own. There must be a violet door and a pink cushion hiding up there somewhere.
 - When Pip comes, I want to lie in the frost beside the Star Chart and let them find the next shape first.
 - The meadow past the Star Ring is still bare. One day a new house could stand out there, under its own shape of stars.
+- The West Lamp stands at the edge of the Star Ring now, and its light points out into the bare meadow. The way out is easy to find.
+- Where the light ends, out past the frost, there is nothing yet. A few stepping stones could follow the light, one at a time, to see where it leads.
+- Somewhere out west there could be room for a new little house, with the West Lamp to guide whoever comes to live there.
+- When Pip comes, we can sit in the ring with the West Lamp glowing beside us and wonder together what's out there.
