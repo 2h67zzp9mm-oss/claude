@@ -236,6 +236,7 @@
     starchart() {},     // the Star Chart standing stone in the North Meadow is drawn by things-starchart.js
     blanketstone() {},  // the Blanket Stone inside the Star Ring is drawn by things-blanketstone.js
     westlamp() {},      // the West Lamp at the edge of the Star Ring is drawn by things-westlamp.js
+    lampspot() {},      // the Lamp Spot in the West Meadow is drawn by things-lampspot.js
     starring() {},      // the Star Ring at the far end of the Meadow Path is drawn by things-starring.js
     chimes() {},        // the Giggle Chimes on the North Road are drawn by things-chimes.js
     wishlamp() {},      // the Wish Lantern behind the Star Lookout is drawn by things-wishlamp.js

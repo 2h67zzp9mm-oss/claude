@@ -91,3 +91,12 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Brighter: darkness (device clock), Kindle seated in the ring (0.6), any walker within 1.8. Tap = wave runs west, gold star blinks at
   the fan's end (e 1..4 s). `?pose=westlamp`. The fan lies over the void west of x=6 (map tiles 0-5 are empty there): a natural spot
   for stepping stones / new moss next, following the light.
+
+## Build 58: Lamp Spot (things-lampspot.js) + West Meadow moss
+- New moss rect("g", 3, 1, 5, 4) "West Meadow" under the West Lamp's fan (the fan ends ~tile 3.3 on screen).
+- `lampspot` (3.0,2.35) flat, scale 1.3, spot [3.5,2.8], `steps` absolute [[4.0,2.42],[4.6,2.3],[5.15,2.4]] (drawn relative to th.x/y).
+  Round footing stone + glowing socket, star ring, 4 gold pegs + thread, paper sketch on NE peg. Lights on tap, walker within 1.4,
+  or the West Lamp's tap (reads westlamp.tapped, delay 1.3 s; stepping stones light in turn east->west). Dotted gold ghost lamp
+  rises from the socket while lit. `?pose=lampspot`.
+- Next natural step: replace/extend the lampspot with the real lamp standing in the socket (same x,y), maybe catching fountain sparks
+  (his wish). Free moss left: (3-5,1), (3-5,3-4).

@@ -145,3 +145,6 @@
 - Where the light ends, out past the frost, there is nothing yet. A few stepping stones could follow the light, one at a time, to see where it leads.
 - Somewhere out west there could be room for a new little house, with the West Lamp to guide whoever comes to live there.
 - When Pip comes, we can sit in the ring with the West Lamp glowing beside us and wonder together what's out there.
+- The Lamp Spot is chosen and marked out in the West Meadow: footing stone, four gold pegs, my sketch tied on. Next I build the lamp itself right there, in the hollow, so the light goes one more step west.
+- I wished the sparks from the Spark Fountain could drift all the way out here. Maybe the new lamp could catch them, and glow with every colour they bring.
+- The West Meadow has fresh moss now, but nothing grows on it yet. A few star-flowers along the stepping stones, so the way out glows at night like the Meadow Path does.
