@@ -33,6 +33,7 @@
   const PINK = { mid: "#ff78c4", light: "#ffb3de", dark: "#b3307f", rgb: "255,130,200", spark: "255,170,220", hi: "#ffd0ea" };
   const TEAL = { mid: "#27c9c2", light: "#9ff7ea", dark: "#127a80", rgb: "90,230,215", spark: "160,255,240", hi: "#e0fffa" };
   const NIGHT = { mid: "#3d6fd8", light: "#9cc4ff", dark: "#1f3a8a", rgb: "120,170,255", spark: "200,225,255", hi: "#dcebff" };   // the Star Lookout: night-blue with gold stars
+  const EMBER = { mid: "#ff9a3c", light: "#ffd08a", dark: "#b8561c", rgb: "255,160,80", spark: "255,200,120", hi: "#fff0c8" };   // the Hearth Bench: ember-amber, a flame stitched on each
   const VIOLET = { mid: "#9b6bff", light: "#c9a8ff", dark: "#5a36b8", rgb: "170,130,255", spark: "200,170,255", hi: "#ece0ff" };
   function cushion(ctx, cx, cy, w, h, lift, c = PINK) {
     poly(ctx, [[cx - w, cy], [cx - w * 0.85, cy - h - lift], [cx + w * 0.85, cy - h - lift], [cx + w, cy]], c.mid);
@@ -66,12 +67,16 @@
       try { bench(ctx, x, y, s, t, th); } finally { th._scaling = false; ctx.restore(); }
       return;
     }
-    const one = !!th.one, C = th.violet ? VIOLET : th.teal ? TEAL : PINK;   // `one`: a small bench with a single soft cushion
+    const one = !!th.one, C = th.violet ? VIOLET : th.teal ? TEAL : th.ember ? EMBER : PINK;   // `one`: a small bench with a single soft cushion
     const b = y + s * 0.3, w = s * (one ? 0.36 : 0.5), seat = b - s * 0.24, top = b - s * 0.54;
     const walkers = window.GLINT_GRID?.walkers || [];
     const sat = walkers.some(k => k.seated && k.bench === th);
     const e = th.tapped != null ? t - th.tapped : 99, tap = e >= 0 && e < 4 ? Math.sin(Math.PI * Math.min(1, e / 4)) : 0;
-    const warm = Math.max(tap, sat ? 0.6 : 0);
+    let warm = Math.max(tap, sat ? 0.6 : 0);
+    if (th.ember && window.GLINT_HEARTH) {   // the Hearth Bench warms with the hearth: each warm pulse makes the planks glow
+      const H = window.GLINT_HEARTH, he = H.wave != null ? t - H.wave : 99;
+      warm = Math.max(warm, he >= 0 && he < 2.2 ? 0.7 * Math.sin(Math.PI * he / 2.2) : 0, 0.15 * (H.k || 0));
+    }
     const run = e >= 0 && e < 1.8 ? e / 1.8 : sat ? (t * 0.3) % 1 : -1;   // a warm light running along the planks
 
     ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(x, b + s * 0.02, s * 0.56, s * 0.1, 0, 0, TAU); ctx.fill();
@@ -144,7 +149,7 @@
       return;
     }
     // two cushions: room for two. The free one breathes a soft light, waiting. (`night`: night-blue with a gold star each)
-    const P2 = th.night ? NIGHT : PINK;
+    const P2 = th.night ? NIGHT : th.ember ? EMBER : PINK;
     cushion(ctx, x - w * 0.47, seat - s * 0.03, cw, ch, 0, P2);
     glow(ctx, x + w * 0.47, seat - s * 0.06, s * 0.28, P2.rgb, 0.22 + 0.2 * wait + 0.35 * warm);
     cushion(ctx, x + w * 0.47, seat - s * 0.03, cw, ch, s * 0.008 * wait, P2);
@@ -154,6 +159,31 @@
       ctx.fillStyle = "#ffd166"; ctx.beginPath();
       for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, q = j % 2 ? r * 0.45 : r; ctx.lineTo(sx + Math.cos(a) * q, sy + Math.sin(a) * q); }
       ctx.closePath(); ctx.fill();
+    }
+    if (th.ember) for (const d of [-1, 1]) {   // a little gold flame stitched on each
+      const sx = x + d * w * 0.47, sy = seat - s * 0.07 - (d > 0 ? s * 0.008 * wait : 0), r = s * 0.034;
+      glow(ctx, sx, sy, s * 0.08, "255,200,110", d > 0 ? 0.3 + 0.3 * wait : 0.2 + 0.3 * warm);
+      ctx.fillStyle = "#ffe08a"; ctx.beginPath();
+      ctx.moveTo(sx, sy - r); ctx.quadraticCurveTo(sx + r * 0.7, sy, sx + r * 0.45, sy + r * 0.45);
+      ctx.quadraticCurveTo(sx, sy + r * 0.75, sx - r * 0.45, sy + r * 0.45); ctx.quadraticCurveTo(sx - r * 0.7, sy, sx, sy - r); ctx.fill();
+      ctx.fillStyle = "#ff8a3a"; ctx.beginPath(); ctx.ellipse(sx, sy + r * 0.2, r * 0.2, r * 0.3, 0, 0, TAU); ctx.fill();
+    }
+    if (th.ember) {   // a basket of bread at the free end for toasting, and a toasting fork leaning on the arm
+      const kx = x + w * 1.12, ky = b - s * 0.02;
+      ctx.strokeStyle = "#ffd166"; ctx.lineWidth = Math.max(1, s * 0.014);
+      ctx.beginPath(); ctx.moveTo(kx + s * 0.06, ky); ctx.lineTo(x + w * 0.9, top - s * 0.1); ctx.stroke();
+      for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + w * 0.9, top - s * 0.1); ctx.lineTo(x + w * 0.9 + d * s * 0.02 - s * 0.01, top - s * 0.17); ctx.stroke(); }
+      poly(ctx, [[kx - s * 0.09, ky - s * 0.08], [kx + s * 0.09, ky - s * 0.08], [kx + s * 0.07, ky], [kx - s * 0.07, ky]], "#b8762e");
+      ctx.strokeStyle = "#8a4f24"; ctx.lineWidth = Math.max(1, s * 0.008);
+      for (const f of [0.35, 0.65]) { ctx.beginPath(); ctx.moveTo(kx - s * 0.085, ky - s * 0.08 * f); ctx.lineTo(kx + s * 0.085, ky - s * 0.08 * f); ctx.stroke(); }
+      for (const [ox, c] of [[-0.035, "#e2a050"], [0.035, "#d38c3c"]]) {
+        ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(kx + s * ox, ky - s * 0.095, s * 0.045, s * 0.035, 0, Math.PI, TAU); ctx.fill();
+        ctx.fillStyle = "rgba(255,240,200,0.6)"; ctx.fillRect(kx + s * ox - s * 0.015, ky - s * 0.115, s * 0.03, Math.max(1, s * 0.008));
+      }
+      for (let i = 0; i < 2; i++) {   // a curl of warm steam from the bread
+        const f = (t * 0.35 + i / 2) % 1;
+        glow(ctx, kx + Math.sin(t * 1.7 + i * 3) * s * 0.03, ky - s * 0.14 - f * s * 0.25, s * 0.04, "255,240,220", 0.35 * Math.sin(f * Math.PI));
+      }
     }
     if (th.blanket) {   // a woolly blanket folded over the left end of the back rail, for cold clear nights; its fringe stirs in the breeze
       const bx0 = x - w * 0.95, bx1 = x - w * 0.25, by0 = top - s * 0.01, by1 = top + s * 0.27;

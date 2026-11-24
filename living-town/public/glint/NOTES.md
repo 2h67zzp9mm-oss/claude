@@ -78,25 +78,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `starflowers` (10,3) flat stub, flowers from meadowlamp `path`, halos in GLINT_OVER; open at night or on a wave. `?pose=starbloom|starbud`.
 - `starchart` (9.6,0.85): `shapes` [{name, rgb, heart, pts absolute y<0, lines}]; next shape on tap/near/16 s at night. `?pose=starchart0|1|2`.
 
-## Builds 57-59 (short)
-- `westlamp` (5.8,2.3) scale 1.5 things-westlamp.js: honey post, light = 7 soft pools fanning west (pools, not a hard wedge). Tap wave
-  (th.tapped) read by sparklamp/westflowers. `?pose=westlamp`.
-- West Meadow moss rect g 3-5,1-4. `sparklamp` (3.0,2.35) things-sparklamp.js replaced the lampspot (file + stub kept, unused).
-  Draws the 3 stepping stones (`steps`, drawn at x+0.5) + footing; fountain sparks fly in every 6 s, `_col`/`_land` on th.
-  `?pose=sparklamp`; glint-look zoom arg must be quoted: `glint-look 3.5 2 "90&pose=sparklamp"`.
+## Builds 57-61 (short)
+- `westlamp` (5.8,2.3) honey post, 7 soft pools west, tap wave (th.tapped). `sparklamp` (3.0,2.35) draws 3 stepping stones (`steps`, x+0.5);
+  fountain sparks every 6 s, `_col`/`_land`. `westflowers` (4,2) flat, all drawn in GLINT_OVER, colour flush from sparklamp. Every new kind
+  needs a stub `kind() {},` in things.js (a build failed without it). Quote pose zoom: `glint-look 3.5 2 "90&pose=sparklamp"`.
+- `hearth` (10.45,4.15) scale 1.7 publishes `window.GLINT_HEARTH {k, wave, from}`; things-meadowpath.js warms the path stones and runs an
+  amber pulse (auto 18 s / 9 s mornings, tap). `?pose=hearth`. glint-look zoom caps ~90 px/tile.
 
-## Build 60: Spark-flowers (things-westflowers.js)
-- Last build failed because `westflowers` was on the map without a stub in things.js: every new kind needs `kind() {},` in things.js too.
-- `westflowers` (4,2) flat stub, spot [4.8,3.2], name "Spark-flowers". All drawing in GLINT_OVER (solids + glows) so the front arc
-  sits over the Spark Lamp's footing. Flowers at world-centre coords along LINE (stepping stones): 6 north, 6 south, 3 arc in front.
-- Night open (device clock); West Lamp tap = bloom east->west; tap flowers = west->east; Spark Lamp `_land`/`_col` = colour flush
-  running east at 2.2 tiles/s (half-opens buds by day). `?pose=sparkbloom|sparkbud|sparkwave`.
-- Next: another lamp further west (free moss x 3-5 rows 1, 3-4; map tiles 0-2 empty), or a house site under the Spark Lamp's light.
-
-## Build 61: Morning Hearth (things-hearth.js)
-- `hearth` (10.45,4.15) scale 1.7, spot [11,4.6], `from: 3.6` (meadowlamp path index where pulses start). Publishes
-  `window.GLINT_HEARTH {k, wave, from}`; things-meadowpath.js reads it: warm stones (melted dark ring, amber heart, steam curls,
-  fewer frost glints) + an amber pulse both ways at 2.6 tiles/s. Auto pulse every 18 s (9 s 5-10am device clock), tap = pulse.
-  `?pose=hearth`. Stub `hearth() {}` in things.js. Script tag must come before things-meadowpath.js (it isn't needed, read lazily, but keep).
-- glint-look zoom seems capped around 90 px/tile (150 looked the same).
-- Next ideas: warmth to the West Meadow stepping stones (sparklamp `steps`), a two-seat bench by the hearth.
+## Build 62: Hearth Bench (things-woodbench.js + things-hearth.js)
+- `bench wood ember` (8.95,3.98) scale 1.3, seatX -0.24, spot [9.4,4.3]: EMBER palette (cushions + glowberry), stitched gold flames,
+  bread basket + gold toasting fork at the right end. Warms with window.GLINT_HEARTH (pulse wave -> planks glow + sparks). Kindle
+  sits from path tile (9,3) (Manhattan 1.03 < 1.1). Hearth option `toast: true` draws a round loaf on the grate with steam.
+- Next ideas: hearth warmth to the West Meadow stepping stones (sparklamp `steps`), cup hook by the hearth.

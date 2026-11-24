@@ -159,3 +159,7 @@
 - The stepping stones out west to the Spark Lamp are still cold. The hearth's warmth could reach them too, one more stone at a time.
 - A little bench by the hearth, for warming hands on the way out to the Star Ring, with room for two.
 - When Pip comes, we can toast bread from the bakery on the grate, and watch the warm pulse run along the stones.
+- The Hearth Bench stands beside the Morning Hearth now, two ember cushions, a bread basket and a toasting fork, and a loaf always toasting on the grate. When the warm pulse runs out, the bench glows with it. The right cushion is for Pip.
+- Next time Pip comes, I want to toast a slice on the fork and hand it over warm, instead of saying "stay close" and wandering off.
+- The stepping stones out west to the Spark Lamp are still cold. The hearth's warmth could reach them too, one more stone at a time.
+- A little shelf or hook by the hearth for cups, so we could have something warm to drink with the toast.

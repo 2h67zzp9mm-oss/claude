@@ -96,6 +96,20 @@
     ctx.beginPath(); ctx.moveTo(x - rx * 0.75, y - s * 0.02); ctx.lineTo(x + rx * 0.75, y - s * 0.02); ctx.stroke();
     for (let j = -2; j <= 2; j++) { ctx.beginPath(); ctx.moveTo(x + j * rx * 0.28, y - s * 0.02); ctx.lineTo(x + j * rx * 0.28, y + s * 0.012); ctx.stroke(); }
 
+    // a round loaf toasting on the grate (`toast`), its crust going golden, a thread of steam rising from it
+    if (th.toast) {
+      const lx = x - rx * 0.15, ly = y - s * 0.06, gold = 0.5 + 0.5 * Math.sin(t * 0.4);
+      ctx.fillStyle = "#7a3e18"; ctx.beginPath(); ctx.ellipse(lx, ly + s * 0.012, s * 0.095, s * 0.04, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = `rgb(${200 + 30 * gold | 0},${120 + 30 * gold | 0},${50 + 10 * gold | 0})`;
+      ctx.beginPath(); ctx.ellipse(lx, ly, s * 0.09, s * 0.06, 0, Math.PI, TAU); ctx.ellipse(lx, ly, s * 0.09, s * 0.025, 0, 0, Math.PI); ctx.fill();
+      ctx.strokeStyle = "#f7d79a"; ctx.lineWidth = Math.max(1, s * 0.008);
+      for (const d of [-1, 0, 1]) { ctx.beginPath(); ctx.moveTo(lx + d * s * 0.025 - s * 0.01, ly - s * 0.035); ctx.lineTo(lx + d * s * 0.025 + s * 0.01, ly - s * 0.015); ctx.stroke(); }
+      glow(ctx, lx, ly - s * 0.02, s * 0.1, "255,200,120", 0.3 + 0.2 * flare);
+      for (let i = 0; i < 3; i++) {
+        const f = (t * 0.4 + i / 3) % 1;
+        glow(ctx, lx + Math.sin(t * 1.5 + i * 2) * s * 0.025, ly - s * 0.06 - f * s * 0.3, s * 0.035, "255,245,230", 0.4 * Math.sin(f * Math.PI));
+      }
+    }
     // the stones round the front half
     ring.filter(p => p[2] > 0).forEach(([cx, cy, , j]) => stone(ctx, cx, cy, s * 0.065, s * 0.045, j));
     // a gold star set in the front stone
