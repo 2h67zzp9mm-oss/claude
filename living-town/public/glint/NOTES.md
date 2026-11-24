@@ -84,30 +84,17 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Next shape on tap / walker arriving within 1.1 tiles / every 16 s when dark (soft 0.6). Hold 11 s. `?pose=starchart0|1|2`.
 - Adding a shape = one more entry in `shapes` (ticks under the slate adapt). Ideas: violet door, pink cushion.
 
-## Build 57: West Lamp (things-westlamp.js)
-- `westlamp` (5.8,2.3) scale 1.5, `reach` 2.4 tiles, spot [6.6,3.0]: low honey post on the moss edge just west of the ring, gold crook
-  leaning west, honey lantern with a gold hood on its east side. Light = 7 overlapping soft `pool`s marching west from the lantern
-  (a hard-edged wedge polygon looked bad on the phone; pools read as a soft fan) + 5 motes drifting west + a ray from the lantern.
-- Brighter: darkness (device clock), Kindle seated in the ring (0.6), any walker within 1.8. Tap = wave runs west, gold star blinks at
-  the fan's end (e 1..4 s). `?pose=westlamp`. The fan lies over the void west of x=6 (map tiles 0-5 are empty there): a natural spot
-  for stepping stones / new moss next, following the light.
+## Builds 57-59 (short)
+- `westlamp` (5.8,2.3) scale 1.5 things-westlamp.js: honey post, light = 7 soft pools fanning west (pools, not a hard wedge). Tap wave
+  (th.tapped) read by sparklamp/westflowers. `?pose=westlamp`.
+- West Meadow moss rect g 3-5,1-4. `sparklamp` (3.0,2.35) things-sparklamp.js replaced the lampspot (file + stub kept, unused).
+  Draws the 3 stepping stones (`steps`, drawn at x+0.5) + footing; fountain sparks fly in every 6 s, `_col`/`_land` on th.
+  `?pose=sparklamp`; glint-look zoom arg must be quoted: `glint-look 3.5 2 "90&pose=sparklamp"`.
 
-## Build 58: Lamp Spot (things-lampspot.js) + West Meadow moss
-- New moss rect("g", 3, 1, 5, 4) "West Meadow" under the West Lamp's fan (the fan ends ~tile 3.3 on screen).
-- `lampspot` (3.0,2.35) flat, scale 1.3, spot [3.5,2.8], `steps` absolute [[4.0,2.42],[4.6,2.3],[5.15,2.4]] (drawn relative to th.x/y).
-  Round footing stone + glowing socket, star ring, 4 gold pegs + thread, paper sketch on NE peg. Lights on tap, walker within 1.4,
-  or the West Lamp's tap (reads westlamp.tapped, delay 1.3 s; stepping stones light in turn east->west). Dotted gold ghost lamp
-  rises from the socket while lit. `?pose=lampspot`.
-- Next natural step: replace/extend the lampspot with the real lamp standing in the socket (same x,y), maybe catching fountain sparks
-  (his wish). Free moss left: (3-5,1), (3-5,3-4).
-
-## Build 59: Spark Lamp (things-sparklamp.js) replaces the Lamp Spot
-- World entry `lampspot` swapped for `sparklamp` at the same (3.0,2.35), scale 1.5, same `steps`, name "Spark Lamp" (not flat: it's tall).
-  index.html loads things-sparklamp.js instead of things-lampspot.js (file kept, unused; stub `lampspot` still in things.js).
-- Lamp: footing stone + star ring + steps kept; slim honey post, gold cup, clear globe (GR = S*0.12) tinted by `th._col`,
-  5 coloured sparks orbiting inside, gold crown + star. Pool of the globe colour on the moss.
-- Fountain sparks (his wish): a flight every 6 s from (x+3.4, y-1.1 tiles) on an arc into the globe (2.6 s, trail of 7 glows);
-  on landing the colour eases prev->new over 1.5 s with a white flash. Tap / walker within 1.4 / West Lamp wave (+1.3 s): extra fast
-  spark, faster swirl, ring stars light round in COLS colours. State lives on th (_flights, _col, _prev, _land, _next, _burst).
-- `?pose=sparklamp` (night, teal globe, violet spark in flight). glint-look arg must be quoted: `glint-look 3.5 2 "90&pose=sparklamp"`.
-- Next ideas: star-flowers along the stepping stones (extend starflowers to these points), further west moss / a house site.
+## Build 60: Spark-flowers (things-westflowers.js)
+- Last build failed because `westflowers` was on the map without a stub in things.js: every new kind needs `kind() {},` in things.js too.
+- `westflowers` (4,2) flat stub, spot [4.8,3.2], name "Spark-flowers". All drawing in GLINT_OVER (solids + glows) so the front arc
+  sits over the Spark Lamp's footing. Flowers at world-centre coords along LINE (stepping stones): 6 north, 6 south, 3 arc in front.
+- Night open (device clock); West Lamp tap = bloom east->west; tap flowers = west->east; Spark Lamp `_land`/`_col` = colour flush
+  running east at 2.2 tiles/s (half-opens buds by day). `?pose=sparkbloom|sparkbud|sparkwave`.
+- Next: another lamp further west (free moss x 3-5 rows 1, 3-4; map tiles 0-2 empty), or a house site under the Spark Lamp's light.

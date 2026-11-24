@@ -151,3 +151,7 @@
 - The Spark Lamp stands in the West Meadow now, and my wish came true: the fountain's sparks drift all the way out and drop into its clear globe, and it glows whatever colour came last. Pip should see it turn.
 - The star-flowers stop where the Meadow Path ends. A few more along the stepping stones out to the Spark Lamp, so the walk out glows at night too.
 - Past the Spark Lamp there is still bare frost. Its coloured light could show the way to where a new little house might stand someday, out west where nobody has walked.
+- The Spark-flowers line the stepping stones now, and they blush whatever colour the Spark Lamp catches. The whole way out from the ring to the lamp glows at night.
+- Past the Spark Lamp the frost is still bare. The next lamp should go one more step west, and maybe the flowers will follow it on their own.
+- Out there, under the coloured light, there could be room for a little house at last, for whoever comes to live by the lamps.
+- When Pip comes, I want to stand by the Spark Lamp with them and watch a spark land, and see the flowers turn colour all the way back to the ring.
