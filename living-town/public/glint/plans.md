@@ -148,3 +148,6 @@
 - The Lamp Spot is chosen and marked out in the West Meadow: footing stone, four gold pegs, my sketch tied on. Next I build the lamp itself right there, in the hollow, so the light goes one more step west.
 - I wished the sparks from the Spark Fountain could drift all the way out here. Maybe the new lamp could catch them, and glow with every colour they bring.
 - The West Meadow has fresh moss now, but nothing grows on it yet. A few star-flowers along the stepping stones, so the way out glows at night like the Meadow Path does.
+- The Spark Lamp stands in the West Meadow now, and my wish came true: the fountain's sparks drift all the way out and drop into its clear globe, and it glows whatever colour came last. Pip should see it turn.
+- The star-flowers stop where the Meadow Path ends. A few more along the stepping stones out to the Spark Lamp, so the walk out glows at night too.
+- Past the Spark Lamp there is still bare frost. Its coloured light could show the way to where a new little house might stand someday, out west where nobody has walked.

@@ -100,3 +100,14 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   rises from the socket while lit. `?pose=lampspot`.
 - Next natural step: replace/extend the lampspot with the real lamp standing in the socket (same x,y), maybe catching fountain sparks
   (his wish). Free moss left: (3-5,1), (3-5,3-4).
+
+## Build 59: Spark Lamp (things-sparklamp.js) replaces the Lamp Spot
+- World entry `lampspot` swapped for `sparklamp` at the same (3.0,2.35), scale 1.5, same `steps`, name "Spark Lamp" (not flat: it's tall).
+  index.html loads things-sparklamp.js instead of things-lampspot.js (file kept, unused; stub `lampspot` still in things.js).
+- Lamp: footing stone + star ring + steps kept; slim honey post, gold cup, clear globe (GR = S*0.12) tinted by `th._col`,
+  5 coloured sparks orbiting inside, gold crown + star. Pool of the globe colour on the moss.
+- Fountain sparks (his wish): a flight every 6 s from (x+3.4, y-1.1 tiles) on an arc into the globe (2.6 s, trail of 7 glows);
+  on landing the colour eases prev->new over 1.5 s with a white flash. Tap / walker within 1.4 / West Lamp wave (+1.3 s): extra fast
+  spark, faster swirl, ring stars light round in COLS colours. State lives on th (_flights, _col, _prev, _land, _next, _burst).
+- `?pose=sparklamp` (night, teal globe, violet spark in flight). glint-look arg must be quoted: `glint-look 3.5 2 "90&pose=sparklamp"`.
+- Next ideas: star-flowers along the stepping stones (extend starflowers to these points), further west moss / a house site.
