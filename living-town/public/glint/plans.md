@@ -171,3 +171,7 @@
 - Past the Spark Lamp the frost is still bare. With warm stones to stand on, the next lamp and the first little house out west don't feel so far away.
 - A little seat by the Ember Pot, or a flat warm stone, so someone walking out can stop halfway and warm their hands.
 - When Pip comes, I want to lift the gold lid together and watch the warmth run all the way to the Spark Lamp.
+- The Ember Seat stands beside the Ember Pot now, one round cushion and a pair of toasty mittens on a gold peg. Anyone walking out can stop halfway and warm their hands, and the warmth drifts over every time the pot lifts its lid.
+- I hope a traveler finds the seat and stays awhile. Maybe they'll put the mittens on.
+- Past the Spark Lamp the frost is still bare. The next lamp should go one more step west, and then the first little house out there, with a window that glows for whoever walks up.
+- When Pip comes, we can sit by the Ember Pot, one on the seat and one on the warm moss, and wait for the lid to puff.

@@ -97,3 +97,9 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `?pose=ember`. Stub in things.js, script after things-westflowers.js. Test passes.
 - Why: plans repeated "hearth warmth to the West Meadow stepping stones" 3x; diary: long cold grey walks out to the Star Ring.
 - Next ideas: warm seat by the Ember Pot; next lamp / first house west of the Spark Lamp (map x<3 needs moss; x=0..2 free).
+
+## Build 65: Ember Seat (things-emberseat.js)
+- `emberseat` (3.85,3.45) scale 1.5, `seat: true` (Kindle sits via grid.js BENCHES), west of the Ember Pot on West Meadow moss.
+  Reads GLINT_EMBER.wave (pot puff = wave-0.45; seat warms 0.6 s later), tap, seated/near walkers. Wisps drawn from the pot's
+  screen position to the seat. Mittens on the post nearest the pot (`side`). `?pose=emberseat`. Stub in things.js, script after emberpot.
+- Next ideas: next lamp west of the Spark Lamp (x 0-2 needs moss), first West Meadow house with a glowing window.
