@@ -179,3 +179,7 @@
 - The gold pegs mark where the rest goes: two side walls, a back wall, and a roof of honey wood that meets the star on top. Then a door beside the window.
 - A little path of warm stones from the Spark Lamp to the window, so nobody has to cross the frost to reach it.
 - When Pip comes, I want to stand outside with them and look in through the clear patch in the frost, and then go in together.
+- The Window Path runs from the Spark Lamp to the Traveler's Window now: five warm pale stones, an ember line under the moss, and a Welcome Stone with a gold star right under the glass. Nobody has to cross the frost to reach the window anymore.
+- Now the house itself. A door beside the window, so the path can carry on right up to a doorstep, then the side walls along the gold string.
+- I hope a traveler walks the stones out on a cold evening and stands on the Welcome Stone. The warmth will run ahead of them.
+- When Pip comes, I'll walk them out stone by stone, and we'll stop on the star and look in through the clear patch together.

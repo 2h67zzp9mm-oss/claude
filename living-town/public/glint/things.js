@@ -241,6 +241,7 @@
     warmshelf() {},     // the Keeping Shelf beside the Morning Hearth is drawn by things-warmshelf.js
     hearth() {},   // the Morning Hearth beside the bend of the Meadow Path is drawn by things-hearth.js
     glowwindow() {},  // the Traveler's Window past the Spark Lamp is drawn by things-glowwindow.js
+    warmpath() {},  // the Window Path of warm stones to the Traveler's Window is drawn by things-warmpath.js
     emberseat() {},  // the Ember Seat beside the Ember Pot is drawn by things-emberseat.js
     emberpot() {},   // the Ember Pot by the West Meadow stepping stones is drawn by things-emberpot.js
     westflowers() {},   // the Spark-flowers along the stepping stones to the Spark Lamp are drawn by things-westflowers.js

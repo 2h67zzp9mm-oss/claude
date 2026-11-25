@@ -54,11 +54,7 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - Fractional things are drawn at x+0.5; `hedge`/`lamps` points are absolute. glint-look 3rd arg = px per tile (~90 max).
 
 ## Builds 41-43 (short)
-- Lantern Street Hedge: moss (13,24-26), vertical `hedge` (y 23.6). "Lantern Street Lanterns" `roadlamps` y 26.95, opts `west`, `forward`,
-  `board: "door"`, `wave: "<hedge name>"`, zone [11.6,13.6,23.3,27.4]. Fourth house idea now crosses the hedge (split it or go further south).
-- `vane` things-vane.js on the bakery roof, exposes `window.GLINT_WIND` (heading, radians; slow sines, no real data), `?pose=gust`.
-- `mill` things-mill.js "Glass Windmill" (18.1,19.5) scale 1.25 on moss (18,20); angle integrated in th.ang; tap whirl, `?pose=whirl`.
-- glint-look must run alone (not after `&&`), else it silently leaves the old .look/grid.png. No PIL; sips can't write (sandbox).
+- Lantern Street Hedge + Lanterns (moss 13,24-26), `vane` (GLINT_WIND), `mill` Glass Windmill (18.1,19.5). glint-look must run alone.
 
 ## Builds 44-52 (short)
 - `lampsong` bell (14,10.01) publishes `window.GLINT_SONG`; singing lamps go in heads(). Web Audio unlocked on pointerup.
@@ -90,10 +86,13 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `emberpot` (4.75,3.4) publishes `window.GLINT_EMBER {k, wave, at}` (= hearth wave + 2 s); things-sparklamp.js warms its steps from it.
 - `emberseat` (3.85,3.45) `seat: true`, warms 0.6 s after the pot puffs, mittens on the pot side. Poses `?pose=ember|emberseat|keeping`.
 
-## Build 66: Traveler's Window (things-glowwindow.js)
-- Moss (0-2, 1-4). `glowwindow` (1.2,2.2) scale 1.6, spot [1.7,3.2]: pale stone wall + arched 4-pane window, candle, frost ferns
-  (clear patch round flame), teal shutters (`th._o` eases; open at night h>=17||<7, someone within 1.8, or 8 s after tap), sill +
-  frost-flowers + icicles, window-light pool on the frost, gold motes toward nearest walker. Gold pegs/string = house footprint.
-  `?pose=glowwindow`. Stub in things.js, script after emberseat. Test passes.
-- Next: build the rest of the West House around it (side/back walls + roof meeting the top star, door beside the window),
-  warm stones from the Spark Lamp to it. Free moss x 0-2, y 1-4 (window occupies ~x 0.6-1.9, y 1.6-2.6).
+## Builds 66-67 (short)
+- `glowwindow` (1.2,2.2) things-glowwindow.js, scale 1.6, spot [1.7,3.2]: stone wall + arched window, candle, shutters (`th._o`, open at
+  night / someone near / tap), light pool, motes. Panes on screen ~ (win.x+0.5, win.y+0.27). Gold pegs/string = house footprint. `?pose=glowwindow`.
+- `warmpath` "Window Path" (2,2) things-warmpath.js, flat, `stones` absolute (x+0.5), last = Welcome Stone (gold star), `from` = Spark Lamp.
+  Runs lamp->window at 2.6 tiles/s: GLINT_EMBER.wave (offset 2.15 so it continues the Spark Lamp steps' pulse), tap, or a walker on stone 0.
+  Arrival -> GLINT_OVER motes up to the panes. `?pose=warmpath`.
+- Walkable now: "f" tiles (3-6,2) (3,3) (1-2,3) connect the Star Ring (7,2) to the window; listed in warmpath `tiles`, and the file wraps
+  GLINT_GROUND.f.draw (after meadowpath's wrap) to draw them as plain moss. Travelers can walk out to the window.
+- Next: West House door beside the window (doorstep at tile (2,3)/(1,3) end of the path), then side/back walls + honey roof to the star.
+  Free moss x 0-2, y 1-4 (window ~x 0.6-1.9, y 1.6-2.6; pegs at ~x 0.1 and 2.1).
