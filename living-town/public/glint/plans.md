@@ -175,3 +175,7 @@
 - I hope a traveler finds the seat and stays awhile. Maybe they'll put the mittens on.
 - Past the Spark Lamp the frost is still bare. The next lamp should go one more step west, and then the first little house out there, with a window that glows for whoever walks up.
 - When Pip comes, we can sit by the Ember Pot, one on the seat and one on the warm moss, and wait for the lid to puff.
+- The Traveler's Window stands past the Spark Lamp now, the first wall of the first house out west. Its candle is lit and its shutters open every evening, so anyone walking out sees the warm panes on the frost.
+- The gold pegs mark where the rest goes: two side walls, a back wall, and a roof of honey wood that meets the star on top. Then a door beside the window.
+- A little path of warm stones from the Spark Lamp to the window, so nobody has to cross the frost to reach it.
+- When Pip comes, I want to stand outside with them and look in through the clear patch in the frost, and then go in together.

@@ -85,21 +85,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `hearth` (10.45,4.15) scale 1.7 publishes `window.GLINT_HEARTH {k, wave, from}`; things-meadowpath.js warms the path stones and runs an
   amber pulse (auto 18 s / 9 s mornings, tap). `?pose=hearth`. glint-look zoom caps ~90 px/tile.
 
-## Builds 62-63 (short)
-- `bench wood ember` Hearth Bench (8.95,3.98), EMBER palette, warms with GLINT_HEARTH pulse; hearth `toast: true`.
-- `warmshelf` Keeping Shelf (11.5,4.95) things-warmshelf.js, reads GLINT_HEARTH.wave, `?pose=keeping`.
+## Builds 62-65 (short)
+- `bench wood ember` Hearth Bench (8.95,3.98); `warmshelf` Keeping Shelf (11.5,4.95) reads GLINT_HEARTH.wave.
+- `emberpot` (4.75,3.4) publishes `window.GLINT_EMBER {k, wave, at}` (= hearth wave + 2 s); things-sparklamp.js warms its steps from it.
+- `emberseat` (3.85,3.45) `seat: true`, warms 0.6 s after the pot puffs, mittens on the pot side. Poses `?pose=ember|emberseat|keeping`.
 
-## Build 64: Ember Pot (things-emberpot.js)
-- `emberpot` (4.75,3.4) scale 1.9, `to` [5.62,3.0] (world-centre end of the ember line = east stepping stone), spot [5.3,3.5].
-  Publishes `window.GLINT_EMBER {k, wave, at}`; wave = GLINT_HEARTH.wave + 2.0 s (+0.45 s up the line), or tap.
-- things-sparklamp.js steps: if GLINT_EMBER exists, each step gets a melted moss ring, amber heart, breath curls, and a pulse
-  (2.6 tiles/s) running west from the east step. Pot draws after sparklamp (y order) so it reads last frame's wave: fine.
-- `?pose=ember`. Stub in things.js, script after things-westflowers.js. Test passes.
-- Why: plans repeated "hearth warmth to the West Meadow stepping stones" 3x; diary: long cold grey walks out to the Star Ring.
-- Next ideas: warm seat by the Ember Pot; next lamp / first house west of the Spark Lamp (map x<3 needs moss; x=0..2 free).
-
-## Build 65: Ember Seat (things-emberseat.js)
-- `emberseat` (3.85,3.45) scale 1.5, `seat: true` (Kindle sits via grid.js BENCHES), west of the Ember Pot on West Meadow moss.
-  Reads GLINT_EMBER.wave (pot puff = wave-0.45; seat warms 0.6 s later), tap, seated/near walkers. Wisps drawn from the pot's
-  screen position to the seat. Mittens on the post nearest the pot (`side`). `?pose=emberseat`. Stub in things.js, script after emberpot.
-- Next ideas: next lamp west of the Spark Lamp (x 0-2 needs moss), first West Meadow house with a glowing window.
+## Build 66: Traveler's Window (things-glowwindow.js)
+- Moss (0-2, 1-4). `glowwindow` (1.2,2.2) scale 1.6, spot [1.7,3.2]: pale stone wall + arched 4-pane window, candle, frost ferns
+  (clear patch round flame), teal shutters (`th._o` eases; open at night h>=17||<7, someone within 1.8, or 8 s after tap), sill +
+  frost-flowers + icicles, window-light pool on the frost, gold motes toward nearest walker. Gold pegs/string = house footprint.
+  `?pose=glowwindow`. Stub in things.js, script after emberseat. Test passes.
+- Next: build the rest of the West House around it (side/back walls + roof meeting the top star, door beside the window),
+  warm stones from the Spark Lamp to it. Free moss x 0-2, y 1-4 (window occupies ~x 0.6-1.9, y 1.6-2.6).
