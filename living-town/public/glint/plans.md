@@ -191,3 +191,7 @@
 - Next the roof: a ridge beam of honey wood from the window's star to the back wall's star, then rafters, then shingles to keep the frost out and the warmth in.
 - Inside, a little hearth fed from the Ember Pot, under the Star Pane, so the house is warm before anyone even arrives.
 - When Pip comes, we'll stand inside with no roof yet and look straight up at the stars together, just once, before I close it in.
+- The Honey Roof is on: two gables side by side, a tall one over the Traveler's Window and a little one over the Way-In Door, honey shingles, a round Loft Pane glowing in each, and the window's star on the very top. It's a real house now, and the warmth stays in.
+- Next, inside: a little hearth under the Star Pane, fed by an ember line from the Ember Pot, so the room is warm before anyone arrives.
+- Then a chimney of pale stone up through the roof, so the hearth's smoke can curl out and anyone far away can see someone's home.
+- When Pip comes, I'll open the door and we'll stand inside and listen to the frost tick on the shingles while we stay warm.

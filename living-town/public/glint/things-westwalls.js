@@ -155,7 +155,7 @@
     star(ctx, rsx, rsy, u * 0.05, "#ffd166");
 
     // warmth rising out of the open top into the cold air: soft pale wisps, and a few gold motes at night
-    for (let i = 0; i < 4; i++) {
+    if (!W.some(o => o.kind === "westroof")) for (let i = 0; i < 4; i++) {
       const f = (t * 0.12 + i / 4) % 1, wx = lerp(pBL[0], pBR[0], 0.2 + 0.2 * i) + Math.sin(t * 0.9 + i * 1.7) * u * 0.08;
       const wy = lerp(pFL[1] + u * 0.1, pBL[1] - u * 0.7, f);
       const a = Math.sin(f * Math.PI) * (0.1 + 0.08 * warm);

@@ -242,6 +242,7 @@
     hearth() {},   // the Morning Hearth beside the bend of the Meadow Path is drawn by things-hearth.js
     glowwindow() {},  // the Traveler's Window past the Spark Lamp is drawn by things-glowwindow.js
     westdoor() {},  // the Way-In Door beside the Traveler's Window is drawn by things-westdoor.js
+    westroof() {},  // the Honey Roof of the first west house is drawn by things-westroof.js
     westwalls() {},  // the Stone Walls (sides and back) of the first west house are drawn by things-westwalls.js
     warmpath() {},  // the Window Path of warm stones to the Traveler's Window is drawn by things-warmpath.js
     emberseat() {},  // the Ember Seat beside the Ember Pot is drawn by things-emberseat.js

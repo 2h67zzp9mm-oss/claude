@@ -98,3 +98,13 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - glowwindow `walled: true` hides the gold pegs/string. Test passes (3/3).
 - Next: roof (ridge beam window star -> back star at abs x 1.7, rafters, honey shingles; draw it as its own kind at y > 2.21 so it
   covers both front walls' tops), then an inside (`room`-style, see cottage `room`/`step`) with a hearth fed from the Ember Pot.
+
+## Build 70
+- `westroof` "Honey Roof" (1.1,2.25) things-westroof.js, drawn after window/door. Two gables front-to-back: door gable (across 0..wDiv,
+  wDiv = abs x 1.08) and main gable (wDiv..1, ridge abs x 1.7, stars both ends). R(across, depth, lift) maps onto the walls' frame.
+- LESSON: the walls' fTop 2.53 is NOT where the front walls' tops appear; they show at abs y ~2.1-2.15 (window/door draw their own
+  geometry). Roof uses fTop 2.15, bTop 1.73. Check with a temporary pose that hides a kind and compare screenshots.
+- westwalls stops its open-top wisps when a westroof exists. Roof has a ridge-vent curl leaning east (breeze), Loft Panes, frost.
+  Warm run = warmpath `_arrive` + 1.6 s (after the caps), or tap. `?pose=westroof`.
+- Next: inside (hearth under the Star Pane fed from the Ember Pot; maybe `room`-style lift of the roof to look in), then a stone chimney
+  through the main roof's east slope (wisps already lean east).
