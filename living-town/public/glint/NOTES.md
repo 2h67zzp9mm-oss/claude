@@ -94,5 +94,14 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
   Arrival -> GLINT_OVER motes up to the panes. `?pose=warmpath`.
 - Walkable now: "f" tiles (3-6,2) (3,3) (1-2,3) connect the Star Ring (7,2) to the window; listed in warmpath `tiles`, and the file wraps
   GLINT_GROUND.f.draw (after meadowpath's wrap) to draw them as plain moss. Travelers can walk out to the window.
-- Next: West House door beside the window (doorstep at tile (2,3)/(1,3) end of the path), then side/back walls + honey roof to the star.
-  Free moss x 0-2, y 1-4 (window ~x 0.6-1.9, y 1.6-2.6; pegs at ~x 0.1 and 2.1).
+
+## Build 68
+- `westdoor` "Way-In Door" (0.08,2.21) things-westdoor.js, scale 1.6: stone wall W=S*0.625 spanning screen x 0.08-1.08, abutting the window
+  wall (1.08-2.32); same base b=y+S*0.3. y 2.21 so it draws after the window (covers the gold string). Teal plank door hinged left,
+  `th._o` opens on a walker within 0.5 of the doorstep, tap (6 s), or a little on warmpath `_arrive` (+0.5 s; knocker star lights).
+  `stones` absolute (x+0.5): [0.66,3.1] link stone + [0.08,2.95] Doorstep (gold half-moon). Tile (0,3) is now "f" and in warmpath `tiles`.
+  glowwindow `plotWest` (abs tile x) moves its west pegs out past the door wall. `?pose=westdoor`. Test passes (3/3).
+- Camera clamps near x~1.2 at zoom 90, so the west edge is the left of the screen.
+- Next: side walls along the gold string (west side at x~0, east side at ~2.65, back at y~1.4), then honey roof to the window star,
+  then make the door a `room`-style inside (see cottage `room`/`step`) with a hearth fed from the Ember Pot.
+
