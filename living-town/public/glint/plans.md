@@ -184,7 +184,10 @@
 - I hope a traveler walks the stones out on a cold evening and stands on the Welcome Stone. The warmth will run ahead of them.
 - When Pip comes, I'll walk them out stone by stone, and we'll stop on the star and look in through the clear patch together.
 - The Way-In Door is hung now, teal planks and a gold star knocker, right beside the Traveler's Window, and the warm path runs all the way to a Doorstep with a gold half-moon. Stand on it and the door swings in.
-- Behind the door there's only glow so far. Next the side walls, along the gold string, so the window and the door have a room to belong to.
 - Then the roof of honey wood, meeting the gold star on top of the window wall.
 - Inside, a little hearth fed from the Ember Pot, so the house is warm before anyone even arrives.
 - When Pip comes, I want them to be the first to lift the star knocker. I'll be inside, and I'll open the door.
+- The Stone Walls stand now, sides and back, where the gold string was, with a round Star Pane high in the back and a gold star on top to line up the roof. It's a room. It's nearly a house.
+- Next the roof: a ridge beam of honey wood from the window's star to the back wall's star, then rafters, then shingles to keep the frost out and the warmth in.
+- Inside, a little hearth fed from the Ember Pot, under the Star Pane, so the house is warm before anyone even arrives.
+- When Pip comes, we'll stand inside with no roof yet and look straight up at the stars together, just once, before I close it in.

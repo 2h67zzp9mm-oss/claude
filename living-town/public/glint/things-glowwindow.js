@@ -59,11 +59,13 @@
     const back = b - S * 0.5, sideX = S * 0.6;
     const westX = th.plotWest != null ? x + (th.plotWest + 0.5 - wcx) * s : null;   // the Way-In Door widened the plot west
     const pegs = [[westX ?? x - sideX, b - S * 0.06], [westX != null ? westX + S * 0.04 : x - sideX * 0.92, back], [x + sideX * 0.92, back], [x + sideX, b - S * 0.06]];
+    if (!th.walled) {   // once the Stone Walls stand, the pegs and string are taken up
     ctx.strokeStyle = "rgba(255,209,102,0.65)"; ctx.lineWidth = Math.max(1, S * 0.008);
     ctx.beginPath(); pegs.forEach(([px, py], i) => i ? ctx.lineTo(px, py - S * 0.05) : ctx.moveTo(px, py - S * 0.05)); ctx.stroke();
     for (const [px, py] of pegs) {
       ctx.fillStyle = "#b8862a"; ctx.fillRect(px - S * 0.012, py - S * 0.07, S * 0.024, S * 0.07);
       ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(px, py - S * 0.07, Math.max(1, S * 0.016), 0, TAU); ctx.fill();
+    }
     }
 
     // the pool of window light on the frost in front: four warm panes, stretched out toward the viewer

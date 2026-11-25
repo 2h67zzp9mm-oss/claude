@@ -48,10 +48,8 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - The test (../../test/glint-grid.test.js) loads only world.js + things.js: every kind needs a stub in things.js.
 
 ## Builds 28-40 (short)
-- Pink house (10,24) set: mat, tree, flowers, `homelight`, Doorstep Bench `bench wood` (things-woodbench.js), Bun Table. Cooling Shelf, Corner Lamp
-  + amber `trail`, Hedge Lanterns, Violet Door Bench, Bread Basket, Bakery Table + Table Sign. `roadlamps` (lamps [x,y,pdx,pdy], zone, board) used 3x.
-  Waiting Lamp `waitlamp` (12.42,17.95). Each kind has a `?pose=` to hold its lit state.
-- Fractional things are drawn at x+0.5; `hedge`/`lamps` points are absolute. glint-look 3rd arg = px per tile (~90 max).
+- Pink house (10,24) set (mat, tree, flowers, bench wood, Bun Table), bakery props, `roadlamps` (lamps [x,y,pdx,pdy]), Waiting Lamp.
+  Each kind has a `?pose=` to hold its lit state. Fractional things are drawn at x+0.5; `hedge`/`lamps` points are absolute.
 
 ## Builds 41-43 (short)
 - Lantern Street Hedge + Lanterns (moss 13,24-26), `vane` (GLINT_WIND), `mill` Glass Windmill (18.1,19.5). glint-look must run alone.
@@ -86,22 +84,17 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `emberpot` (4.75,3.4) publishes `window.GLINT_EMBER {k, wave, at}` (= hearth wave + 2 s); things-sparklamp.js warms its steps from it.
 - `emberseat` (3.85,3.45) `seat: true`, warms 0.6 s after the pot puffs, mittens on the pot side. Poses `?pose=ember|emberseat|keeping`.
 
-## Builds 66-67 (short)
-- `glowwindow` (1.2,2.2) things-glowwindow.js, scale 1.6, spot [1.7,3.2]: stone wall + arched window, candle, shutters (`th._o`, open at
-  night / someone near / tap), light pool, motes. Panes on screen ~ (win.x+0.5, win.y+0.27). Gold pegs/string = house footprint. `?pose=glowwindow`.
-- `warmpath` "Window Path" (2,2) things-warmpath.js, flat, `stones` absolute (x+0.5), last = Welcome Stone (gold star), `from` = Spark Lamp.
-  Runs lamp->window at 2.6 tiles/s: GLINT_EMBER.wave (offset 2.15 so it continues the Spark Lamp steps' pulse), tap, or a walker on stone 0.
-  Arrival -> GLINT_OVER motes up to the panes. `?pose=warmpath`.
-- Walkable now: "f" tiles (3-6,2) (3,3) (1-2,3) connect the Star Ring (7,2) to the window; listed in warmpath `tiles`, and the file wraps
-  GLINT_GROUND.f.draw (after meadowpath's wrap) to draw them as plain moss. Travelers can walk out to the window.
+## Builds 66-68 (short)
+- `glowwindow` (1.2,2.2) scale 1.6: wall + arched window, shutters `th._o`, light pool. `warmpath` (2,2) flat, `stones` absolute (x+0.5),
+  run from GLINT_EMBER.wave, sets `_arrive`; wraps GLINT_GROUND.f.draw so its `tiles` draw as moss. Walkable "f" (0-6,2-3) to the house.
+- `westdoor` (0.08,2.21) scale 1.6, door `th._o` (doorstep walker / tap / warmpath `_arrive`), `stones` link + Doorstep at (0.08,2.95).
+  Camera clamps near x~1.2 at zoom 90 (west edge = screen left). Poses `?pose=glowwindow|warmpath|westdoor`.
 
-## Build 68
-- `westdoor` "Way-In Door" (0.08,2.21) things-westdoor.js, scale 1.6: stone wall W=S*0.625 spanning screen x 0.08-1.08, abutting the window
-  wall (1.08-2.32); same base b=y+S*0.3. y 2.21 so it draws after the window (covers the gold string). Teal plank door hinged left,
-  `th._o` opens on a walker within 0.5 of the doorstep, tap (6 s), or a little on warmpath `_arrive` (+0.5 s; knocker star lights).
-  `stones` absolute (x+0.5): [0.66,3.1] link stone + [0.08,2.95] Doorstep (gold half-moon). Tile (0,3) is now "f" and in warmpath `tiles`.
-  glowwindow `plotWest` (abs tile x) moves its west pegs out past the door wall. `?pose=westdoor`. Test passes (3/3).
-- Camera clamps near x~1.2 at zoom 90, so the west edge is the left of the screen.
-- Next: side walls along the gold string (west side at x~0, east side at ~2.65, back at y~1.4), then honey roof to the window star,
-  then make the door a `room`-style inside (see cottage `room`/`step`) with a hearth fed from the Ember Pot.
-
+## Build 69
+- `westwalls` "Stone Walls" (1.1,2.19) things-westwalls.js: side + back walls, drawn BEFORE window/door (y 2.19). Geometry in abs tile
+  units (tile centre n+0.5): front x 0.08..2.324, front top 2.53, base 3.68; back inset 0.13, back base 2.88, top 1.73 (th.geo can override).
+  Back wall inner face + Star Pane (abs 1.2,2.06), side inner faces, frosted caps with a gold run (warmpath `_arrive` +1 s, or tap),
+  gold ridge star at abs x 1.7 (lines up with the window star), warmth wisps. Warm level reads westdoor `_o`. `?pose=westwalls`.
+- glowwindow `walled: true` hides the gold pegs/string. Test passes (3/3).
+- Next: roof (ridge beam window star -> back star at abs x 1.7, rafters, honey shingles; draw it as its own kind at y > 2.21 so it
+  covers both front walls' tops), then an inside (`room`-style, see cottage `room`/`step`) with a hearth fed from the Ember Pot.
