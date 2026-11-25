@@ -75,10 +75,32 @@
     pool(ctx, x, y + s * 0.03, s * 0.4, s * 0.17, "255,225,160", 0.08 + 0.1 * k);
 
     // stepping stones back toward the West Lamp (east), lighting in turn as its wave passes
-    (th.steps || []).forEach(([sx, sy], i) => {
+    // Ember Pot warmth (things-emberpot.js): melted moss ring, amber heart, warm breath, a pulse running west from the pot
+    const EM = window.GLINT_EMBER;
+    const steps = th.steps || [];
+    steps.forEach(([sx, sy], i) => {
       const px = x + (sx - th.x) * s, py = y + (sy - th.y) * s;
       const lit = le > 0.3 + i * 0.35 && le < 4 + i * 0.3 ? Math.sin(Math.min(1, (le - 0.3 - i * 0.35) / 2) * Math.PI) : 0;
+      let hp = 0;
+      if (EM) {
+        // the pulse comes up the ember line at the east step, then runs west to the Spark Lamp
+        const d = EM.wave != null ? (t - EM.wave) * 2.6 : -9, along = Math.abs(sx - steps[Math.min(2, steps.length - 1)][0]);
+        hp = d > -1 && d < 5 ? Math.max(0, 1 - Math.abs(along - d) / 0.55) : 0;
+        ctx.fillStyle = "rgba(14,52,40,0.8)"; ctx.beginPath(); ctx.ellipse(px, py + s * 0.02, s * 0.26, s * 0.15, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "rgba(34,96,62,0.55)"; ctx.beginPath(); ctx.ellipse(px, py + s * 0.02, s * 0.21, s * 0.12, 0, 0, TAU); ctx.fill();
+      }
       flatStone(ctx, px, py, s * 0.17, s * 0.1, Math.max(lit, 0.15 + 0.25 * dark), i === 0 ? col : null);
+      if (EM) {
+        const wk = 0.55 + 0.45 * EM.k, b = (0.75 + 0.25 * Math.sin(t * 1.7 + i * 2.3)) * wk + hp;
+        ctx.fillStyle = `rgba(255,${150 + 60 * Math.min(1, hp) | 0},70,${0.32 + 0.25 * b})`;
+        ctx.beginPath(); ctx.ellipse(px, py + s * 0.01, s * 0.08, s * 0.045, 0, 0, TAU); ctx.fill();
+        glow(ctx, px, py, s * (0.2 + 0.12 * hp), "255,160,80", 0.18 * b + 0.15 * dark);
+        for (let j = 0; j < 2; j++) {   // little curls of warm breath
+          const q = ((t * 0.3 + j * 0.5 + i * 0.27) % 1), cx = px + Math.sin(q * 6 + i + j) * s * 0.03, cy = py - s * 0.04 - q * s * (0.22 + 0.15 * hp);
+          ctx.strokeStyle = `rgba(255,236,210,${(0.28 + 0.3 * hp) * (1 - q)})`; ctx.lineWidth = Math.max(1, s * 0.01);
+          ctx.beginPath(); ctx.arc(cx, cy, s * 0.025, 0.3, Math.PI * 1.5); ctx.stroke();
+        }
+      }
     });
 
     // the footing stone with its gold star ring; the stars light round on a tap

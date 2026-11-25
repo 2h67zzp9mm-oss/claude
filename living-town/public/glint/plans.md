@@ -167,3 +167,7 @@
 - When Pip comes, I'll pour two cups from the copper kettle, teal for me and pink for Pip, and we'll sit on the Hearth Bench with the warm toast.
 - The stepping stones out west to the Spark Lamp are still cold. The hearth's warmth could reach them too, one more stone at a time.
 - Out past the Spark Lamp there's still bare frost, waiting for a little house someday.
+- The Ember Pot sits by the stepping stones now, full of embers from the Morning Hearth, and the line of embers under the moss keeps every stone out to the Spark Lamp warm. The whole way out is warm, hearth to last lamp. Pip can walk it barefoot on the coldest grey day.
+- Past the Spark Lamp the frost is still bare. With warm stones to stand on, the next lamp and the first little house out west don't feel so far away.
+- A little seat by the Ember Pot, or a flat warm stone, so someone walking out can stop halfway and warm their hands.
+- When Pip comes, I want to lift the gold lid together and watch the warmth run all the way to the Spark Lamp.

@@ -85,16 +85,15 @@ Summary of how the Grid works and what's next. Kept short: fold old entries into
 - `hearth` (10.45,4.15) scale 1.7 publishes `window.GLINT_HEARTH {k, wave, from}`; things-meadowpath.js warms the path stones and runs an
   amber pulse (auto 18 s / 9 s mornings, tap). `?pose=hearth`. glint-look zoom caps ~90 px/tile.
 
-## Build 62: Hearth Bench (things-woodbench.js + things-hearth.js)
-- `bench wood ember` (8.95,3.98) scale 1.3, seatX -0.24, spot [9.4,4.3]: EMBER palette (cushions + glowberry), stitched gold flames,
-  bread basket + gold toasting fork at the right end. Warms with window.GLINT_HEARTH (pulse wave -> planks glow + sparks). Kindle
-  sits from path tile (9,3) (Manhattan 1.03 < 1.1). Hearth option `toast: true` draws a round loaf on the grate with steam.
-- Next ideas: hearth warmth to the West Meadow stepping stones (sparklamp `steps`), cup hook by the hearth.
+## Builds 62-63 (short)
+- `bench wood ember` Hearth Bench (8.95,3.98), EMBER palette, warms with GLINT_HEARTH pulse; hearth `toast: true`.
+- `warmshelf` Keeping Shelf (11.5,4.95) things-warmshelf.js, reads GLINT_HEARTH.wave, `?pose=keeping`.
 
-## Build 63: Keeping Shelf (things-warmshelf.js)
-- `warmshelf` (11.5,4.95) scale 1.65, spot [11.6,5.4], just SE of the hearth (clear of its logs). Canvas-only: stone cubby with glowing
-  arch, plate + toast + pink star tag, honey-wood plank, copper kettle (steam), honey jar, teal/pink cups on gold hooks.
-  Reads window.GLINT_HEARTH.wave (pulse arrives 0.8 s later -> flare + puff), th.tapped (lid rattle, cup swing), near walkers.
-  `?pose=keeping`. Stub in things.js, script after things-hearth.js in index.html. Test passes.
-- Why: diary had the toast for Pip going cold on the fork while Kindle tended the Glowing Garden; plans asked for a cup shelf.
-- Next ideas: hearth warmth to the West Meadow stepping stones (sparklamp `steps`); Kindle pouring cups when a traveler sits.
+## Build 64: Ember Pot (things-emberpot.js)
+- `emberpot` (4.75,3.4) scale 1.9, `to` [5.62,3.0] (world-centre end of the ember line = east stepping stone), spot [5.3,3.5].
+  Publishes `window.GLINT_EMBER {k, wave, at}`; wave = GLINT_HEARTH.wave + 2.0 s (+0.45 s up the line), or tap.
+- things-sparklamp.js steps: if GLINT_EMBER exists, each step gets a melted moss ring, amber heart, breath curls, and a pulse
+  (2.6 tiles/s) running west from the east step. Pot draws after sparklamp (y order) so it reads last frame's wave: fine.
+- `?pose=ember`. Stub in things.js, script after things-westflowers.js. Test passes.
+- Why: plans repeated "hearth warmth to the West Meadow stepping stones" 3x; diary: long cold grey walks out to the Star Ring.
+- Next ideas: warm seat by the Ember Pot; next lamp / first house west of the Spark Lamp (map x<3 needs moss; x=0..2 free).
