@@ -473,7 +473,11 @@
     // the things to buy scroll (today's, then the dream row); Back stays put by the thumb
     const st = stars(), was = host.bar.querySelector(".home-title:has(.room-picks)")?.scrollTop || 0;
     const buy = (id, words, off) => `<button data-buy="${id}" ${off ? "disabled" : ""}>${words}</button>`;
-    const today = V().stock.map(s => { const d = BY[s.id], have = count(s.id); return buy(s.id, `${d.rare ? "✨" : d.emoji} ${esc(d.name)} ${s.soldOut ? "<small>sold out</small>" : `${d.price}⭐`}${have ? ` <small>×${have}</small>` : ""}`, s.soldOut || st < d.price); }).join("");
+    // your dream goal lives in another world's shop: a note first in the row says where, with how far you've got
+    const g = V().goal, gd = g && !g.room ? BY[g.id] : null;
+    const away = gd && !(V().dreams || []).some(s => s.id === g.id) ? (gd.worlds === "all" ? null : gd.worlds.map(k => host.worlds?.[k]).find(Boolean)) : null;
+    const awayNote = away ? `<button data-away class="goal-away">🎯 ${esc(gd.name)} <small>${st}/${gd.price}⭐</small><br><small>in the ${away.icon} ${esc(away.name)} shop</small></button>` : "";
+    const today = awayNote + V().stock.map(s => { const d = BY[s.id], have = count(s.id); return buy(s.id, `${d.rare ? "✨" : d.emoji} ${esc(d.name)} ${s.soldOut ? "<small>sold out</small>" : `${d.price}⭐`}${have ? ` <small>×${have}</small>` : ""}`, s.soldOut || st < d.price); }).join("");
     // a dream thing you can't pay for yet can still be tapped: it becomes your saving goal (🎯), and goes green when you have enough
     const goal = V().goal?.id;
     const dream = (V().dreams || []).map(s => {
@@ -487,6 +491,8 @@
       [{ label: "Back", go: idle }]);
     host.bar.querySelectorAll("[data-buy]").forEach(b => { b.onclick = () => host.act("decorBuy", { item: b.dataset.buy }); });
     host.bar.querySelectorAll("[data-goal]").forEach(b => { b.onclick = () => { if (b.dataset.goal === goal) return host.toast("🎯 That's your goal. Keep saving!"); host.act("dreamGoal", { item: b.dataset.goal }); }; });
+    const aw = host.bar.querySelector("[data-away]");
+    if (aw) aw.onclick = () => host.toast(g.ready ? `🎉 You have enough! Go to ${away.icon} ${away.name} to buy it.` : `🎯 It's in the ${away.icon} ${away.name} shop. Keep saving!`);
     const sc = host.bar.querySelector(".home-title"); if (sc) sc.scrollTop = was;   // buying keeps your place in the list
   }
   // stored things grouped by kind, as buttons in the panel's scrolling part (tap one to put it out)

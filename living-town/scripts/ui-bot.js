@@ -269,6 +269,24 @@ async function main() {
         report.screens.push({ screen: "room-goal-cheer", bad: [], text: cheer?.text || "" });
       }
     }
+    // A dream goal from another world: the house shop's first row starts with a note saying which world's shop has it
+    // (pretend the goal is a dream thing this world's shop doesn't sell), and the note fits like the other buttons.
+    {
+      // the server keeps sending the real goal, so the pretend goal is mixed into every view until pretend(null)
+      const pick = await run(`(() => { const v = window.LivingTownHome._test.view(), D = window.LivingTownDecor, here = new Set((v.decor.dreams || []).map(s => s.id)); const d = D.CATALOG.find(x => x.dream && x.worlds !== "all" && !here.has(x.id)); if (!d) return ""; window.__ui.pretend({ decor: { goal: { id: d.id, name: d.name, emoji: d.emoji, have: 0, need: d.price, ready: false } } }); return d.name; })()`);
+      const miss = pick ? await run(`window.__ui.open(["pop:door", "Go inside", "Shop"])`) : "no dream thing from another world to pretend with";
+      if (miss) problem("room-shop-away", miss === "missing" ? "could not open the shop in the room" : miss);
+      else {
+        const a = await run("window.__ui.audit()"), first = await run(`(() => { const b = document.querySelector(".home-bar .room-picks button"); return b ? { away: b.hasAttribute("data-away"), text: b.innerText.replace(/\\s+/g, " ") } : null; })()`);
+        await shot("room-shop-away");
+        for (const b of a.bad) problem("room-shop-away", b);
+        if (!first?.away) problem("room-shop-away", `the shop's first row does not start with the goal note: ${JSON.stringify(first?.text || "")}`);
+        else if (!first.text.includes(pick) || !/ in \S/.test(first.text)) problem("room-shop-away", `the goal note does not say what or where: ${JSON.stringify(first.text)}`);
+        report.screens.push({ screen: "room-shop-away", bad: a.bad, text: first?.text || "" });
+      }
+      await run("window.__ui.pretend(null)");
+      await run("window.__ui.home()");
+    }
     // The room fills the screen: in every style (clay, storybook, pixel), the room reaches from just under the top
     // display to just above the bottom panel, with no big empty band above or below it.
     {

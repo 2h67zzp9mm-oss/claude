@@ -8,13 +8,12 @@ Each item: a short name, then what "done" means. Sizes: S (under 30 min), M (abo
 Up next: split it first.
 
 ## Up next (the CEO may build these, top first)
-1. **"You're saving for…" in other worlds** (S): a note on the shop's first row when the goal lives in another world.
-2. **Back-wall options for Hazel** (M): a 🎨 Style row for the tall back wall (none, hanging lamp, high shelves,
+1. **Back-wall options for Hazel** (M): a 🎨 Style row for the tall back wall (none, hanging lamp, high shelves,
    bunting), "none" stays the default; Hazel picks in the game.
-3. **Doorway looks for Hazel** (S): a 🎨 Style row for the doorway between rooms (plain frame default, arch, curtain,
+2. **Doorway looks for Hazel** (S): a 🎨 Style row for the doorway between rooms (plain frame default, arch, curtain,
    painted vines).
-4. **Second room grows too** (S): the bigger room makes both rooms deeper.
-5. **UI bot sees cut-off ring words** (S): mend the check so "Bigger ro…"-style cut-offs count as problems.
+3. **Second room grows too** (S): the bigger room makes both rooms deeper.
+4. **UI bot sees cut-off ring words** (S): mend the check so "Bigger ro…"-style cut-offs count as problems.
 
 (Kindle and his Grid moved to their own app on 2026-11-17 and aren't part of the game any more.)
 
@@ -47,7 +46,14 @@ Up next: split it first.
 - The second room (2,500⭐) could be a 🎯 saving goal too, the same way the bigger room now is.
 - A quick "🎯 Saving up for…" note pops up over the bottom of the Goals panel for a moment and covers a row
   (seen in the UI bot's picture); it might sit better just above the panel.
+- In one UI bot run (2026-11-25) the town's "⬆ Upstairs · 2" button wrapped onto too many lines; the next run was
+  fine. It probably depends on which house in town the bot ends up inside. A shorter label would stop the wobble.
 ## Done
+- 2026-11-25 "Saving for…" in other worlds: when your 🎯 dream goal is sold in another world's house shop (like the
+  Play Rocket in Sci-fi), the house shop's first row now starts with a note: "🎯 Play Rocket 120/1000⭐, in the 🚀
+  Sci-fi shop". Tapping it says to keep saving, or to go to that world once you have enough. (Also mended a hidden
+  slip: the game used to swap back to the main buttons if the first button began with 🎯.) The UI bot pretends a goal
+  from another world, opens the shop and checks the note is first and fits. 152 screens, 0 problems.
 - 2026-11-24 Bigger room as a saving goal: the house door's 🏗️ Big room panel has `🎯 Save for it` (until you can
   afford it). It then works like a dream goal: a have/need row with a meter in 🎯 Goals, one "You saved enough! Build
   the bigger room at your house door" cheer, and it clears for everyone once the family builds it. Each person still

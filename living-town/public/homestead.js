@@ -425,7 +425,7 @@
   function goInside() {
     if (!window.LivingTownRoom) return opts.openHouse();
     hidePop();
-    window.LivingTownRoom.open({ el, bar, top, pop, setBar: (...a) => setBar(...a), act, view: () => view, world: () => world, toast: m => opts.toast(m), sfx: SFX, onClose: idleBar,
+    window.LivingTownRoom.open({ el, bar, top, pop, setBar: (...a) => setBar(...a), act, view: () => view, world: () => world, worlds: WORLDS, toast: m => opts.toast(m), sfx: SFX, onClose: idleBar,
       person: () => sheetOf(opts.me()), sheetOf, family });
   }
   function sheetOf(id) { const key = walkerFor(id), av = avatarFor(id); return { w: av || A.walkers[key], img: av ? av.canvas : imgs["walk_" + key] }; }
@@ -630,7 +630,8 @@
       Object.assign(cur, { tx: o.x, ty: o.y, dir: o.dir, name: o.name, inside: Boolean(o.inside), room: o.room === 2 ? 2 : 1, seen: performance.now() }); others.set(o.id, cur);
     }
     for (const [id, o] of others) if (performance.now() - o.seen > 6000) others.delete(id);
-    if (bar.querySelector("button")?.textContent.startsWith("🎯")) idleBar();   // keep the goals count fresh
+    const first = bar.querySelector("button");   // keep the goals count fresh (not a 🎯 goal note in the house shop's list)
+    if (first?.textContent.startsWith("🎯") && !first.closest(".room-picks")) idleBar();
     const quest = bar.querySelector(".home-quest"); if (quest) questBar(quest.dataset.p);   // keep an open level, story, build or book panel fresh
     const r = msg.result;
     if (!r) return;
